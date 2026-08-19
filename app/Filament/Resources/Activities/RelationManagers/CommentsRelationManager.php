@@ -7,16 +7,24 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class CommentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'comments';
+
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {
@@ -33,6 +41,13 @@ class CommentsRelationManager extends RelationManager
     {
         return $schema
             ->components([
+                Actions::make([
+                    CreateAction::make()
+                        ->relationship(fn (): Relation => $this->getRelationship())
+                        ->mutateFormDataUsing(fn (array $data) => array_merge($data, [
+                            'user_id' => auth()->id(),
+                        ])),
+                ]),
                 TextEntry::make('user.name')
                     ->label('Author'),
                 TextEntry::make('comment')
@@ -66,6 +81,7 @@ class CommentsRelationManager extends RelationManager
                     ])),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

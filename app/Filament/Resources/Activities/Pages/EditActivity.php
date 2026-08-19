@@ -29,4 +29,9 @@ class EditActivity extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    protected function getAllRelationManagers(): array
+    {
+        return [];
+    }
 }
