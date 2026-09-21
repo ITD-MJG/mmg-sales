@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Activities\Tables;
 use App\Exports\ActivitiesExport;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Activity;
+use App\Models\ActivityComment;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -172,7 +173,7 @@ class ActivitiesTable
                             'comment' => $data['comment'],
                         ]);
                     })
-                    ->visible(fn () => auth()->user()?->can('create_activity_comment')),
+                    ->visible(fn (Activity $record) => auth()->user()?->can('createForActivity', [ActivityComment::class, $record])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

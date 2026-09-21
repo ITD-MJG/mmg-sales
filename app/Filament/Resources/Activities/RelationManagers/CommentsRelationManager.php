@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Activities\RelationManagers;
 
+use App\Models\ActivityComment;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -15,6 +16,7 @@ use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 class CommentsRelationManager extends RelationManager
@@ -24,6 +26,20 @@ class CommentsRelationManager extends RelationManager
     public function isReadOnly(): bool
     {
         return false;
+    }
+
+    /**
+     * Only users attached to the activity (owner, attendee, or lead
+     * creator/collaborator) with the create permission may comment.
+     */
+    protected function getCreateAuthorizationResponse(): Response
+    {
+        $user = auth()->user();
+        $activity = $this->getOwnerRecord();
+
+        return $user?->can('createForActivity', [ActivityComment::class, $activity])
+            ? Response::allow()
+            : Response::deny();
     }
 
     public function form(Schema $schema): Schema

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\ResourceCodeGenerator;
 use App\Traits\HasCode;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,6 +55,7 @@ class Lead extends Model
         'converted_at' => 'datetime',
         'last_contacted_at' => 'datetime',
     ];
+
     protected $codeColumn = 'lead_code';
 
     // Uses generateForLead from ResourceCodeGenerator (LEAD-YYYYMM-XXXX)
@@ -118,6 +120,35 @@ class Lead extends Model
     public function activityComments(): HasManyThrough
     {
         return $this->hasManyThrough(ActivityComment::class, Activity::class);
+    }
+
+    /**
+     * Whether the user owns the lead: creator or listed collaborator.
+     * Mirrors the lead-visibility rule used by ActivitiesTable and ActivityScopeService.
+     */
+    public function isAccessibleBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($this->created_by === $user->id) {
+            return true;
+        }
+
+        return $this->collaborators()->whereKey($user->getKey())->exists();
+    }
+
+    public function scopeAccessibleBy(Builder $query, User $user): Builder
+    {
+        if ($user->hasRole('Super Admin')) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $query) use ($user): void {
+            $query->where('created_by', $user->id)
+                ->orWhereHas('collaborators', fn (Builder $collaborators) => $collaborators->whereKey($user->getKey()));
+        });
     }
 
     public function latestActivity(): HasOne
