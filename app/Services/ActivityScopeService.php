@@ -16,8 +16,8 @@ class ActivityScopeService
     {
         $query = Activity::query();
 
-        // Director sees all territories (top of hierarchy)
-        if ($user->hasRole('Super Admin') || $user->hasRole('Management Director')) {
+        // Super Admin and Management Directors see every activity.
+        if ($user->hasGlobalVisibility()) {
             return $query;
         }
 
@@ -81,8 +81,8 @@ class ActivityScopeService
      */
     public function getAllSubordinateIds(User $user): Collection
     {
-        // Super Admin and Director see all territories
-        if ($user->hasRole('Super Admin') || $user->hasRole('Management Director')) {
+        // Super Admin and Management department see all territories
+        if ($user->hasGlobalVisibility()) {
             return User::active()->pluck('id');
         }
 

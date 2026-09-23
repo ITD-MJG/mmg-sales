@@ -144,4 +144,59 @@ class User extends Authenticatable implements FilamentUser
     {
         return $query->where('is_active', true);
     }
+
+    /**
+     * Memoized department check. Policies evaluate this per row, so avoid
+     * reloading the relation for every record in a table.
+     */
+    private ?bool $managementDepartment = null;
+
+    private ?bool $managementDirector = null;
+
+    /**
+     * Whether the user belongs to the Management department.
+     */
+    public function isManagementDepartment(): bool
+    {
+        return $this->managementDepartment ??= $this->department?->name === Department::MANAGEMENT;
+    }
+
+    /**
+     * Whether the user is a Director within the Management department.
+     *
+     * Matched on the role name containing "Director" rather than on an exact
+     * role name: this role has already been renamed between
+     * "Director - Management" and "Management Director", and the admin UI can
+     * rewrite it again.
+     */
+    public function isManagementDirector(): bool
+    {
+        return $this->managementDirector ??= $this->isManagementDepartment()
+            && $this->roles->contains(fn ($role): bool => str_contains($role->name, 'Director'));
+    }
+
+    /**
+     * Whether every record is visible to this user, ignoring ownership,
+     * hierarchy and territory.
+     *
+     * Super Admin is checked first so a Super Admin who happens to sit in the
+     * Management department keeps write access.
+     */
+    public function hasGlobalVisibility(): bool
+    {
+        return $this->isSuperAdmin() || $this->isManagementDirector();
+    }
+
+    /**
+     * Whether this user may never write, even to records they can see.
+     */
+    public function isReadOnlyGlobalViewer(): bool
+    {
+        return $this->isManagementDirector() && ! $this->isSuperAdmin();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('Super Admin');
+    }
 }

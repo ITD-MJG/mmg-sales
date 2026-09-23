@@ -13,6 +13,12 @@ class Department extends Model
 {
     use HasCode, HasFactory, LogsActivity;
 
+    /**
+     * Department whose members get read-only global visibility: they see every
+     * record, but the policies deny every write.
+     */
+    public const MANAGEMENT = 'Management';
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

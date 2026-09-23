@@ -15,8 +15,12 @@ class TargetPolicy extends BasePolicy
 
     public function view(User $user, $model): bool
     {
-        return $user->hasPermissionTo("view_{$this->model}")
-            && $model->user_id === $user->id;
+        if (! $user->hasPermissionTo("view_{$this->model}")) {
+            return false;
+        }
+
+        // A read-only global viewer (Director in Management) may view any target.
+        return $user->hasGlobalVisibility() || $model->user_id === $user->id;
     }
 
     public function create(User $user): bool

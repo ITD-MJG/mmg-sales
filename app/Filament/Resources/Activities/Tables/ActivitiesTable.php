@@ -57,7 +57,7 @@ class ActivitiesTable
                         $query->orWhere(function ($q) use ($leadIds, $user) {
                             $q->whereIn('lead_id', $leadIds);
 
-                            if (! $user->hasRole('Management Director') && $user->territory_id) {
+                            if (! $user->hasGlobalVisibility() && $user->territory_id) {
                                 $q->whereHas('user', function ($uq) use ($user): void {
                                     $uq->where('territory_id', $user->territory_id);
                                 });

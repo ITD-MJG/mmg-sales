@@ -7,6 +7,8 @@ use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
 use App\Filament\Resources\Roles\Schemas\RoleForm;
 use App\Filament\Resources\Roles\Tables\RolesTable;
+use App\Models\Department;
+use App\Models\Position;
 use App\Models\Role;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -28,6 +30,28 @@ class RoleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return RoleForm::configure($schema);
+    }
+
+    /**
+     * Role names follow "{Department} {Position}".
+     *
+     * Create and edit must both use this single implementation. They previously
+     * each carried their own copy and drifted apart, so saving a role from the
+     * edit page silently rewrote its name to the older
+     * "{Position} - {Department}" format and broke every role-name check.
+     */
+    public static function generateRoleName(?int $positionId, ?int $departmentId): string
+    {
+        $position = $positionId ? Position::find($positionId) : null;
+        $department = $departmentId ? Department::find($departmentId) : null;
+
+        $name = $position?->name ?? 'Unnamed';
+
+        if ($department) {
+            $name = $department->name.' '.$name;
+        }
+
+        return $name;
     }
 
     public static function table(Table $table): Table

@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\Builder;
 trait HasVisibilityScope
 {
     /**
-     * Apply visibility scope based on position hierarchy (OR) and territory hierarchy (OR),
-     * with direct reports (OR) included via manager_id.
+     * Apply the record-visibility contract for the current user.
      *
-     * - Super Admin: sees everything
-     * - Director: sees all sales team records (view-only)
+     * - Super Admin: sees everything, writes everything
+     * - Management department Director: sees everything, writes nothing
      * - Staff: own records only
      * - Others: own records + subordinates (position OR territory union) + direct reports
      */
@@ -24,16 +23,9 @@ trait HasVisibilityScope
             return $query;
         }
 
-        // Super Admin bypasses all visibility restrictions
-        if ($user->hasRole('Super Admin')) {
+        // Super Admin and Management Directors see everything.
+        if ($user->hasGlobalVisibility()) {
             return $query;
-        }
-
-        // Director - can see all records from the sales team (all territories)
-        if ($user->hasRole('Management Director')) {
-            $salesTeamIds = self::getSalesTeamUserIds();
-
-            return $query->whereIn($userColumn, $salesTeamIds);
         }
 
         // Staff - can only see their own records
@@ -61,7 +53,7 @@ trait HasVisibilityScope
      * Check if user can edit/delete a specific record.
      *
      * - Super Admin: can modify anything
-     * - Director: view-only (cannot modify any records)
+     * - Management department: view-only (cannot modify any records)
      * - Everyone else: can only modify their own records
      */
     public static function canModifyRecord($record, string $userColumn = 'user_id'): bool
@@ -73,12 +65,12 @@ trait HasVisibilityScope
         }
 
         // Super Admin can modify anything
-        if ($user->hasRole('Super Admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Director is view-only, cannot modify any records
-        if ($user->hasRole('Management Director')) {
+        // Management department is view-only, cannot modify any records
+        if ($user->isReadOnlyGlobalViewer()) {
             return false;
         }
 
@@ -126,22 +118,5 @@ trait HasVisibilityScope
         }
 
         return array_unique($userIds);
-    }
-
-    /**
-     * Get IDs of all sales team users (Staff, Manager, Supervisor, RSM, ASM).
-     * Used by Director to oversee all sales records.
-     */
-    private static function getSalesTeamUserIds(): array
-    {
-        $salesRoles = ['Staff', 'Manager', 'Supervisor', 'Regional Manager', 'Area Manager'];
-
-        return User::active()->whereHas('roles', function ($query) use ($salesRoles): void {
-            $query->where(function ($q) use ($salesRoles): void {
-                foreach ($salesRoles as $role) {
-                    $q->orWhere('name', 'like', "% {$role}");
-                }
-            });
-        })->pluck('id')->toArray();
     }
 }
