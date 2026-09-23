@@ -132,8 +132,8 @@ class ResetPermissions extends Command
         $smRoles = [
             'Sales Staff',
             'Sales Supervisor',
-            'Sales Area Manager',
-            'Sales Regional Manager',
+            'Area Sales Manager',
+            'Regional Sales Manager',
             'Marketing Staff',
             'Marketing Manager',
             'Sales Manager',
@@ -152,8 +152,8 @@ class ResetPermissions extends Command
 
         // 6. Report access: add report perms on top of S&M perms for specific roles
         $reportRoles = [
-            'Sales Regional Manager',
-            'Sales Area Manager',
+            'Regional Sales Manager',
+            'Area Sales Manager',
             'Marketing Manager',
             'Sales Manager',
         ];
@@ -172,8 +172,8 @@ class ResetPermissions extends Command
         $mapping = [
             ['Staff',                  'Sales',               'Sales Staff'],
             ['Supervisor',             'Sales',               'Sales Supervisor'],
-            ['Area Sales Manager',     'Sales',               'Sales Area Manager'],
-            ['Regional Sales Manager', 'Sales',               'Sales Regional Manager'],
+            ['Area Sales Manager',     'Sales',               'Area Sales Manager'],
+            ['Regional Sales Manager', 'Sales',               'Regional Sales Manager'],
             ['Admin',                  'Sales',               'Sales Admin'],
             ['Staff',                  'Marketing',           'Marketing Staff'],
             ['Manager',                'Marketing',           'Marketing Manager'],
@@ -197,7 +197,7 @@ class ResetPermissions extends Command
             }
         }
 
-        $oldRoleNames = ['Admin', 'Director', 'Staff', 'Supervisor', 'Regional Sales Manager', 'Area Sales Manager', 'Manager'];
+        $oldRoleNames = ['Admin', 'Director', 'Staff', 'Supervisor', 'Manager'];
 
         foreach ($userNewRoles as $userId => $newRoleName) {
             $user = User::find($userId);
@@ -220,7 +220,7 @@ class ResetPermissions extends Command
     {
         $this->line('Deleting old roles...');
 
-        $oldRoles = ['Admin', 'Director', 'Staff', 'Supervisor', 'Regional Sales Manager', 'Area Sales Manager', 'Manager'];
+        $oldRoles = ['Admin', 'Director', 'Staff', 'Supervisor', 'Manager'];
 
         foreach ($oldRoles as $roleName) {
             $role = Role::where('name', $roleName)->first();

@@ -33,12 +33,14 @@ it('allows Super Admin to view segments and subsegments', function () {
     expect(SubSegmentResource::shouldRegisterNavigation())->toBeTrue();
 });
 
-it('denies Sales Representative from viewing segments and subsegments', function () {
+it('allows Sales Staff to view segments and subsegments as reference data', function () {
     actingAs($this->salesRep);
 
-    expect($this->salesRep->can('viewAny', Segment::class))->toBeFalse();
-    expect($this->salesRep->can('viewAny', SubSegment::class))->toBeFalse();
+    // Reference data is viewable by every Sales & Marketing role (view_any_segment
+    // ships in the shared reference permission set), which matches production.
+    expect($this->salesRep->can('viewAny', Segment::class))->toBeTrue();
+    expect($this->salesRep->can('viewAny', SubSegment::class))->toBeTrue();
 
-    expect(SegmentResource::shouldRegisterNavigation())->toBeFalse();
-    expect(SubSegmentResource::shouldRegisterNavigation())->toBeFalse();
+    expect(SegmentResource::shouldRegisterNavigation())->toBeTrue();
+    expect(SubSegmentResource::shouldRegisterNavigation())->toBeTrue();
 });

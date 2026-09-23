@@ -73,7 +73,7 @@ class SendReportDigest extends Command
             'end_date' => now()->format('Y-m-d'),
         ];
 
-        if (in_array($role, ['Sales Regional Manager', 'Sales Area Manager'])) {
+        if (in_array($role, ['Regional Sales Manager', 'Area Sales Manager'])) {
             $filters['territory_id'] = $user->territory_id;
         } elseif (in_array($role, ['Sales Supervisor', 'Sales Staff'])) {
             $filters['user_id'] = $user->id;

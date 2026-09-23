@@ -28,9 +28,11 @@ it('allows Super Admin to view distributors', function () {
     expect(DistributorResource::shouldRegisterNavigation())->toBeTrue();
 });
 
-it('denies Sales Representative from viewing distributors', function () {
+it('allows Sales Staff to view distributors as reference data', function () {
     actingAs($this->salesRep);
 
-    expect($this->salesRep->can('viewAny', Distributor::class))->toBeFalse();
-    expect(DistributorResource::shouldRegisterNavigation())->toBeFalse();
+    // Reference data is viewable by every Sales & Marketing role (view_any_distributor
+    // ships in the shared reference permission set), which matches production.
+    expect($this->salesRep->can('viewAny', Distributor::class))->toBeTrue();
+    expect(DistributorResource::shouldRegisterNavigation())->toBeTrue();
 });
