@@ -30,8 +30,9 @@ class LeadsTable
                 // Role-based visibility: staff sees own, managers see subordinates, etc.
                 self::applyVisibilityScope($query, 'created_by');
 
-                // Also include leads where the user is a collaborator (skip for Super Admin)
-                if ($user && ! $user->hasRole('Super Admin')) {
+                // Also include leads where the user is a collaborator (skip for global viewers,
+                // whose scope adds no WHERE and would be swallowed by this top-level OR)
+                if ($user && ! $user->hasGlobalVisibility()) {
                     $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
                 }
 

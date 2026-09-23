@@ -45,3 +45,4 @@ graphify-out/
 .omp/
 TODO.md
 mmg-feedback-*.md
+.env.testing

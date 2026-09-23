@@ -37,11 +37,12 @@ class ActivitiesTable
                 // Apply base visibility scope (user_id-based filtering)
                 self::applyVisibilityScope($query, 'user_id');
 
-                // For non-Super Admin users, also include activities on leads
+                // For non-global-viewer users, also include activities on leads
                 // where the user is the creator or a collaborator,
                 // but only if the activity's user is in the same territory.
-                // Director sees all territories, so no territory constraint.
-                if (! $user->hasRole('Super Admin')) {
+                // Global viewers already see everything, so a top-level OR here
+                // would collapse into the only condition.
+                if (! $user->hasGlobalVisibility()) {
                     $leadIds = DB::table('lead_collaborators')
                         ->where('user_id', $user->id)
                         ->pluck('lead_id')

@@ -30,7 +30,9 @@ class LeadStatusChart extends ChartWidget
 
         self::applyVisibilityScope($baseQuery, 'created_by');
 
-        if ($user && ! $user->hasRole('Super Admin')) {
+        // Global viewers already see every lead: adding this as a top-level OR
+        // would collapse into the only condition when the scope adds no WHERE.
+        if ($user && ! $user->hasGlobalVisibility()) {
             $baseQuery->orWhereHas('collaborators', fn (Builder $q) => $q->where('users.id', $user->id));
         }
 
