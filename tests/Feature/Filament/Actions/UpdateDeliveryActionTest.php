@@ -10,7 +10,9 @@ use function Pest\Laravel\actingAs;
 it('can render update delivery action', function () {
     $user = User::factory()->create();
     Permission::firstOrCreate(['name' => 'update_delivery_order']);
-    $user->givePermissionTo('update_delivery_order');
+    Permission::firstOrCreate(['name' => 'view_order']);
+    Permission::firstOrCreate(['name' => 'view_any_order']);
+    $user->givePermissionTo(['update_delivery_order', 'view_order', 'view_any_order']);
     $order = Order::factory()->create(['created_by' => $user->id]);
 
     actingAs($user);

@@ -37,16 +37,13 @@ it('is not visible when user lacks permission', function (): void
     expect($action->isVisible())->toBeFalse();
 });
 
-it('creates delivery status record on action', function (): void
-{
+it('creates a delivery status record when the action runs', function (): void {
     $order = Order::factory()->create();
     $user = User::factory()->create();
     Permission::firstOrCreate(['name' => 'update_delivery_order']);
     $user->givePermissionTo('update_delivery_order');
 
     $this->actingAs($user);
-
-    $action = UpdateDeliveryAction::make('updateDelivery');
 
     $data = [
         'carrier' => 'JNE',
@@ -57,7 +54,11 @@ it('creates delivery status record on action', function (): void
         'notes' => 'Test shipment',
     ];
 
-    $action->evaluate($data, ['record' => $order]);
+    // Call the action's own handler, not the form schema: evaluate() would
+    // invoke the form definition and never reach the closure that persists.
+    $action = UpdateDeliveryAction::make('updateDelivery');
+    $action->record($order);
+    $action->call(['data' => $data]);
 
     $this->assertDatabaseHas(DeliveryStatus::class, [
         'order_id' => $order->id,

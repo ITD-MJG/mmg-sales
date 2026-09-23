@@ -61,11 +61,25 @@ abstract class BasePolicy
     }
 
     /**
+     * Whether the user holds the permission backing an ability.
+     *
+     * checkPermissionTo() is deliberate: hasPermissionTo() throws
+     * PermissionDoesNotExist, and these methods run for every resource on every
+     * render (Filament renders global search across the whole panel). One
+     * missing permission row would otherwise 500 the entire admin. A permission
+     * that does not exist is one nobody can hold, so denying is correct.
+     */
+    protected function allows(User $user, string $ability): bool
+    {
+        return $user->checkPermissionTo("{$ability}_{$this->model}");
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo("view_any_{$this->model}");
+        return $this->allows($user, 'view_any');
     }
 
     /**
@@ -73,7 +87,7 @@ abstract class BasePolicy
      */
     public function view(User $user, $model): bool
     {
-        return $user->hasPermissionTo("view_{$this->model}");
+        return $this->allows($user, 'view');
     }
 
     /**
@@ -81,7 +95,7 @@ abstract class BasePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo("create_{$this->model}");
+        return $this->allows($user, 'create');
     }
 
     /**
@@ -89,7 +103,7 @@ abstract class BasePolicy
      */
     public function update(User $user, $model): bool
     {
-        return $user->hasPermissionTo("update_{$this->model}");
+        return $this->allows($user, 'update');
     }
 
     /**
@@ -97,7 +111,7 @@ abstract class BasePolicy
      */
     public function delete(User $user, $model): bool
     {
-        return $user->hasPermissionTo("delete_{$this->model}");
+        return $this->allows($user, 'delete');
     }
 
     /**
@@ -105,7 +119,7 @@ abstract class BasePolicy
      */
     public function restore(User $user, $model): bool
     {
-        return $user->hasPermissionTo("restore_{$this->model}");
+        return $this->allows($user, 'restore');
     }
 
     /**
@@ -113,6 +127,6 @@ abstract class BasePolicy
      */
     public function forceDelete(User $user, $model): bool
     {
-        return $user->hasPermissionTo("force_delete_{$this->model}");
+        return $this->allows($user, 'force_delete');
     }
 }

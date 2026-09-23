@@ -18,7 +18,7 @@ class LeadPolicy extends BasePolicy
     public function update(User $user, $model): bool
     {
         // Must have update permission AND be the creator
-        if (! $user->hasPermissionTo("update_{$this->model}")) {
+        if (! $this->allows($user, 'update')) {
             return false;
         }
 
@@ -33,7 +33,7 @@ class LeadPolicy extends BasePolicy
     public function delete(User $user, $model): bool
     {
         // Must have delete permission AND be the creator
-        if (! $user->hasPermissionTo("delete_{$this->model}")) {
+        if (! $this->allows($user, 'delete')) {
             return false;
         }
 

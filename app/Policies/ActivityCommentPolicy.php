@@ -17,7 +17,7 @@ class ActivityCommentPolicy extends BasePolicy
      */
     public function createForActivity(User $user, $activity): bool
     {
-        if (! $user->hasPermissionTo("create_{$this->model}")) {
+        if (! $this->allows($user, 'create')) {
             return false;
         }
 
@@ -26,7 +26,7 @@ class ActivityCommentPolicy extends BasePolicy
 
     public function update(User $user, $model): bool
     {
-        if (! $user->hasPermissionTo("update_{$this->model}")) {
+        if (! $this->allows($user, 'update')) {
             return false;
         }
 
@@ -35,7 +35,7 @@ class ActivityCommentPolicy extends BasePolicy
 
     public function delete(User $user, $model): bool
     {
-        if (! $user->hasPermissionTo("delete_{$this->model}")) {
+        if (! $this->allows($user, 'delete')) {
             return false;
         }
 
