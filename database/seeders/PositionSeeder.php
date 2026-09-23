@@ -19,7 +19,7 @@ class PositionSeeder extends Seeder
 
         $positions = [
             // Management
-            ['name' => 'Board of Director', 'code' => 'BOD', 'department_id' => $mgmtDept->id, 'level' => 0],
+            ['name' => 'Managing Director', 'code' => 'BOD', 'department_id' => $mgmtDept->id, 'level' => 0],
 
             // PROD Department
             ['name' => 'Head', 'code' => 'HEAD', 'department_id' => $prodDept->id, 'level' => 1],

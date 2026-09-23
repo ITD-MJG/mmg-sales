@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Customer;
+use App\Models\Department;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\User;
@@ -11,11 +12,14 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
-    $this->bodUser = User::factory()->create();
-    $this->bodUser->assignRole('Board of Director');
+
+    // A read-only global viewer: Director sitting in the Management department.
+    $management = Department::factory()->create(['name' => Department::MANAGEMENT]);
+    $this->bodUser = User::factory()->create(['department_id' => $management->id]);
+    $this->bodUser->assignRole('Management Director');
 });
 
-it('allows BOD to view resources but denies create/update/delete', function () {
+it('allows a Management Director to view resources but denies create/update/delete', function () {
     $lead = Lead::factory()->create();
     $customer = Customer::factory()->create();
 

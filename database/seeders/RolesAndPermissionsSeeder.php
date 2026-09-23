@@ -131,8 +131,14 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // ── 5. Management Director ──────────────────────────────────────
-        // Reports access + view reference data + view comments
+        // The read-only global viewer. Sees every record across every resource,
+        // writes none: BasePolicy::before() denies every write ability for this
+        // role, so only the view_* grants below are load-bearing.
         $directorPermissions = array_merge($reportPermissions, $viewReference, [
+            'view_any_lead', 'view_lead',
+            'view_any_order', 'view_order',
+            'view_any_activity', 'view_activity',
+            'view_any_target', 'view_target',
             'view_any_activity_comment', 'view_activity_comment',
         ]);
 

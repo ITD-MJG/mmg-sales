@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 class DepartmentPositionSeeder extends Seeder
 {
     private array $departments = [
-        ['name' => 'Board of Directors', 'code' => 'BOD', 'description' => 'Company board of directors'],
+        ['name' => 'Management', 'code' => 'MGMT', 'description' => 'Company management and board of directors'],
         ['name' => 'Sales', 'code' => 'SAL', 'description' => 'Sales department'],
         ['name' => 'Marketing', 'code' => 'MKT', 'description' => 'Marketing department'],
         ['name' => 'Technical Sales Support', 'code' => 'TSS', 'description' => 'Technical Sales Support department'],
@@ -20,10 +20,10 @@ class DepartmentPositionSeeder extends Seeder
     ];
 
     private array $positions = [
-        // Board of Directors
-        'BOD' => [
-            ['name' => 'Managing Director', 'level' => 1, 'code' => 'MD'],
-            ['name' => 'Director', 'level' => 2, 'code' => 'DIR'],
+        // Management
+        'MGMT' => [
+            ['name' => 'Managing Director', 'level' => 0, 'code' => 'MD'],
+            ['name' => 'Director', 'level' => 1, 'code' => 'DIR'],
         ],
         // Marketing
         'MKT' => [

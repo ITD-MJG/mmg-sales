@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Resources\Leads\Pages\ListLeads;
+use App\Models\Department;
 use App\Models\Lead;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -14,11 +15,14 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
-    $this->bodUser = User::factory()->create();
-    $this->bodUser->assignRole('Board of Director');
+
+    // A read-only global viewer: Director sitting in the Management department.
+    $management = Department::factory()->create(['name' => Department::MANAGEMENT]);
+    $this->bodUser = User::factory()->create(['department_id' => $management->id]);
+    $this->bodUser->assignRole('Management Director');
 });
 
-it('allows BOD to access lead list but forbids create and edit pages', function () {
+it('allows a Management Director to access the lead list but forbids create and edit pages', function () {
     $lead = Lead::factory()->create();
 
     actingAs($this->bodUser);
@@ -36,7 +40,7 @@ it('allows BOD to access lead list but forbids create and edit pages', function 
         ->assertForbidden();
 });
 
-it('hides create and edit actions from lead table for BOD but shows view', function () {
+it('hides create and edit actions from the lead table for a Management Director but shows view', function () {
     $lead = Lead::factory()->create();
 
     actingAs($this->bodUser);
