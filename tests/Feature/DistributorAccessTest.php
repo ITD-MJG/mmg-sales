@@ -18,7 +18,7 @@ beforeEach(function () {
     $this->superAdmin->assignRole('Super Admin');
 
     $this->salesRep = User::factory()->create();
-    $this->salesRep->assignRole('SalesRepresentative');
+    $this->salesRep->assignRole('Sales Staff');
 });
 
 it('allows Super Admin to view distributors', function () {

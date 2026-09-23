@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Activity;
 use App\Models\Customer;
+use App\Models\Department;
 use App\Models\User;
 use App\Services\ActivityScopeService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -26,7 +27,7 @@ class ActivityScopeServiceTest extends TestCase
     public function test_sales_representative_can_only_see_their_own_activities()
     {
         $sr = User::factory()->create();
-        $sr->assignRole('SalesRepresentative');
+        $sr->assignRole('Sales Staff');
         $otherUser = User::factory()->create();
 
         $srActivity = Activity::factory()->create(['user_id' => $sr->id]);
@@ -41,7 +42,7 @@ class ActivityScopeServiceTest extends TestCase
     public function test_manager_can_see_their_own_and_subordinates_activities()
     {
         $manager = User::factory()->create();
-        $manager->assignRole('AreaSalesManager');
+        $manager->assignRole('Area Sales Manager');
 
         $subordinate = User::factory()->create(['manager_id' => $manager->id]);
         $grandSubordinate = User::factory()->create(['manager_id' => $subordinate->id]);
@@ -62,8 +63,10 @@ class ActivityScopeServiceTest extends TestCase
 
     public function test_head_can_see_all_activities()
     {
-        $head = User::factory()->create();
-        $head->assignRole('Head');
+        // A global viewer: Management-department Director sees every activity.
+        $management = Department::factory()->create(['name' => Department::MANAGEMENT]);
+        $head = User::factory()->create(['department_id' => $management->id]);
+        $head->assignRole('Management Director');
         $sr = User::factory()->create();
 
         $activity = Activity::factory()->create(['user_id' => $sr->id]);

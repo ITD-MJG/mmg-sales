@@ -28,7 +28,7 @@ it('shows import action to Super Admin', function () {
 
 it('shows import action to Regional Sales Manager', function () {
     $user = User::factory()->create();
-    $user->assignRole('RegionalSalesManager');
+    $user->assignRole('Regional Sales Manager');
 
     actingAs($user);
 
@@ -38,7 +38,7 @@ it('shows import action to Regional Sales Manager', function () {
 
 it('hides import action from Sales Representative', function () {
     $user = User::factory()->create();
-    $user->assignRole('SalesRepresentative');
+    $user->assignRole('Sales Staff');
 
     actingAs($user);
 
