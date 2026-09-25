@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -43,4 +44,71 @@ it('preserves all seven legacy stage values in the enum', function () {
     foreach (['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] as $stage) {
         expect($column->Type)->toContain($stage);
     }
+});
+
+it('preserves legacy rows and products across the rename', function () {
+    $migration = 'database/migrations/2026_09_26_000001_rename_leads_to_opportunities_and_split.php';
+
+    // Roll M1 back one step so the pre-rename shape (`leads` + `status`, `lead_product`) exists.
+    Artisan::call('migrate:rollback', ['--path' => $migration, '--force' => true]);
+
+    // A product to hang a lead_product row off.
+    $productId = DB::table('products')->insertGetId([
+        'name' => 'Legacy Test Product',
+        'unit_price' => 100000,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Two legacy leads: one `new`, one `contacted`.
+    $newLeadId = DB::table('leads')->insertGetId([
+        'lead_code' => 'LEAD-M1-NEW',
+        'title' => 'Legacy New Lead',
+        'customer_name' => 'Acme Legacy',
+        'phone' => '080000000001',
+        'status' => 'new',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $contactedLeadId = DB::table('leads')->insertGetId([
+        'lead_code' => 'LEAD-M1-CONTACTED',
+        'title' => 'Legacy Contacted Lead',
+        'customer_name' => 'Beta Legacy',
+        'phone' => '080000000002',
+        'status' => 'contacted',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $productRowId = DB::table('lead_product')->insertGetId([
+        'lead_id' => $newLeadId,
+        'product_id' => $productId,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Run M1 forward.
+    Artisan::call('migrate', ['--path' => $migration, '--force' => true]);
+
+    // Both leads survive with their stage values intact and unchanged ids.
+    $newRow = DB::table('opportunities')->where('id', $newLeadId)->first();
+    $contactedRow = DB::table('opportunities')->where('id', $contactedLeadId)->first();
+
+    expect($newRow)->not->toBeNull()
+        ->and($newRow->stage)->toBe('new');
+    expect($contactedRow)->not->toBeNull()
+        ->and($contactedRow->stage)->toBe('contacted');
+
+    // The lead_product row survives and still points at the renamed opportunity.
+    $productRow = DB::table('opportunity_product')->where('id', $productRowId)->first();
+
+    expect($productRow)->not->toBeNull()
+        ->and($productRow->opportunity_id)->toBe($newLeadId)
+        ->and($productRow->product_id)->toBe($productId);
+
+    // Leave the testing DB clean for other tests (schema stays migrated).
+    DB::table('opportunity_product')->where('id', $productRowId)->delete();
+    DB::table('opportunities')->whereIn('id', [$newLeadId, $contactedLeadId])->delete();
+    DB::table('products')->where('id', $productId)->delete();
 });
