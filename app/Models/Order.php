@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Observers\OrderObserver;
 use App\Services\ResourceCodeGenerator;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
+#[ObservedBy(OrderObserver::class)]
 class Order extends Model
 {
     use HasFactory;
@@ -33,7 +36,7 @@ class Order extends Model
         'jual_kso',
         'distributor_id',
         'order_number',
-        'lead_id',
+        'opportunity_id',
         'subtotal',
         'tax_amount',
         'discount_amount',
@@ -123,9 +126,9 @@ class Order extends Model
         return $this->belongsTo(Distributor::class);
     }
 
-    public function lead(): BelongsTo
+    public function opportunity(): BelongsTo
     {
-        return $this->belongsTo(Lead::class, 'lead_id');
+        return $this->belongsTo(Opportunity::class, 'opportunity_id');
     }
 
     public function creator(): BelongsTo

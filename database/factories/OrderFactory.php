@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\Customer;
 use App\Models\Department;
 use App\Models\Distributor;
-use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Position;
 use App\Models\Principal;
@@ -40,7 +39,7 @@ class OrderFactory extends Factory
             'net_sales_total' => $total,
             'jual_kso' => fake()->randomElement(['Jual', 'KSO']),
             'distributor_id' => Distributor::factory(),
-            'lead_id' => Lead::factory(),
+            'opportunity_id' => null,
             'discount_on' => fake()->randomFloat(2, 0, 20),
             'subtotal' => $subtotal,
             'tax_amount' => $tax,
