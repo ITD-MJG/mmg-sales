@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\OrderItem;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class TopSellingProductsChart extends ChartWidget
 {
@@ -41,7 +40,7 @@ class TopSellingProductsChart extends ChartWidget
 
         $data = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())
-            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('products', 'order_items.item_id', '=', 'products.id')
             ->selectRaw('products.name as product_name, SUM(order_items.quantity) as total_qty')
             ->groupBy('products.name')
             ->orderByDesc('total_qty')

@@ -3,7 +3,6 @@
 use App\DTOs\ReportFilterData;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Item;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Principal;
@@ -17,31 +16,6 @@ function createTerritory(string $name = 'Test Territory'): object
     $id = DB::table('territories')->insertGetId(['name' => $name, 'created_at' => now(), 'updated_at' => now()]);
 
     return (object) ['id' => $id, 'name' => $name];
-}
-
-function createOrderWithItem(array $orderOverrides = [], array $itemOverrides = []): array
-{
-    $principal = Principal::factory()->create();
-    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
-    $territory = createTerritory();
-    $user = User::factory()->create(['territory_id' => $territory->id]);
-    $item = Item::factory()->create();
-
-    $order = Order::factory()->create(array_merge([
-        'created_by' => $user->id,
-        'end_customer_id' => $customer->id,
-        'principal_id' => $principal->id,
-        'order_date' => Carbon::now()->format('Y-m-d'),
-    ], $orderOverrides));
-
-    $orderItem = OrderItem::factory()->create(array_merge([
-        'order_id' => $order->id,
-        'principal_id' => $principal->id,
-        'item_id' => $item->id,
-        'subtotal' => 500000,
-    ], $itemOverrides));
-
-    return compact('order', 'orderItem', 'principal', 'customer', 'user', 'item');
 }
 
 function makeFilters(array $overrides = []): ReportFilterData
@@ -101,6 +75,7 @@ it('returns revenue by sales rep from order_items', function () {
 
     $order = Order::factory()->create([
         'created_by' => $user->id,
+        'sales' => [$user->id],
         'end_customer_id' => $customer->id,
         'order_date' => Carbon::now()->format('Y-m-d'),
     ]);
@@ -125,6 +100,7 @@ it('returns revenue by territory from order_items', function () {
 
     $order = Order::factory()->create([
         'created_by' => $user->id,
+        'sales' => [$user->id],
         'end_customer_id' => $customer->id,
         'order_date' => Carbon::now()->format('Y-m-d'),
     ]);

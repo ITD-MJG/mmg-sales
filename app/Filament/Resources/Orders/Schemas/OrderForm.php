@@ -110,7 +110,7 @@ class OrderForm
 
                                         $orderItems = $lead->products->map(fn ($product) => [
                                             'principal_id' => $product->principal_id,
-                                            'product_id' => $product->id,
+                                            'item_id' => $product->id,
                                             'quantity' => 1,
                                             'price_type' => 'unit_price',
                                             'unit_price' => $product->unit_price ?? 0,
@@ -304,8 +304,8 @@ class OrderForm
                                             ->searchable()
                                             ->required()
                                             ->live()
-                                            ->afterStateUpdated(fn ($set) => $set('product_id', null)),
-                                        Select::make('product_id')
+                                            ->afterStateUpdated(fn ($set) => $set('item_id', null)),
+                                        Select::make('item_id')
                                             ->label('Product')
                                             ->options(fn ($get) => $get('principal_id')
                                                 ? Product::where('principal_id', $get('principal_id'))->pluck('name', 'id')
@@ -337,7 +337,7 @@ class OrderForm
                                             ->numeric()
                                             ->prefix('IDR')
                                             ->live()
-                                            ->readOnly(fn ($get) => ! $get('principal_id') || ! $get('product_id'))
+                                            ->readOnly(fn ($get) => ! $get('principal_id') || ! $get('item_id'))
                                             ->afterStateUpdated(fn ($set, $get) => $set('subtotal', (int) $get('quantity') * (float) $get('unit_price')))
                                             ->columnSpan(1),
                                     ]),
@@ -391,12 +391,12 @@ class OrderForm
 
     protected static function updateLineTotal($set, $get): void
     {
-        $productId = $get('product_id');
+        $itemId = $get('item_id');
         $quantity = (int) $get('quantity');
         $priceType = $get('price_type') ?? 'unit_price';
 
-        if ($productId) {
-            $product = Product::find($productId);
+        if ($itemId) {
+            $product = Product::find($itemId);
             if ($product) {
                 $unitPrice = $priceType === 'ecatalog_price'
                     ? ($product->ecatalog_price ?? $product->unit_price ?? 0)
@@ -429,6 +429,7 @@ class OrderForm
         $discountPercent = (float) $get('discount_on');
         $netSales = $grossSales * (1 - ($discountPercent / 100));
         $set('total_amount', $netSales);
+        $set('net_sales_total', $netSales);
     }
 
     protected static function calculateNetSales($set, $get): void
@@ -437,5 +438,6 @@ class OrderForm
         $discountPercent = (float) $get('discount_on');
         $netSales = $grossSales * (1 - ($discountPercent / 100));
         $set('total_amount', $netSales);
+        $set('net_sales_total', $netSales);
     }
 }

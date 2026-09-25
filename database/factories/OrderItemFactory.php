@@ -2,22 +2,22 @@
 
 namespace Database\Factories;
 
-use App\Models\Item;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class OrderItemFactory extends Factory
 {
     public function definition(): array
     {
-        $item = Item::factory()->create();
+        $product = Product::factory()->create();
         $quantity = fake()->numberBetween(1, 100);
-        $unitPrice = $item->unit_price;
+        $unitPrice = $product->unit_price;
         $subtotal = $quantity * $unitPrice;
 
         return [
             'order_id' => Order::factory(),
-            'item_id' => $item->id,
+            'item_id' => $product->id,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'current_price' => $unitPrice,

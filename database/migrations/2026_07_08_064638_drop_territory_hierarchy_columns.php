@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,9 +12,21 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite cannot drop a foreign key by name; pass the columns so the
+            // grammar removes them from the rebuilt table definition.
+            Schema::table('territories', function (Blueprint $table) {
+                $table->dropForeign(['parent_id']);
+                $table->dropForeign(['manager_id']);
+            });
+        } else {
+            Schema::table('territories', function (Blueprint $table) {
+                $table->dropForeign('territories_parent_id_foreign');
+                $table->dropForeign('territories_manager_id_foreign');
+            });
+        }
+
         Schema::table('territories', function (Blueprint $table) {
-            $table->dropForeign('territories_parent_id_foreign');
-            $table->dropForeign('territories_manager_id_foreign');
             $table->dropColumn([
                 'wilayah_code',
                 'type',

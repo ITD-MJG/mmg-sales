@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -8,6 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            $this->upSqlite();
+
+            return;
+        }
+
         // 1. Drop FK constraints that reference projects.id
         DB::statement('ALTER TABLE orders DROP FOREIGN KEY orders_project_id_foreign');
         DB::statement('ALTER TABLE activities DROP FOREIGN KEY activities_project_id_foreign');
@@ -56,8 +63,113 @@ return new class extends Migration
         });
     }
 
+    /**
+     * SQLite cannot ALTER ... DROP FOREIGN KEY, but it rewrites foreign key
+     * references automatically when tables and columns are renamed, so only
+     * portable schema operations are needed.
+     */
+    private function upSqlite(): void
+    {
+        Schema::rename('projects', 'leads');
+        Schema::rename('project_collaborators', 'lead_collaborators');
+        Schema::rename('project_product', 'lead_product');
+        Schema::rename('project_milestone', 'lead_milestone');
+
+        Schema::table('orders', function (Blueprint $table) {
+            $table->renameColumn('project_id', 'lead_id');
+        });
+        Schema::table('activities', function (Blueprint $table) {
+            $table->renameColumn('project_id', 'lead_id');
+        });
+        Schema::table('lead_collaborators', function (Blueprint $table) {
+            $table->renameColumn('project_id', 'lead_id');
+        });
+        Schema::table('lead_product', function (Blueprint $table) {
+            $table->renameColumn('project_id', 'lead_id');
+        });
+        Schema::table('lead_milestone', function (Blueprint $table) {
+            $table->renameColumn('project_id', 'lead_id');
+        });
+
+        Schema::table('activities', function (Blueprint $table) {
+            $table->index(['lead_id', 'performed_at'], 'activities_lead_id_performed_at_index');
+        });
+        Schema::table('lead_collaborators', function (Blueprint $table) {
+            $table->unique(['lead_id', 'user_id'], 'lead_collaborators_lead_id_user_id_unique');
+        });
+
+        Schema::table('leads', function (Blueprint $table) {
+            $table->string('lead_code', 20)->nullable();
+        });
+
+        DB::table('leads')->whereNull('lead_code')->update(['lead_code' => DB::raw('project_code')]);
+
+        // SQLite keeps the original index name after a table rename, so the
+        // stale unique index on project_code must go before the column does.
+        Schema::table('leads', function (Blueprint $table) {
+            $table->dropUnique('projects_project_code_unique');
+        });
+
+        // Dropping columns rebuilds the table on SQLite, so the unique index is
+        // added afterwards to avoid the rebuild discarding it. The FK on
+        // contact_person must be dropped first or the rebuild keeps it and
+        // fails with "unknown column contact_person in foreign key definition".
+        Schema::table('leads', function (Blueprint $table) {
+            $table->dropForeign(['contact_person']);
+        });
+        Schema::table('leads', function (Blueprint $table) {
+            $table->dropColumn(['project_code', 'contact_person']);
+        });
+        Schema::table('leads', function (Blueprint $table) {
+            $table->unique('lead_code', 'leads_lead_code_unique');
+        });
+    }
+
+    private function downSqlite(): void
+    {
+        Schema::table('leads', function (Blueprint $table) {
+            $table->dropUnique('leads_lead_code_unique');
+        });
+        Schema::table('leads', function (Blueprint $table) {
+            $table->string('project_code', 20)->nullable();
+            $table->unsignedBigInteger('contact_person')->nullable();
+        });
+
+        DB::table('leads')->whereNull('project_code')->update(['project_code' => DB::raw('lead_code')]);
+
+        Schema::table('leads', function (Blueprint $table) {
+            $table->dropColumn('lead_code');
+        });
+
+        Schema::table('activities', function (Blueprint $table) {
+            $table->renameColumn('lead_id', 'project_id');
+        });
+        Schema::table('orders', function (Blueprint $table) {
+            $table->renameColumn('lead_id', 'project_id');
+        });
+        Schema::table('lead_collaborators', function (Blueprint $table) {
+            $table->renameColumn('lead_id', 'project_id');
+        });
+        Schema::table('lead_product', function (Blueprint $table) {
+            $table->renameColumn('lead_id', 'project_id');
+        });
+        Schema::table('lead_milestone', function (Blueprint $table) {
+            $table->renameColumn('lead_id', 'project_id');
+        });
+
+        Schema::rename('leads', 'projects');
+        Schema::rename('lead_collaborators', 'project_collaborators');
+        Schema::rename('lead_product', 'project_product');
+        Schema::rename('lead_milestone', 'project_milestone');
+    }
+
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            $this->downSqlite();
+
+            return;
+        }
         // Reverse: add back project_code, copy lead_code values, drop lead_code
         Schema::table('leads', function ($table) {
             $table->string('project_code', 20)->unique()->nullable()->after('id');

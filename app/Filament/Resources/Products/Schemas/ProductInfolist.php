@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
-use Carbon\Carbon;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -20,8 +19,8 @@ class ProductInfolist
                             ->label('Product Name')
                             ->weight('bold')
                             ->columnSpan(2),
-                        TextEntry::make('sku')
-                            ->label('SKU'),
+                        TextEntry::make('internal_code')
+                            ->label('Internal Code'),
                         TextEntry::make('principal.name')
                             ->label('Principal'),
                         TextEntry::make('category')
@@ -30,26 +29,16 @@ class ProductInfolist
                         TextEntry::make('unit_price')
                             ->label('Price')
                             ->money('IDR'),
+                        TextEntry::make('ecatalog_price')
+                            ->label('E-Catalog Price')
+                            ->money('IDR'),
                         TextEntry::make('unit_of_measure')
                             ->label('UoM'),
-                        TextEntry::make('manufacturer'),
-                        TextEntry::make('expiry_date')
-                            ->date('d M Y')
-                            ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y')) : '-'),
-                        TextEntry::make('storage_requirements'),
-                    ]),
-
-                Section::make('Inventory')
-                    ->columns(3)
-                    ->schema([
-                        TextEntry::make('stock_quantity')
-                            ->label('Current Stock')
-                            ->weight('bold')
-                            ->color(fn ($record) => $record->stock_quantity <= $record->minimum_stock ? 'danger' : 'success'),
-                        TextEntry::make('minimum_stock')
-                            ->label('Min. Stock'),
-                        TextEntry::make('reorder_quantity')
-                            ->label('Reorder Qty'),
+                        TextEntry::make('is_active')
+                            ->label('Active')
+                            ->badge()
+                            ->color(fn ($state) => $state ? 'success' : 'danger')
+                            ->formatStateUsing(fn ($state) => $state ? 'Active' : 'Inactive'),
                     ]),
 
                 Section::make('Description')

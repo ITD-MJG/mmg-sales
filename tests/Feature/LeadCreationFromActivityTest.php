@@ -25,7 +25,7 @@ it('auto-links unlinked activities when lead is created', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
 
     // Create 2 activities without a lead
     $activity1 = Activity::factory()->create([
@@ -68,7 +68,7 @@ it('does not relink activities already assigned to another lead', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
 
     // Create a lead first
     $existingLead = Lead::factory()->create([

@@ -36,18 +36,14 @@ class ProductForm
 
                 Section::make('Pricing')
                     ->schema([
-                        Select::make('currency')
-                            ->options([
-                                'IDR' => 'IDR',
-                                'USD' => 'USD',
-                            ])
-                            ->default('IDR')
-                            ->required()
-                            ->live(),
                         TextInput::make('unit_price')
                             ->required()
                             ->numeric()
-                            ->prefix(fn (callable $get) => $get('currency') ?? 'IDR'),
+                            ->prefix('IDR'),
+                        TextInput::make('ecatalog_price')
+                            ->label('E-Catalog Price')
+                            ->numeric()
+                            ->prefix('IDR'),
                     ])
                     ->columns(2),
 

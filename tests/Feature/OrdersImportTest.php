@@ -7,10 +7,10 @@ use App\Jobs\ImportOrdersJob;
 use App\Models\Customer;
 use App\Models\Department;
 use App\Models\Distributor;
-use App\Models\Item;
 use App\Models\Order;
 use App\Models\Position;
 use App\Models\Principal;
+use App\Models\Product;
 use App\Models\Segment;
 use App\Models\Territory;
 use App\Models\User;
@@ -31,16 +31,15 @@ test('orders import parses valid data correctly', function () {
 
     $territory = Territory::create(['name' => 'BATAM', 'type' => 'city', 'level' => 3]);
     $customer = Customer::create(['name' => 'PT. Batam Karya Husada']);
-    $principal = Principal::create(['name' => 'Abbott', 'code' => 'ABBOTT']);
+    $principal = Principal::create(['name' => 'Abbott', 'initial' => 'ABB']);
     $segment = Segment::create(['name' => 'UNIVERSITY', 'code' => 'UNIV']);
     $distributor = Distributor::create(['name' => 'MJG', 'code' => 'MJG']);
 
-    $item = Item::create([
+    $product = Product::create([
         'name' => '9H48.02 - EMERALD DILUENT',
         'principal_id' => $principal->id,
         'unit_price' => 10000000,
         'internal_code' => 'ABB-TD-00303',
-        'principle_code' => '9H48.02',
     ]);
 
     // 2. Mock Excel Data (Using index based on tinker dump)
@@ -65,7 +64,7 @@ test('orders import parses valid data correctly', function () {
 
 test('orders import fails atomically if master data is missing', function () {
     // 1. Setup minimal Master Data (Missing Department 'MMG')
-    Principal::create(['name' => 'Abbott', 'code' => 'ABBOTT']);
+    Principal::create(['name' => 'Abbott', 'initial' => 'ABB']);
 
     $data = [
         [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
@@ -98,16 +97,15 @@ test('orders import skips duplicates correctly', function () {
 
     $territory = Territory::create(['name' => 'BATAM', 'type' => 'city', 'level' => 3]);
     $customer = Customer::create(['name' => 'PT. Batam Karya Husada']);
-    $principal = Principal::create(['name' => 'Abbott', 'code' => 'ABBOTT']);
+    $principal = Principal::create(['name' => 'Abbott', 'initial' => 'ABB']);
     $segment = Segment::create(['name' => 'UNIVERSITY', 'code' => 'UNIV']);
     $distributor = Distributor::create(['name' => 'MJG', 'code' => 'MJG']);
 
-    $item = Item::create([
+    $product = Product::create([
         'name' => '9H48.02 - EMERALD DILUENT',
         'principal_id' => $principal->id,
         'unit_price' => 10000000,
         'internal_code' => 'ABB-TD-00303',
-        'principle_code' => '9H48.02',
     ]);
 
     $data = [
@@ -137,9 +135,9 @@ test('ImportOrdersJob dispatches and sends notification', function () {
     Position::create(['name' => 'SUMBAGUT_ARI', 'code' => 'SR', 'level' => 5, 'department_id' => $dept->id]);
     Territory::create(['name' => 'BATAM', 'type' => 'city', 'level' => 3]);
     Customer::create(['name' => 'PT. Batam Karya Husada']);
-    Principal::create(['name' => 'Abbott', 'code' => 'ABB']);
+    Principal::create(['name' => 'Abbott', 'initial' => 'ABB']);
     Segment::create(['name' => 'UNIVERSITY', 'code' => 'UNIV']);
-    Item::create(['name' => '9H48.02 - EMERALD DILUENT', 'principal_id' => Principal::where('name', 'Abbott')->first()->id, 'unit_price' => 10000000, 'internal_code' => 'ABB-TD-00303', 'principle_code' => '9H48.02']);
+    Product::create(['name' => '9H48.02 - EMERALD DILUENT', 'principal_id' => Principal::where('name', 'Abbott')->first()->id, 'unit_price' => 10000000, 'internal_code' => 'ABB-TD-00303']);
     Distributor::create(['name' => 'MJG', 'code' => 'MJG']);
 
     $data = [

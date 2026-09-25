@@ -28,6 +28,7 @@ class Order extends Model
         'principal_id',
         'reg_inst',
         'sales_type_id',
+        'discount_on',
         'net_sales_total',
         'jual_kso',
         'distributor_id',
@@ -107,7 +108,6 @@ class Order extends Model
         return $this->belongsTo(Position::class, 'spv_position_id');
     }
 
-
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'end_customer_id');
@@ -148,7 +148,12 @@ class Order extends Model
         return $this->hasMany(PaymentStatus::class);
     }
 
-    public function getNetSalesTotalAttribute(): float
+    /**
+     * Sum of line items. Kept separate from the `net_sales_total` column,
+     * which is the stored value and is the only source for imported orders
+     * (the import writes a header with no order_items).
+     */
+    public function orderItemsNetTotal(): float
     {
         return (float) $this->orderItems()->sum('subtotal');
     }

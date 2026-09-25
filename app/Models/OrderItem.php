@@ -10,21 +10,9 @@ class OrderItem extends Model
 {
     use HasFactory;
 
-    protected static function boot(): void
-    {
-        parent::boot();
-
-        static::saving(function (self $model): void {
-            if ($model->product_id && ! $model->item_id) {
-                $model->item_id = $model->product_id;
-            }
-        });
-    }
-
     protected $fillable = [
         'order_id',
         'principal_id',
-        'product_id',
         'item_id',
         'quantity',
         'unit_price',
@@ -55,13 +43,13 @@ class OrderItem extends Model
         return $this->belongsTo(Product::class, 'item_id');
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'item_id');
+    }
+
     public function principal(): BelongsTo
     {
         return $this->belongsTo(Principal::class);
-    }
-
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
     }
 }

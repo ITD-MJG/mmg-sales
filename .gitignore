@@ -45,3 +45,7 @@ graphify-out/
 .omp/
 TODO.md
 mmg-feedback-*.md
+
+# Local tooling indexes and DB dumps (not source)
+/.codegraph
+/storage/backups/db/*.sql

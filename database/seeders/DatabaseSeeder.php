@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             SegmentSeeder::class,
             DistributorSeeder::class,
             PrincipalSeeder::class,
-            PrincipalProductSeeder::class,
+            ProductSeeder::class,
         ]);
     }
 }

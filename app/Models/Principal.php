@@ -39,11 +39,6 @@ class Principal extends Model
 
     protected $codePrefix = 'PRN';
 
-    public function items(): HasMany
-    {
-        return $this->hasMany(Item::class);
-    }
-
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
