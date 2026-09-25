@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Activity;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -31,6 +32,7 @@ class ActivityFactory extends Factory
 
         return [
             'lead_id' => Lead::factory(),
+            'opportunity_id' => null,
             'user_id' => User::factory(),
             'type' => $type,
             'subject' => $subject,
@@ -39,5 +41,21 @@ class ActivityFactory extends Factory
             'duration_minutes' => fake()->randomElement([15, 30, 45, 60, 90]),
             'outcome' => fake()->randomElement(['Interested', 'No Answer', 'Postponed', 'Need more info', 'Not Interested']),
         ];
+    }
+
+    public function forLead(Lead $lead): static
+    {
+        return $this->state(fn () => [
+            'lead_id' => $lead->id,
+            'opportunity_id' => null,
+        ]);
+    }
+
+    public function forOpportunity(Opportunity $opportunity): static
+    {
+        return $this->state(fn () => [
+            'lead_id' => null,
+            'opportunity_id' => $opportunity->id,
+        ]);
     }
 }
