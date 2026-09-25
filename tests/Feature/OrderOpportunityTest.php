@@ -3,6 +3,7 @@
 use App\Models\Opportunity;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -25,8 +26,25 @@ it('marks a linked opportunity as won when an order is created', function () {
 });
 
 it('does not fail when an order has no opportunity', function () {
-    expect(fn () => Order::factory()->create(['opportunity_id' => null]))
-        ->not->toThrow(Throwable::class);
+    $unrelated = Opportunity::factory()->stage('negotiation')->create();
+
+    $order = Order::factory()->create(['opportunity_id' => null]);
+
+    expect($order->exists)->toBeTrue()
+        ->and($order->opportunity_id)->toBeNull()
+        ->and($unrelated->refresh()->stage)->toBe('negotiation')
+        ->and($unrelated->converted_at)->toBeNull();
+});
+
+it('returns cleanly when the linked opportunity row is missing', function () {
+    // Bypass the FK so the order row can hold an id that resolves to nothing.
+    $order = Schema::withoutForeignKeyConstraints(
+        fn () => Order::factory()->create(['opportunity_id' => 999999])
+    );
+
+    expect($order->exists)->toBeTrue()
+        ->and((int) $order->opportunity_id)->toBe(999999)
+        ->and($order->opportunity)->toBeNull();
 });
 
 it('relates the opportunity', function () {
