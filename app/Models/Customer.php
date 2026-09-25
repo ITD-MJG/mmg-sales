@@ -79,6 +79,11 @@ class Customer extends Model
         return $this->hasMany(Lead::class, 'customer_id');
     }
 
+    public function opportunities(): HasMany
+    {
+        return $this->hasMany(Opportunity::class, 'customer_id');
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'end_customer_id');
