@@ -6,11 +6,10 @@ use App\Models\User;
 use App\Services\ActivityScopeService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
-class TopVisitedLeadsChart extends ChartWidget
+class TopVisitedCustomersChart extends ChartWidget
 {
-    protected ?string $heading = 'Top Leads by Activity';
+    protected ?string $heading = 'Top Visited Customers';
 
     protected static bool $isLazy = false;
 
@@ -30,24 +29,21 @@ class TopVisitedLeadsChart extends ChartWidget
         $service = app(ActivityScopeService::class);
 
         $rows = $service->getActivityQuery($user)
-            ->whereNotNull('lead_id')
-            ->selectRaw('lead_id, COUNT(*) as activity_count')
-            ->groupBy('lead_id')
+            ->whereNotNull('customer_id')
+            ->selectRaw('customer_id, COUNT(*) as activity_count')
+            ->groupBy('customer_id')
             ->orderByDesc('activity_count')
-            ->orderBy('lead_id')
+            ->orderBy('customer_id')
             ->limit(10)
-            ->with(['lead:id,lead_code,title'])
+            // withTrashed(): a deleted customer still owns its historical
+            // activities, and without this the bar would render unlabelled.
+            ->with(['customer' => fn ($query) => $query->withTrashed()->select('id', 'name')])
             ->get();
 
         // No ->reverse(): with indexAxis 'y', Chart.js draws index 0 at the top,
         // so the descending order from the query is already highest-first.
-
-        // lead_code keeps the label unique: leads share titles (several are
-        // called "STI"), and a bar chart with duplicate labels is unreadable.
         $labels = $rows
-            ->map(fn ($row): string => $row->lead
-                ? Str::limit($row->lead->title, 34).' ('.$row->lead->lead_code.')'
-                : 'Lead #'.$row->lead_id)
+            ->map(fn ($row): string => trim($row->customer?->name ?? 'Customer #'.$row->customer_id))
             ->all();
 
         $values = $rows

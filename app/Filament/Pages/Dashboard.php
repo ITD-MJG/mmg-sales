@@ -7,8 +7,7 @@ use App\Filament\Widgets\MonthlyRevenueTrendChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
 use App\Filament\Widgets\TopSellingProductsChart;
-use App\Filament\Widgets\TopVisitedCustomersWidget;
-use App\Filament\Widgets\TopVisitedLeadsChart;
+use App\Filament\Widgets\TopVisitedCustomersChart;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
@@ -31,8 +30,7 @@ class Dashboard extends BaseDashboard
             MonthlyRevenueTrendChart::class,
             RevenueByPrincipalChart::class,
             TopSellingProductsChart::class,
-            TopVisitedLeadsChart::class,
-            TopVisitedCustomersWidget::class,
+            TopVisitedCustomersChart::class,
             TopSalesRepresentativeVisitsWidget::class,
         ];
     }
