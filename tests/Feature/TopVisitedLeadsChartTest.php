@@ -22,6 +22,20 @@ beforeEach(function () {
     actingAs($this->user);
 });
 
+/**
+ * Render the widget and pull the chart payload out of it.
+ *
+ * @return array{labels: array<int, string>, datasets: array<int, array<string, mixed>>}
+ */
+function chartData(): array
+{
+    $component = livewire(TopVisitedLeadsChart::class)->assertOk();
+
+    return (function (): array {
+        return $this->getData();
+    })->call($component->instance());
+}
+
 it('uses a three column dashboard layout', function () {
     expect((new Dashboard)->getColumns())->toBe(3);
 });
@@ -35,13 +49,13 @@ it('registers the top visits by lead chart on the dashboard', function () {
     expect((new Dashboard)->getWidgets())->toContain(TopVisitedLeadsChart::class);
 });
 
-it('renders the top visits by lead chart', function () {
+it('renders the top leads by activity chart', function () {
     livewire(TopVisitedLeadsChart::class)
-        ->assertSee('Top Visits by Lead')
+        ->assertSee('Top Leads by Activity')
         ->assertOk();
 });
 
-it('ranks leads by visit count and excludes activities without a lead', function () {
+it('ranks leads by activity count, highest first, and excludes activities without a lead', function () {
     $busyLead = Lead::factory()->create(['title' => 'Busy Lead']);
     $quietLead = Lead::factory()->create(['title' => 'Quiet Lead']);
 
@@ -63,12 +77,73 @@ it('ranks leads by visit count and excludes activities without a lead', function
         'performed_at' => now(),
     ]);
 
-    $component = livewire(TopVisitedLeadsChart::class)->assertOk();
+    $data = chartData();
 
-    $data = (function () {
-        return $this->getData();
-    })->call($component->instance());
+    // Highest first, and no ->reverse(): index 0 renders at the top of a
+    // horizontal bar chart.
+    expect($data['labels'])->toBe([
+        'Busy Lead ('.$busyLead->lead_code.')',
+        'Quiet Lead ('.$quietLead->lead_code.')',
+    ])->and($data['datasets'][0]['data'])->toBe([3, 1]);
+});
 
-    expect($data['labels'])->toBe(['Busy Lead', 'Quiet Lead'])
-        ->and($data['datasets'][0]['data'])->toBe([3, 1]);
+it('labels leads uniquely so same-titled leads stay distinguishable', function () {
+    $first = Lead::factory()->create(['title' => 'STI']);
+    $second = Lead::factory()->create(['title' => 'STI']);
+
+    foreach ([$first, $second] as $lead) {
+        Activity::factory()->create([
+            'lead_id' => $lead->id,
+            'user_id' => $this->user->id,
+            'performed_at' => now(),
+        ]);
+    }
+
+    $labels = chartData()['labels'];
+
+    expect($labels)->toHaveCount(2)
+        ->and(array_unique($labels))->toHaveCount(2)
+        ->and($labels[0])->toContain($first->lead_code)
+        ->and($labels[1])->toContain($second->lead_code);
+});
+
+it('limits the chart to the ten most active leads', function () {
+    Lead::factory()->count(12)->create()->each(function (Lead $lead): void {
+        Activity::factory()->create([
+            'lead_id' => $lead->id,
+            'user_id' => $this->user->id,
+            'performed_at' => now(),
+        ]);
+    });
+
+    expect(chartData()['labels'])->toHaveCount(10);
+});
+
+it('scopes the chart to the activities the user may see', function () {
+    $otherUser = User::factory()->create();
+    $otherUser->assignRole('Sales Staff');
+
+    $visible = Lead::factory()->create(['title' => 'Visible Lead']);
+    $hidden = Lead::factory()->create(['title' => 'Hidden Lead']);
+
+    Activity::factory()->create([
+        'lead_id' => $visible->id,
+        'user_id' => $this->user->id,
+        'performed_at' => now(),
+    ]);
+
+    Activity::factory()->count(5)->create([
+        'lead_id' => $hidden->id,
+        'user_id' => $otherUser->id,
+        'performed_at' => now(),
+    ]);
+
+    // The Super Admin in beforeEach sees everything, so assert the scope
+    // from the other user's side: their own activity is all they get.
+    actingAs($otherUser);
+
+    $labels = chartData()['labels'];
+
+    expect($labels)->toHaveCount(1)
+        ->and($labels[0])->toContain('Hidden Lead');
 });

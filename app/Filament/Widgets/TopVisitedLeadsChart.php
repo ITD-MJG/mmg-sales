@@ -10,11 +10,11 @@ use Illuminate\Support\Str;
 
 class TopVisitedLeadsChart extends ChartWidget
 {
-    protected ?string $heading = 'Top Visits by Lead';
+    protected ?string $heading = 'Top Leads by Activity';
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '200px';
+    protected static ?string $height = '320px';
 
     protected static ?int $sort = 25;
 
@@ -29,21 +29,29 @@ class TopVisitedLeadsChart extends ChartWidget
         $user = Auth::user();
         $service = app(ActivityScopeService::class);
 
-        $data = $service->getActivityQuery($user)
+        $rows = $service->getActivityQuery($user)
             ->whereNotNull('lead_id')
-            ->selectRaw('lead_id, COUNT(*) as visit_count')
+            ->selectRaw('lead_id, COUNT(*) as activity_count')
             ->groupBy('lead_id')
-            ->orderByDesc('visit_count')
+            ->orderByDesc('activity_count')
+            ->orderBy('lead_id')
             ->limit(10)
-            ->with(['lead:id,title'])
+            ->with(['lead:id,lead_code,title'])
             ->get();
 
-        $labels = $data
-            ->map(fn ($row): string => Str::limit($row->lead?->title ?? 'Lead #'.$row->lead_id, 30))
+        // No ->reverse(): with indexAxis 'y', Chart.js draws index 0 at the top,
+        // so the descending order from the query is already highest-first.
+
+        // lead_code keeps the label unique: leads share titles (several are
+        // called "STI"), and a bar chart with duplicate labels is unreadable.
+        $labels = $rows
+            ->map(fn ($row): string => $row->lead
+                ? Str::limit($row->lead->title, 34).' ('.$row->lead->lead_code.')'
+                : 'Lead #'.$row->lead_id)
             ->all();
 
-        $values = $data
-            ->map(fn ($row): int => (int) $row->visit_count)
+        $values = $rows
+            ->map(fn ($row): int => (int) $row->activity_count)
             ->all();
 
         $colors = [
@@ -62,7 +70,7 @@ class TopVisitedLeadsChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Visits',
+                    'label' => 'Activities',
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'borderWidth' => 0,
@@ -87,11 +95,17 @@ class TopVisitedLeadsChart extends ChartWidget
                     'display' => false,
                 ],
             ],
+            'indexAxis' => 'y',
             'scales' => [
-                'y' => [
+                'x' => [
                     'beginAtZero' => true,
                     'ticks' => [
                         'precision' => 0,
+                    ],
+                ],
+                'y' => [
+                    'grid' => [
+                        'display' => false,
                     ],
                 ],
             ],
