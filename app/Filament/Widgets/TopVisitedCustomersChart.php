@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\ActivityScopeService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class TopVisitedCustomersChart extends ChartWidget
 {
@@ -42,8 +43,11 @@ class TopVisitedCustomersChart extends ChartWidget
 
         // No ->reverse(): with indexAxis 'y', Chart.js draws index 0 at the top,
         // so the descending order from the query is already highest-first.
+        // Names are long ("BALAI BESAR LABORATORIUM KESEHATAN MASYARAKAT
+        // PALEMBANG ...") and chart options are JSON-encoded, so the tick
+        // cannot be trimmed by a JS callback. Trim server-side instead.
         $labels = $rows
-            ->map(fn ($row): string => trim($row->customer?->name ?? 'Customer #'.$row->customer_id))
+            ->map(fn ($row): string => Str::limit(trim($row->customer?->name ?? 'Customer #'.$row->customer_id), 17))
             ->all();
 
         $values = $rows

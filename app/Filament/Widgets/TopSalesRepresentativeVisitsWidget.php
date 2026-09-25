@@ -4,72 +4,108 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Services\ActivityScopeService;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
-class TopSalesRepresentativeVisitsWidget extends TableWidget
+class TopSalesRepresentativeVisitsWidget extends ChartWidget
 {
-    protected static ?int $sort = 5;
+    protected ?string $heading = 'Top Sales Representatives by Customer Visits';
 
-    protected int|string|array $columnSpan = 1;
+    protected static bool $isLazy = false;
 
-    protected static ?string $heading = 'Top Sales Representatives by Customer Visits';
+    protected static ?string $height = '280px';
 
-    public function getTableRecordKey(Model|array $record): string
+    protected static ?int $sort = 40;
+
+    public static function canView(): bool
     {
-        return $record->user_id.'-'.$record->customer_id;
+        return auth()->check();
     }
 
-    public function table(Table $table): Table
+    protected function getData(): array
     {
         /** @var User $user */
         $user = Auth::user();
         $service = app(ActivityScopeService::class);
 
-        return $table
-            ->query(fn (): Builder => $this->getVisitQuery($service, $user))
-            ->columns([
-                Tables\Columns\TextColumn::make('rank')
-                    ->label('Rank')
-                    ->state(fn ($record, $rowLoop): int => $rowLoop->iteration)
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Sales Rep')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('customer.name')
-                    ->label('Customer')
-                    ->limit(20)
-                    ->tooltip(fn ($record): string => $record->customer->name ?? '')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('visit_count')
-                    ->label('Visits')
-                    ->badge()
-                    ->color('success')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('last_visit')
-                    ->label('Last Visit')
-                    ->date('d M Y')
-                    ->sortable(),
-            ])
-            ->paginated([5, 10])
-            ->defaultPaginationPageOption(5);
+        // Counted per rep, not per rep-and-customer: the rep/customer pair runs
+        // to 82 rows, which is a table, not a chart.
+        $rows = $service->getActivityQuery($user)
+            ->whereNotNull('customer_id')
+            ->selectRaw('user_id, COUNT(*) as visit_count')
+            ->groupBy('user_id')
+            ->orderByDesc('visit_count')
+            ->orderBy('user_id')
+            ->limit(10)
+            ->with(['user:id,name'])
+            ->get();
+
+        $labels = $rows
+            ->map(fn ($row): string => $row->user?->name ?? 'User #'.$row->user_id)
+            ->all();
+
+        $values = $rows
+            ->map(fn ($row): int => (int) $row->visit_count)
+            ->all();
+
+        $colors = [
+            'rgb(59, 130, 246)',
+            'rgb(34, 197, 94)',
+            'rgb(234, 179, 8)',
+            'rgb(239, 68, 68)',
+            'rgb(168, 85, 247)',
+            'rgb(14, 165, 233)',
+            'rgb(249, 115, 22)',
+            'rgb(107, 114, 128)',
+            'rgb(156, 163, 175)',
+            'rgb(99, 102, 241)',
+        ];
+
+        return [
+            'datasets' => [
+                [
+                    'label' => 'Customer Visits',
+                    'data' => $values,
+                    'backgroundColor' => array_slice($colors, 0, count($values)),
+                    'borderWidth' => 0,
+                ],
+            ],
+            'labels' => $labels,
+        ];
     }
 
-    protected function getVisitQuery(ActivityScopeService $service, User $user): Builder
+    /**
+     * A ranking of reps by visit count: horizontal bars, highest first.
+     */
+    protected function getType(): string
     {
-        return $service->getActivityQuery($user)
-            ->where(function ($query): void {
-                $query->whereNotNull('visit_started_at')
-                    ->orWhereNotNull('customer_id');
-            })
-            ->whereNotNull('customer_id')
-            ->selectRaw('user_id, customer_id, COUNT(*) as visit_count, MAX(performed_at) as last_visit')
-            ->groupBy('user_id', 'customer_id')
-            ->with(['user:id,name', 'customer:id,name'])
-            ->orderByDesc('visit_count');
+        return 'bar';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'responsive' => true,
+            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => false,
+                ],
+            ],
+            'indexAxis' => 'y',
+            'scales' => [
+                'x' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                    ],
+                ],
+                'y' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+            ],
+        ];
     }
 }

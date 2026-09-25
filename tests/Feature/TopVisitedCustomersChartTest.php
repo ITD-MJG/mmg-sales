@@ -97,7 +97,7 @@ it('ranks customers by activity count, highest first, and excludes activities wi
 });
 
 it('labels bars with the customer name, not the lead title', function () {
-    $customer = Customer::factory()->create(['name' => 'RSUP Wahidin Sudirohusodo']);
+    $customer = Customer::factory()->create(['name' => 'RS Sehat Sentosa']);
     $lead = Lead::factory()->create([
         'title' => 'Petridish Pekybio',
         'customer_id' => $customer->id,
@@ -107,7 +107,7 @@ it('labels bars with the customer name, not the lead title', function () {
 
     $labels = chartData()['labels'];
 
-    expect($labels)->toBe(['RSUP Wahidin Sudirohusodo'])
+    expect($labels)->toBe(['RS Sehat Sentosa'])
         ->and($labels[0])->not->toContain('Petridish Pekybio');
 });
 
@@ -127,12 +127,12 @@ it('aggregates every lead of a customer into one bar', function () {
 });
 
 it('still labels a customer that has been soft deleted', function () {
-    $customer = Customer::factory()->create(['name' => 'Balai Besar Lab Kes']);
+    $customer = Customer::factory()->create(['name' => 'Balai Lab Sehat']);
     logActivities($customer, 3);
 
     $customer->delete();
 
-    expect(chartData()['labels'])->toBe(['Balai Besar Lab Kes']);
+    expect(chartData()['labels'])->toBe(['Balai Lab Sehat']);
 });
 
 it('limits the chart to the ten most active customers', function () {
