@@ -94,8 +94,9 @@ class KanbanLeads extends BoardPage
         // Same visibility contract as LeadsTable::configure()
         self::applyVisibilityScope($query, 'created_by');
 
-        // Include leads where user is a collaborator (skip for Super Admin)
-        if ($user && ! $user->hasRole('Super Admin')) {
+        // Include leads where user is a collaborator (skip for global viewers,
+        // whose scope adds no WHERE and would be swallowed by this top-level OR)
+        if ($user && ! $user->hasGlobalVisibility()) {
             $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
         }
 

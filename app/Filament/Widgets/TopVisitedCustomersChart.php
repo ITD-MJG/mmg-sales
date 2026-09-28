@@ -6,16 +6,17 @@ use App\Models\User;
 use App\Services\ActivityScopeService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
-class TopSalesRepresentativeVisitsWidget extends ChartWidget
+class TopVisitedCustomersChart extends ChartWidget
 {
-    protected ?string $heading = 'Top Sales Representatives by Customer Visits';
+    protected ?string $heading = 'Top Visited Customers';
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '280px';
+    protected static ?string $height = '320px';
 
-    protected static ?int $sort = 40;
+    protected static ?int $sort = 25;
 
     public static function canView(): bool
     {
@@ -28,24 +29,29 @@ class TopSalesRepresentativeVisitsWidget extends ChartWidget
         $user = Auth::user();
         $service = app(ActivityScopeService::class);
 
-        // Counted per rep, not per rep-and-customer: the rep/customer pair runs
-        // to 82 rows, which is a table, not a chart.
         $rows = $service->getActivityQuery($user)
             ->whereNotNull('customer_id')
-            ->selectRaw('user_id, COUNT(*) as visit_count')
-            ->groupBy('user_id')
-            ->orderByDesc('visit_count')
-            ->orderBy('user_id')
+            ->selectRaw('customer_id, COUNT(*) as activity_count')
+            ->groupBy('customer_id')
+            ->orderByDesc('activity_count')
+            ->orderBy('customer_id')
             ->limit(10)
-            ->with(['user:id,name'])
+            // withTrashed(): a deleted customer still owns its historical
+            // activities, and without this the bar would render unlabelled.
+            ->with(['customer' => fn ($query) => $query->withTrashed()->select('id', 'name')])
             ->get();
 
+        // No ->reverse(): with indexAxis 'y', Chart.js draws index 0 at the top,
+        // so the descending order from the query is already highest-first.
+        // Names are long ("BALAI BESAR LABORATORIUM KESEHATAN MASYARAKAT
+        // PALEMBANG ...") and chart options are JSON-encoded, so the tick
+        // cannot be trimmed by a JS callback. Trim server-side instead.
         $labels = $rows
-            ->map(fn ($row): string => $row->user?->name ?? 'User #'.$row->user_id)
+            ->map(fn ($row): string => Str::limit(trim($row->customer?->name ?? 'Customer #'.$row->customer_id), 17))
             ->all();
 
         $values = $rows
-            ->map(fn ($row): int => (int) $row->visit_count)
+            ->map(fn ($row): int => (int) $row->activity_count)
             ->all();
 
         $colors = [
@@ -64,7 +70,7 @@ class TopSalesRepresentativeVisitsWidget extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Customer Visits',
+                    'label' => 'Activities',
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'borderWidth' => 0,
@@ -74,9 +80,6 @@ class TopSalesRepresentativeVisitsWidget extends ChartWidget
         ];
     }
 
-    /**
-     * A ranking of reps by visit count: horizontal bars, highest first.
-     */
     protected function getType(): string
     {
         return 'bar';

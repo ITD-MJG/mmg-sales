@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class RevenueByPrincipalChart extends ChartWidget
 {
@@ -15,7 +14,7 @@ class RevenueByPrincipalChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '200px';
+    protected static ?string $height = '280px';
 
     protected static ?int $sort = 20;
 
@@ -76,9 +75,14 @@ class RevenueByPrincipalChart extends ChartWidget
         ];
     }
 
+    /**
+     * Principals are revenue shares, and there are only a handful, so a
+     * doughnut reads the split at a glance. This mirrors the segment widgets
+     * under Reports.
+     */
     protected function getType(): string
     {
-        return 'bar';
+        return 'doughnut';
     }
 
     protected function getOptions(): array
@@ -86,15 +90,11 @@ class RevenueByPrincipalChart extends ChartWidget
         return [
             'responsive' => true,
             'maintainAspectRatio' => false,
+            'cutout' => '55%',
             'plugins' => [
                 'legend' => [
-                    'display' => false,
-                ],
-            ],
-            'indexAxis' => 'y',
-            'scales' => [
-                'x' => [
-                    'beginAtZero' => true,
+                    'display' => true,
+                    'position' => 'right',
                 ],
             ],
         ];

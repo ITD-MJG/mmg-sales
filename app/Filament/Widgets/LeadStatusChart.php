@@ -15,7 +15,7 @@ class LeadStatusChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '150px';
+    protected static ?string $height = '280px';
 
     public static function canView(): bool
     {
@@ -30,7 +30,9 @@ class LeadStatusChart extends ChartWidget
 
         self::applyVisibilityScope($baseQuery, 'created_by');
 
-        if ($user && ! $user->hasRole('Super Admin')) {
+        // Global viewers already see every lead: adding this as a top-level OR
+        // would collapse into the only condition when the scope adds no WHERE.
+        if ($user && ! $user->hasGlobalVisibility()) {
             $baseQuery->orWhereHas('collaborators', fn (Builder $q) => $q->where('users.id', $user->id));
         }
 
@@ -66,9 +68,14 @@ class LeadStatusChart extends ChartWidget
         ];
     }
 
+    /**
+     * A status breakdown is a part-to-whole read, so a doughnut beats bars:
+     * the question is each stage's share of the pipeline, not its absolute
+     * height.
+     */
     protected function getType(): string
     {
-        return 'bar';
+        return 'doughnut';
     }
 
     protected function getOptions(): array
@@ -76,10 +83,11 @@ class LeadStatusChart extends ChartWidget
         return [
             'responsive' => true,
             'maintainAspectRatio' => false,
+            'cutout' => '55%',
             'plugins' => [
                 'legend' => [
                     'display' => true,
-                    'position' => 'top',
+                    'position' => 'right',
                 ],
             ],
         ];
