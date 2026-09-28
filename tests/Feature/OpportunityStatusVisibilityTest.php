@@ -1,14 +1,13 @@
 <?php
 
-use App\Filament\Widgets\LeadStatusChart;
+use App\Filament\Widgets\OpportunityStatusChart;
 use App\Models\Department;
-use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 
-use function Pest\Laravel\actingAs;
 use function Pest\Laravel\seed;
 
 uses(RefreshDatabase::class);
@@ -28,11 +27,11 @@ function managementDirector(): User
 }
 
 /** Read the chart's dataset, which is what the dashboard renders. */
-function leadStatusCounts(User $user): array
+function opportunityStatusCounts(User $user): array
 {
     Auth::login($user);
 
-    $widget = new LeadStatusChart;
+    $widget = new OpportunityStatusChart;
     $method = new ReflectionMethod($widget, 'getData');
     $method->setAccessible(true);
 
@@ -43,47 +42,47 @@ function leadStatusCounts(User $user): array
     return $data['datasets'][0]['data'];
 }
 
-it('counts every lead for a Management Director in the Lead Status chart', function () {
+it('counts every opportunity for a Management Director in the Opportunity Status chart', function () {
     $director = managementDirector();
 
     $otherRep = User::factory()->create();
     $otherRep->assignRole('Sales Staff');
 
-    Lead::factory()->count(3)->create(['status' => 'new', 'created_by' => $otherRep->id]);
-    Lead::factory()->count(2)->create(['status' => 'won', 'created_by' => $otherRep->id]);
-    Lead::factory()->count(4)->create(['status' => 'lost', 'created_by' => $otherRep->id]);
+    Opportunity::factory()->count(3)->create(['stage' => 'new', 'created_by' => $otherRep->id]);
+    Opportunity::factory()->count(2)->create(['stage' => 'won', 'created_by' => $otherRep->id]);
+    Opportunity::factory()->count(4)->create(['stage' => 'lost', 'created_by' => $otherRep->id]);
 
-    $counts = leadStatusCounts($director);
+    $counts = opportunityStatusCounts($director);
 
-    expect(array_sum($counts))->toBe(Lead::count())
+    expect(array_sum($counts))->toBe(Opportunity::count())
         ->and(array_sum($counts))->toBe(9);
 });
 
-it('still counts only own leads for a Sales Staff user in the Lead Status chart', function () {
+it('still counts only own opportunities for a Sales Staff user in the Opportunity Status chart', function () {
     $rep = User::factory()->create();
     $rep->assignRole('Sales Staff');
 
     $other = User::factory()->create();
     $other->assignRole('Sales Staff');
 
-    Lead::factory()->count(2)->create(['status' => 'new', 'created_by' => $rep->id]);
-    Lead::factory()->count(5)->create(['status' => 'new', 'created_by' => $other->id]);
+    Opportunity::factory()->count(2)->create(['stage' => 'new', 'created_by' => $rep->id]);
+    Opportunity::factory()->count(5)->create(['stage' => 'new', 'created_by' => $other->id]);
 
-    $counts = leadStatusCounts($rep);
+    $counts = opportunityStatusCounts($rep);
 
     expect(array_sum($counts))->toBe(2);
 });
 
-it('counts every lead for a Super Admin in the Lead Status chart', function () {
+it('counts every opportunity for a Super Admin in the Opportunity Status chart', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Super Admin');
 
     $other = User::factory()->create();
     $other->assignRole('Sales Staff');
 
-    Lead::factory()->count(6)->create(['status' => 'qualified', 'created_by' => $other->id]);
+    Opportunity::factory()->count(6)->create(['stage' => 'qualified', 'created_by' => $other->id]);
 
-    $counts = leadStatusCounts($admin);
+    $counts = opportunityStatusCounts($admin);
 
     expect(array_sum($counts))->toBe(6);
 });

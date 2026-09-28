@@ -3,15 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Traits\HasVisibilityScope;
-use App\Models\Lead;
+use App\Models\Opportunity;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Database\Eloquent\Builder;
 
-class LeadStatusChart extends ChartWidget
+class OpportunityStatusChart extends ChartWidget
 {
     use HasVisibilityScope;
 
-    protected ?string $heading = 'Lead Status';
+    protected ?string $heading = 'Opportunity Status';
 
     protected static bool $isLazy = false;
 
@@ -26,31 +26,34 @@ class LeadStatusChart extends ChartWidget
     {
         $user = auth()->user();
 
-        $baseQuery = Lead::query();
+        // Pipeline stages live on opportunities: the thin `leads` table is raw
+        // intake only and carries none of the won/lost progression.
+        $baseQuery = Opportunity::query();
 
         self::applyVisibilityScope($baseQuery, 'created_by');
 
-        // Global viewers already see every lead: adding this as a top-level OR
-        // would collapse into the only condition when the scope adds no WHERE.
+        // Global viewers already see every opportunity: adding this as a
+        // top-level OR would collapse into the only condition when the scope
+        // adds no WHERE.
         if ($user && ! $user->hasGlobalVisibility()) {
             $baseQuery->orWhereHas('collaborators', fn (Builder $q) => $q->where('users.id', $user->id));
         }
 
-        $statuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
+        $stages = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
         $counts = (clone $baseQuery)
-            ->whereIn('status', $statuses)
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
+            ->whereIn('stage', $stages)
+            ->selectRaw('stage, COUNT(*) as count')
+            ->groupBy('stage')
+            ->pluck('count', 'stage')
             ->toArray();
 
         $labels = ['New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Converted', 'Not Converted'];
-        $data = array_map(fn ($s) => $counts[$s] ?? 0, $statuses);
+        $data = array_map(fn ($s) => $counts[$s] ?? 0, $stages);
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Leads',
+                    'label' => 'Opportunities',
                     'data' => $data,
                     'backgroundColor' => [
                         'rgb(107, 114, 128)',  // gray — new

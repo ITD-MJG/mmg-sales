@@ -2,7 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\LeadStatusChart;
+use App\Filament\Widgets\OpportunityStatusChart;
 use App\Filament\Widgets\MonthlyRevenueTrendChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
@@ -26,7 +26,7 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            LeadStatusChart::class,
+            OpportunityStatusChart::class,
             MonthlyRevenueTrendChart::class,
             RevenueByPrincipalChart::class,
             TopSellingProductsChart::class,

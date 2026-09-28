@@ -39,13 +39,17 @@ function chartData(): array
 }
 
 /**
- * Log activities against a customer, optionally through a lead.
+ * Log activities against a customer, attached to a lead.
+ *
+ * Activities must belong to a lead or an opportunity, so a lead is created
+ * when the caller does not supply one.
  */
 function logActivities(Customer $customer, int $count, ?User $user = null, ?Lead $lead = null): void
 {
     Activity::factory()->count($count)->create([
         'customer_id' => $customer->id,
-        'lead_id' => $lead?->id,
+        'lead_id' => ($lead ?? Lead::factory()->create(['customer_id' => $customer->id]))->id,
+        'opportunity_id' => null,
         'user_id' => ($user ?? auth()->user())->id,
         'performed_at' => now(),
     ]);
@@ -84,6 +88,8 @@ it('ranks customers by activity count, highest first, and excludes activities wi
 
     Activity::factory()->create([
         'customer_id' => null,
+        'lead_id' => Lead::factory()->create()->id,
+        'opportunity_id' => null,
         'user_id' => $this->user->id,
         'performed_at' => now(),
     ]);

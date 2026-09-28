@@ -40,15 +40,15 @@ class ActivityScopeService
         // Include the user's own ID
         $allowedUserIds = $subordinateIds->push($user->id);
 
-        // Include activities from leads where user is a collaborator
-        $collaboratorLeadIds = $this->getCollaboratorLeadIds($user);
+        // Include activities from opportunities where the user is a collaborator
+        $collaboratorOpportunityIds = $this->getCollaboratorOpportunityIds($user);
 
-        return $query->where(function ($q) use ($allowedUserIds, $collaboratorLeadIds, $user) {
+        return $query->where(function ($q) use ($allowedUserIds, $collaboratorOpportunityIds, $user) {
             $q->whereIn('user_id', $allowedUserIds);
 
-            if ($collaboratorLeadIds->isNotEmpty()) {
-                $q->orWhere(function ($oq) use ($collaboratorLeadIds, $user) {
-                    $oq->whereIn('lead_id', $collaboratorLeadIds);
+            if ($collaboratorOpportunityIds->isNotEmpty()) {
+                $q->orWhere(function ($oq) use ($collaboratorOpportunityIds, $user) {
+                    $oq->whereIn('opportunity_id', $collaboratorOpportunityIds);
 
                     if ($user->territory_id) {
                         $oq->whereHas('user', function ($uq) use ($user): void {
@@ -61,15 +61,15 @@ class ActivityScopeService
     }
 
     /**
-     * Get lead IDs where the user is a collaborator or creator.
+     * Get opportunity IDs where the user is a collaborator or creator.
      */
-    public function getCollaboratorLeadIds(User $user): Collection
+    public function getCollaboratorOpportunityIds(User $user): Collection
     {
-        $collaboratorIds = \DB::table('lead_collaborators')
+        $collaboratorIds = \DB::table('opportunity_collaborators')
             ->where('user_id', $user->id)
-            ->pluck('lead_id');
+            ->pluck('opportunity_id');
 
-        $creatorIds = \DB::table('leads')
+        $creatorIds = \DB::table('opportunities')
             ->where('created_by', $user->id)
             ->pluck('id');
 
