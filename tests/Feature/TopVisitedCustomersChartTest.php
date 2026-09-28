@@ -7,6 +7,7 @@ use App\Filament\Widgets\TopVisitedCustomersWidget;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,17 +40,14 @@ function chartData(): array
 }
 
 /**
- * Log activities against a customer, attached to a lead.
- *
- * Activities must belong to a lead or an opportunity, so a lead is created
- * when the caller does not supply one.
+ * Log activities against a lead, optionally through a customer.
  */
-function logActivities(Customer $customer, int $count, ?User $user = null, ?Lead $lead = null): void
+function logActivities(Lead $lead, int $count, ?User $user = null): void
 {
     Activity::factory()->count($count)->create([
-        'customer_id' => $customer->id,
-        'lead_id' => ($lead ?? Lead::factory()->create(['customer_id' => $customer->id]))->id,
+        'lead_id' => $lead->id,
         'opportunity_id' => null,
+        'customer_id' => $lead->customer_id,
         'user_id' => ($user ?? auth()->user())->id,
         'performed_at' => now(),
     ]);
@@ -64,7 +62,7 @@ it('does not register the revenue by territory chart on the dashboard', function
         ->not->toContain(RevenueByTerritoryChart::class);
 });
 
-it('registers the top visited customers chart on the dashboard', function () {
+it('registers the top visited leads chart on the dashboard', function () {
     expect((new Dashboard)->getWidgets())->toContain(TopVisitedCustomersChart::class);
 });
 
@@ -73,77 +71,74 @@ it('does not register the superseded top visited customers table widget', functi
         ->not->toContain(TopVisitedCustomersWidget::class);
 });
 
-it('renders the top visited customers chart', function () {
+it('renders the top visited leads chart', function () {
     livewire(TopVisitedCustomersChart::class)
-        ->assertSee('Top Visited Customers')
+        ->assertSee('Top Visited Leads')
         ->assertOk();
 });
 
-it('ranks customers by activity count, highest first, and excludes activities without a customer', function () {
-    $busy = Customer::factory()->create(['name' => 'Busy Customer']);
-    $quiet = Customer::factory()->create(['name' => 'Quiet Customer']);
+it('ranks leads by activity count, highest first', function () {
+    $busy = Lead::factory()->create(['lead_code' => 'LEAD-202601-0001']);
+    $quiet = Lead::factory()->create(['lead_code' => 'LEAD-202601-0002']);
+    $middling = Lead::factory()->create(['lead_code' => 'LEAD-202601-0003']);
 
     logActivities($busy, 3);
+    logActivities($middling, 2);
     logActivities($quiet, 1);
-
-    Activity::factory()->create([
-        'customer_id' => null,
-        'lead_id' => Lead::factory()->create()->id,
-        'opportunity_id' => null,
-        'user_id' => $this->user->id,
-        'performed_at' => now(),
-    ]);
 
     $data = chartData();
 
     // Highest first, and no ->reverse(): index 0 renders at the top of a
     // horizontal bar chart.
-    expect($data['labels'])->toBe(['Busy Customer', 'Quiet Customer'])
-        ->and($data['datasets'][0]['data'])->toBe([3, 1]);
+    expect($data['labels'])->toBe(['LEAD-202601-0001', 'LEAD-202601-0003', 'LEAD-202601-0002'])
+        ->and($data['datasets'][0]['data'])->toBe([3, 2, 1]);
 });
 
-it('labels bars with the customer name, not the lead title', function () {
+it('labels bars with the lead code, not the customer name or lead title', function () {
     $customer = Customer::factory()->create(['name' => 'RS Sehat Sentosa']);
     $lead = Lead::factory()->create([
+        'lead_code' => 'LEAD-202602-0042',
         'title' => 'Petridish Pekybio',
         'customer_id' => $customer->id,
     ]);
 
-    logActivities($customer, 2, lead: $lead);
+    logActivities($lead, 2);
 
     $labels = chartData()['labels'];
 
-    expect($labels)->toBe(['RS Sehat Sentosa'])
+    expect($labels)->toBe(['LEAD-202602-0042'])
+        ->and($labels[0])->not->toContain('RS Sehat Sentosa')
         ->and($labels[0])->not->toContain('Petridish Pekybio');
 });
 
-it('aggregates every lead of a customer into one bar', function () {
-    $customer = Customer::factory()->create(['name' => 'PT Biofarma']);
+it('falls back to the opportunity code when an activity links to an opportunity', function () {
+    $opportunity = Opportunity::factory()->create(['opportunity_code' => 'LEAD-202603-0007']);
 
-    $firstLead = Lead::factory()->create(['title' => 'Tecan Tips', 'customer_id' => $customer->id]);
-    $secondLead = Lead::factory()->create(['title' => 'Scan RDI', 'customer_id' => $customer->id]);
+    Activity::factory()->count(4)->forOpportunity($opportunity)->create([
+        'customer_id' => null,
+        'user_id' => $this->user->id,
+        'performed_at' => now(),
+    ]);
 
-    logActivities($customer, 2, lead: $firstLead);
-    logActivities($customer, 3, lead: $secondLead);
+    expect(chartData()['labels'])->toBe(['LEAD-202603-0007'])
+        ->and(chartData()['datasets'][0]['data'])->toBe([4]);
+});
+
+it('aggregates every activity of one lead into a single bar', function () {
+    $lead = Lead::factory()->create(['lead_code' => 'LEAD-202604-0009']);
+
+    logActivities($lead, 2);
+    logActivities($lead, 3);
 
     $data = chartData();
 
-    expect($data['labels'])->toBe(['PT Biofarma'])
+    expect($data['labels'])->toBe(['LEAD-202604-0009'])
         ->and($data['datasets'][0]['data'])->toBe([5]);
 });
 
-it('still labels a customer that has been soft deleted', function () {
-    $customer = Customer::factory()->create(['name' => 'Balai Lab Sehat']);
-    logActivities($customer, 3);
-
-    $customer->delete();
-
-    expect(chartData()['labels'])->toBe(['Balai Lab Sehat']);
-});
-
-it('limits the chart to the ten most active customers', function () {
-    Customer::factory()->count(12)->create()->each(function (Customer $customer): void {
-        logActivities($customer, 1);
+it('limits the chart to the ten most active leads', function () {
+    Lead::factory()->count(12)->create()->each(function (Lead $lead, int $index): void {
+        logActivities($lead, 1 + $index);
     });
 
     expect(chartData()['labels'])->toHaveCount(10);
@@ -153,8 +148,8 @@ it('scopes the chart to the activities the user may see', function () {
     $otherUser = User::factory()->create();
     $otherUser->assignRole('Sales Staff');
 
-    $mine = Customer::factory()->create(['name' => 'My Customer']);
-    $theirs = Customer::factory()->create(['name' => 'Their Customer']);
+    $mine = Lead::factory()->create(['lead_code' => 'LEAD-202605-0001']);
+    $theirs = Lead::factory()->create(['lead_code' => 'LEAD-202605-0002']);
 
     logActivities($mine, 1);
     logActivities($theirs, 5, user: $otherUser);
@@ -163,7 +158,5 @@ it('scopes the chart to the activities the user may see', function () {
     // the other user's side: their own activity is all they get.
     actingAs($otherUser);
 
-    $labels = chartData()['labels'];
-
-    expect($labels)->toBe(['Their Customer']);
+    expect(chartData()['labels'])->toBe(['LEAD-202605-0002']);
 });
