@@ -3,6 +3,7 @@
 use App\Models\Activity;
 use App\Models\ActivityComment;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -50,12 +51,12 @@ it('lets the lead creator comment', function () {
     expect(canComment($creator, $activity))->toBeTrue();
 });
 
-it('lets a lead collaborator comment', function () {
+it('lets an opportunity collaborator comment', function () {
     $creator = User::factory()->create();
     $collaborator = permittedUser();
-    $lead = Lead::factory()->create(['created_by' => $creator->id]);
-    $lead->collaborators()->attach($collaborator->id, ['added_by' => $creator->id]);
-    $activity = Activity::factory()->create(['lead_id' => $lead->id]);
+    $opportunity = Opportunity::factory()->create(['created_by' => $creator->id]);
+    $opportunity->collaborators()->attach($collaborator->id, ['added_by' => $creator->id]);
+    $activity = Activity::factory()->create(['lead_id' => null, 'opportunity_id' => $opportunity->id]);
 
     expect(canComment($collaborator, $activity))->toBeTrue();
 });

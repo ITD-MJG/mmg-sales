@@ -25,16 +25,8 @@ class LeadsTable
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $user = auth()->user();
-
                 // Role-based visibility: staff sees own, managers see subordinates, etc.
                 self::applyVisibilityScope($query, 'created_by');
-
-                // Also include leads where the user is a collaborator (skip for global viewers,
-                // whose scope adds no WHERE and would be swallowed by this top-level OR)
-                if ($user && ! $user->hasGlobalVisibility()) {
-                    $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
-                }
 
                 // Sort by latest activity on the lead (most recently worked leads first)
                 return $query->orderByDesc(
@@ -87,33 +79,29 @@ class LeadsTable
                     ->searchable()
                     ->toggleable(),
 
+                TextColumn::make('status')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->color(fn (string $state): string => match ($state) {
+                        'converted' => 'success',
+                        'disqualified' => 'danger',
+                        'contacted' => 'info',
+                        default => 'gray',
+                    })
+                    ->sortable()
+                    ->toggleable(),
+
                 TextColumn::make('creator.name')
                     ->label('Creator')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
 
-                TextColumn::make('assignedCollaborators')
+                TextColumn::make('assignedUser.name')
                     ->label('Assigned To')
-                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas('collaborators', fn ($q) => $q->where('name', 'like', "%{$search}%")))
-                    ->getStateUsing(function ($record): string {
-                        $names = $record->collaborators->pluck('name')->filter()->values();
-
-                        if ($names->isEmpty()) {
-                            return '-';
-                        }
-
-                        if ($names->count() === 1) {
-                            return $names->first();
-                        }
-
-                        return $names->first().' + '.($names->count() - 1).' others';
-                    })
-                    ->tooltip(function ($record): ?string {
-                        $names = $record->collaborators->pluck('name')->filter();
-
-                        return $names->isEmpty() ? null : $names->join(', ');
-                    })
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('Unassigned')
                     ->toggleable(),
 
                 TextColumn::make('priority')
@@ -126,25 +114,6 @@ class LeadsTable
                         'urgent' => 'danger',
                         default => 'gray',
                     })
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('estimated_value')
-                    ->label('Estimated Value')
-                    ->money('IDR')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('estimated_revenue')
-                    ->label('Expected Revenue')
-                    ->money('IDR')
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('estimated_completion_date')
-                    ->label('Est. Finish')
-                    ->date('M Y')
-                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('M Y')) : '-')
                     ->sortable()
                     ->toggleable(),
 
@@ -169,6 +138,12 @@ class LeadsTable
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('opportunities_count')
+                    ->label('Opportunities')
+                    ->counts('opportunities')
+                    ->sortable()
+                    ->toggleable(),
 
                 TextColumn::make('converted_at')
                     ->label('Converted')

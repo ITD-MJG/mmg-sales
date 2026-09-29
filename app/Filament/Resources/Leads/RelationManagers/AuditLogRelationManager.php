@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Leads\RelationManagers;
 
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class AuditLogRelationManager extends RelationManager
 {

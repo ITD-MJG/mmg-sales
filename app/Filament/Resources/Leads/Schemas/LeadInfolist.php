@@ -2,12 +2,9 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
-use Carbon\Carbon;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
-use App\Filament\Widgets\LeadRevenueComparisonChart;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -28,10 +25,10 @@ class LeadInfolist
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => ucfirst($state))
                             ->color(fn (string $state): string => match ($state) {
-                                'won' => 'success',
-                                'lost' => 'danger',
-                                'new' => 'gray',
-                                default => 'info',
+                                'converted' => 'success',
+                                'disqualified' => 'danger',
+                                'contacted' => 'info',
+                                default => 'gray',
                             }),
                         TextEntry::make('priority')
                             ->badge()
@@ -40,37 +37,44 @@ class LeadInfolist
                             ->copyable(),
                         TextEntry::make('phone')
                             ->copyable(),
-                        TextEntry::make('estimated_completion_date')
-                            ->label('Expected Finish')
-                            ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('M Y')) : '-')
-                            ->weight('bold'),
-                        TextEntry::make('collaborators')
-                            ->label('Collaborator')
-                            ->getStateUsing(fn ($record) => $record->collaborators->pluck('name')->join(', '))
-                            ->placeholder('-'),
+                        TextEntry::make('assignedUser.name')
+                            ->label('Assigned To')
+                            ->placeholder('Unassigned'),
                         TextEntry::make('creator.name')
                             ->label('Created By'),
+                        TextEntry::make('created_at')
+                            ->label('Created')
+                            ->dateTime('d M Y H:i'),
                     ]),
 
                 Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        Section::make('Suppliers & Products')
+                        Section::make('Opportunities')
                             ->schema([
-                                RepeatableEntry::make('products')
+                                RepeatableEntry::make('opportunities')
                                     ->label('')
                                     ->schema([
-                                        TextEntry::make('principal.name')
-                                            ->label('Principal')
+                                        TextEntry::make('opportunity_code')
+                                            ->label('Code')
                                             ->weight('bold'),
-                                        TextEntry::make('name')
-                                            ->label('Product'),
+                                        TextEntry::make('title')
+                                            ->label('Title'),
+                                        TextEntry::make('stage')
+                                            ->label('Stage')
+                                            ->badge(),
                                     ])
-                                    ->columns(2),
+                                    ->columns(3)
+                                    ->placeholder('No opportunities yet'),
                             ]),
 
-                        Livewire::make(LeadRevenueComparisonChart::class)
-                            ->data(fn ($component) => ['record' => $component->getRecord()]),
+                        Section::make('Notes')
+                            ->schema([
+                                TextEntry::make('notes')
+                                    ->hiddenLabel()
+                                    ->placeholder('-')
+                                    ->markdown(),
+                            ]),
                     ]),
 
                 Section::make('Activities History')
@@ -103,8 +107,6 @@ class LeadInfolist
                                 TextEntry::make('description')
                                     ->markdown(),
                             ])
-                            // Sorting logic typically happens at the relationship level
-                            // or via getEloquentQuery in the Page.
                             ->columns(1),
                     ]),
             ]);

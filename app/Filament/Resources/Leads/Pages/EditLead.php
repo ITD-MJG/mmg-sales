@@ -24,7 +24,7 @@ class EditLead extends EditRecord
     {
         return Notification::make()
             ->success()
-            ->title('Project updated successfully');
+            ->title('Lead updated successfully');
     }
 
     protected function getHeaderActions(): array
@@ -38,17 +38,6 @@ class EditLead extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (isset($data['assigned_users'])) {
-            $assignedUsers = $data['assigned_users'];
-            unset($data['assigned_users']);
-
-            $record = $this->getRecord();
-            if ($record) {
-                $record->collaborators()
-                    ->syncWithPivotValues($assignedUsers, ['added_by' => auth()->id()]);
-            }
-        }
-
         if (isset($data['customer_id'])) {
             $customer = Customer::find($data['customer_id']);
             if ($customer) {
@@ -62,6 +51,8 @@ class EditLead extends EditRecord
     protected function afterSave(): void
     {
         $lead = $this->getRecord();
+
+        // Adopt any pre-existing customer activities that are not yet tied to a lead.
         if ($lead->customer_id) {
             Activity::where('customer_id', $lead->customer_id)
                 ->whereNull('lead_id')

@@ -47,9 +47,7 @@ class LeadResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\CollaboratorsRelationManager::class,
             RelationManagers\ActivitiesRelationManager::class,
-            RelationManagers\ActivityCommentsRelationManager::class,
             RelationManagers\AuditLogRelationManager::class,
         ];
     }

@@ -1,45 +1,42 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Livewire;
 
-use App\Filament\Resources\Leads\LeadResource;
-use App\Filament\Resources\Leads\Schemas\LeadForm;
 use App\Filament\Traits\HasVisibilityScope;
-use App\Models\Lead;
-use Filament\Actions\CreateAction;
+use App\Models\Opportunity;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\TextSize;
-use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Component;
 use Relaticle\Flowforge\Board;
-use Relaticle\Flowforge\BoardPage;
 use Relaticle\Flowforge\Column;
+use Relaticle\Flowforge\Concerns\BaseBoard;
+use Relaticle\Flowforge\Contracts\HasBoard;
 
-class KanbanLeads extends BoardPage
+/**
+ * Kanban board for opportunities, embedded as a tab on the opportunities list.
+ *
+ * A plain Livewire component rather than a Filament BoardPage, so the list page
+ * can render it inside a tab without a second navigation entry. BaseBoard brings
+ * the action/schema/form wiring BoardPage would otherwise supply.
+ */
+class OpportunityBoard extends Component implements HasActions, HasBoard, HasForms
 {
+    use BaseBoard;
     use HasVisibilityScope;
 
-    protected static ?string $navigationLabel = 'Lead Board';
-
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedViewColumns;
-
-    protected static string|\UnitEnum|null $navigationGroup = 'CRM';
-
-    protected static ?int $navigationSort = 2;
-
-    public function getHeading(): string
-    {
-        return 'Lead Board';
-    }
+    protected string $view = 'livewire.opportunity-board';
 
     public function board(Board $board): Board
     {
         return $board
-            ->query($this->getEloquentQuery())
+            ->query($this->getBoardQuery())
             ->recordTitleAttribute('title')
-            ->columnIdentifier('status')
+            ->columnIdentifier('stage')
             ->positionIdentifier('position')
             ->cardSchema(fn (Schema $schema) => $schema
                 ->components([
@@ -85,31 +82,21 @@ class KanbanLeads extends BoardPage
             ]);
     }
 
-    public function getEloquentQuery(): Builder
+    public function getBoardQuery(): ?Builder
     {
-        $query = Lead::query()->with(['latestActivity', 'assignedUser']);
+        $query = Opportunity::query()->with(['latestActivity', 'assignedUser']);
 
         $user = auth()->user();
 
-        // Same visibility contract as LeadsTable::configure()
+        // Same visibility contract as OpportunitiesTable::configure()
         self::applyVisibilityScope($query, 'created_by');
 
-        // Include leads where user is a collaborator (skip for global viewers,
-        // whose scope adds no WHERE and would be swallowed by this top-level OR)
+        // Include opportunities where the user is a collaborator (skip for global
+        // viewers, whose scope adds no WHERE and would be swallowed by this top-level OR)
         if ($user && ! $user->hasGlobalVisibility()) {
             $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
         }
 
         return $query;
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            CreateAction::make()
-                ->model(Lead::class)
-                ->form(fn (Schema $schema) => LeadForm::configure($schema)->getComponents())
-                ->successRedirectUrl(fn (Lead $record): string => route('filament.admin.resources.leads.edit', $record)),
-        ];
     }
 }

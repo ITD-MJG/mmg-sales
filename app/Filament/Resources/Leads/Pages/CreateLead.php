@@ -16,7 +16,7 @@ class CreateLead extends CreateRecord
     {
         return Notification::make()
             ->success()
-            ->title('Project created successfully');
+            ->title('Lead created successfully');
     }
 
     protected function getRedirectUrl(): string
@@ -26,12 +26,6 @@ class CreateLead extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        if (isset($data['assigned_users'])) {
-            $assignedUsers = $data['assigned_users'];
-            unset($data['assigned_users']);
-            session(['pending_collaborators' => $assignedUsers]);
-        }
-
         if (isset($data['customer_id'])) {
             $customer = Customer::find($data['customer_id']);
             if ($customer) {
@@ -44,14 +38,9 @@ class CreateLead extends CreateRecord
 
     protected function afterCreate(): void
     {
-        $assignedUsers = session('pending_collaborators', []);
-        if (! empty($assignedUsers)) {
-            $this->getRecord()->collaborators()
-                ->syncWithPivotValues($assignedUsers, ['added_by' => auth()->id()]);
-            session()->forget('pending_collaborators');
-        }
-
         $lead = $this->getRecord();
+
+        // Adopt any pre-existing customer activities that are not yet tied to a lead.
         if ($lead->customer_id) {
             Activity::where('customer_id', $lead->customer_id)
                 ->whereNull('lead_id')
