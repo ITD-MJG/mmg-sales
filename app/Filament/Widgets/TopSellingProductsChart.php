@@ -5,7 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\OrderItem;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class TopSellingProductsChart extends ChartWidget
 {
@@ -15,7 +15,7 @@ class TopSellingProductsChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '200px';
+    protected static ?string $height = '320px';
 
     protected static ?int $sort = 30;
 
@@ -49,8 +49,14 @@ class TopSellingProductsChart extends ChartWidget
             ->pluck('total_qty', 'product_name')
             ->toArray();
 
-        $labels = array_keys($data);
-        $values = array_values($data);
+        // Names are long ("PK00128 - 50mL Centrifuge Tube with ...") and
+        // chart options are JSON-encoded, so the tick cannot be trimmed by a
+        // JS callback. Trim server-side instead.
+        // Chart.js caps the label gutter, so anything past ~20 characters on
+        // a dashboard-width column is clipped mid-word. Str::limit also adds
+        // '...' beyond the limit, so 20 is the cap for the total length.
+        $labels = array_map(fn (string $name): string => Str::limit($name, 17), array_keys($data));
+        $values = array_map(fn ($v) => (int) $v, array_values($data));
 
         return [
             'datasets' => [
@@ -65,6 +71,11 @@ class TopSellingProductsChart extends ChartWidget
         ];
     }
 
+    /**
+     * A ranking of ten named products by units sold. Horizontal bars keep the
+     * long SKU-prefixed names readable and put the ranking top-to-bottom,
+     * matching the other ranked widgets on the dashboard.
+     */
     protected function getType(): string
     {
         return 'bar';
@@ -84,6 +95,14 @@ class TopSellingProductsChart extends ChartWidget
             'scales' => [
                 'x' => [
                     'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                    ],
+                ],
+                'y' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
                 ],
             ],
         ];

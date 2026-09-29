@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class MonthlyRevenueTrendChart extends ChartWidget
 {
@@ -15,7 +14,7 @@ class MonthlyRevenueTrendChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
-    protected static ?string $height = '200px';
+    protected static ?string $height = '280px';
 
     protected static ?int $sort = 10;
 
@@ -56,12 +55,19 @@ class MonthlyRevenueTrendChart extends ChartWidget
             ->toArray();
 
         $labels = $months->pluck('label')->toArray();
-        $data = $months->pluck('key')->map(fn ($key) => round((float) ($revenue[$key] ?? 0), 2))->toArray();
+
+        // Reported in millions: raw rupiah runs to ten digits and overflows the
+        // axis on a three-column dashboard. Filament emits chart options through
+        // @js(), which JSON-encodes them, so a JS tick callback would arrive as
+        // a string and be ignored. The unit is named on the axis instead.
+        $data = $months->pluck('key')
+            ->map(fn ($key) => round((float) ($revenue[$key] ?? 0) / 1_000_000, 2))
+            ->toArray();
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenue (IDR)',
+                    'label' => 'Revenue (Rp juta)',
                     'data' => $data,
                     'borderColor' => 'rgb(59, 130, 246)',
                     'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
@@ -73,6 +79,9 @@ class MonthlyRevenueTrendChart extends ChartWidget
         ];
     }
 
+    /**
+     * Revenue over a continuous month axis is a trend, so a line stays correct.
+     */
     protected function getType(): string
     {
         return 'line';
@@ -91,6 +100,10 @@ class MonthlyRevenueTrendChart extends ChartWidget
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Rp juta',
+                    ],
                 ],
             ],
         ];
