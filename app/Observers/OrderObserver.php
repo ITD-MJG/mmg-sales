@@ -6,46 +6,38 @@ use App\Models\Order;
 
 class OrderObserver
 {
-    /**
-     * Handle the Order "created" event.
-     */
     public function created(Order $order): void
     {
-        if ($order->lead_id) {
-            $lead = $order->lead;
-            $lead->status = 'won';
-            $lead->converted_at = now();
-            $lead->save();
+        if (! $order->opportunity_id) {
+            return;
         }
+
+        $opportunity = $order->opportunity;
+
+        if (! $opportunity) {
+            return;
+        }
+
+        $opportunity->stage = 'won';
+        $opportunity->converted_at = now();
+        $opportunity->save();
     }
 
-    /**
-     * Handle the Order "updated" event.
-     */
     public function updated(Order $order): void
     {
         //
     }
 
-    /**
-     * Handle the Order "deleted" event.
-     */
     public function deleted(Order $order): void
     {
         //
     }
 
-    /**
-     * Handle the Order "restored" event.
-     */
     public function restored(Order $order): void
     {
         //
     }
 
-    /**
-     * Handle the Order "force deleted" event.
-     */
     public function forceDeleted(Order $order): void
     {
         //

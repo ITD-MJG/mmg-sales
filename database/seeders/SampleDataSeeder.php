@@ -8,11 +8,11 @@ use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Department;
 use App\Models\Distributor;
-use App\Models\Item;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Position;
 use App\Models\Principal;
+use App\Models\Product;
 use App\Models\Segment;
 use App\Models\SubSegment;
 use App\Models\Territory;
@@ -27,7 +27,6 @@ class SampleDataSeeder extends Seeder
     {
         $this->call([
             PrincipalSeeder::class,
-            PrincipalProductSeeder::class,
             ProductSeeder::class,
         ]);
 
@@ -36,7 +35,7 @@ class SampleDataSeeder extends Seeder
         $positions = Position::all();
 
         $principals = Principal::all();
-        $items = Item::all();
+        $products = Product::all();
 
         $territories = Territory::factory(15)->create();
         $segments = Segment::factory(4)->create();
@@ -84,7 +83,7 @@ class SampleDataSeeder extends Seeder
                 $convertedAt = (clone $createdAt)->addDays(rand(1, $ageDays));
             }
 
-            $estimatedValue = $items->random()->unit_price * rand(1, 5);
+            $estimatedValue = $products->random()->unit_price * rand(1, 5);
 
             $lead = Lead::create([
                 'title' => fake()->randomElement($leadTitles).' - '.$customer->name,
@@ -122,14 +121,14 @@ class SampleDataSeeder extends Seeder
 
         $wonProjects = Lead::where('status', 'won')->get();
         foreach ($wonProjects as $lead) {
-            $item = $items->random();
+            $product = $products->random();
             $subSegment = $subSegments->random();
             $srUser = $users->where('id', $lead->assigned_to)->first() ?? $users->random();
 
             Order::factory()->create([
                 'lead_id' => $lead->id,
                 'end_customer_id' => $lead->customer_id,
-                'principal_id' => $item->principal_id,
+                'principal_id' => $product->principal_id,
                 'sales_type_id' => $salesTypes[array_rand($salesTypes)],
                 'distributor_id' => $distributors->random()->id,
                 'department_id' => $srUser->department_id ?? $departments->random()->id,

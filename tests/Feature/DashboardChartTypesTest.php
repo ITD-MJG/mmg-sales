@@ -1,6 +1,6 @@
 <?php
 
-use App\Filament\Widgets\LeadStatusChart;
+use App\Filament\Widgets\OpportunityStatusChart;
 use App\Filament\Widgets\MonthlyRevenueTrendChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
@@ -9,6 +9,7 @@ use App\Filament\Widgets\TopVisitedCustomersChart;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Principal;
@@ -50,7 +51,7 @@ function chartSpec(string $widget): array
 }
 
 it('renders lead status as a doughnut, since it is a share of the pipeline', function () {
-    $spec = chartSpec(LeadStatusChart::class);
+    $spec = chartSpec(OpportunityStatusChart::class);
 
     expect($spec['type'])->toBe('doughnut')
         ->and($spec['options']['plugins']['legend']['display'])->toBeTrue();
@@ -92,7 +93,7 @@ it('renders the sales rep ranking as horizontal bars', function () {
 
 it('exposes no JS callbacks in chart options, which JSON encoding would strip', function () {
     $widgets = [
-        LeadStatusChart::class,
+        OpportunityStatusChart::class,
         MonthlyRevenueTrendChart::class,
         RevenueByPrincipalChart::class,
         TopSellingProductsChart::class,
@@ -150,7 +151,7 @@ it('trims long product names server-side so the axis stays readable', function (
 
     OrderItem::factory()->create([
         'order_id' => $order->id,
-        'product_id' => $product->id,
+        'item_id' => $product->id,
         'principal_id' => $principal->id,
         'quantity' => 5,
     ]);
@@ -173,13 +174,21 @@ it('aggregates the rep ranking per rep, not per rep-and-customer', function () {
     $firstCustomer = Customer::factory()->create();
     $secondCustomer = Customer::factory()->create();
 
+    // Activities must belong to a lead or an opportunity. These carry a
+    // customer only, so attach an opportunity to satisfy the exclusivity guard.
+    $opportunity = Opportunity::factory()->create();
+
     Activity::factory()->count(2)->create([
+        'opportunity_id' => $opportunity->id,
+        'lead_id' => null,
         'user_id' => $rep->id,
         'customer_id' => $firstCustomer->id,
         'performed_at' => now(),
     ]);
 
     Activity::factory()->count(3)->create([
+        'opportunity_id' => $opportunity->id,
+        'lead_id' => null,
         'user_id' => $rep->id,
         'customer_id' => $secondCustomer->id,
         'performed_at' => now(),
@@ -199,7 +208,7 @@ it('renders every redesigned widget without error', function () {
     Lead::factory()->count(2)->create(['created_by' => $this->user->id]);
 
     foreach ([
-        LeadStatusChart::class,
+        OpportunityStatusChart::class,
         MonthlyRevenueTrendChart::class,
         RevenueByPrincipalChart::class,
         TopSellingProductsChart::class,

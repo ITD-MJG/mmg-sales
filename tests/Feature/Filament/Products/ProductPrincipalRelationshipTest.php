@@ -41,7 +41,7 @@ it('can create a product with a principal', function () {
 
     livewire(CreateProduct::class)
         ->set('data.name', 'Test Product')
-        ->set('data.sku', 'TP-001')
+        ->set('data.internal_code', 'TP-001')
         ->set('data.category', 'medical_equipment')
         ->set('data.unit_price', 100.00)
         ->set('data.principal_id', $principal->id)

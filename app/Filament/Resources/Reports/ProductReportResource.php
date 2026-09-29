@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\Reports;
 
 use App\Filament\Resources\Reports\Pages\ProductReportPage;
-use App\Models\Item;
+use App\Models\Product;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 
 class ProductReportResource extends Resource
 {
-    protected static ?string $model = Item::class;
+    protected static ?string $model = Product::class;
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 

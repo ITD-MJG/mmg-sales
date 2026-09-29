@@ -6,11 +6,10 @@ use App\Models\User;
 use App\Services\ActivityScopeService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class TopVisitedCustomersChart extends ChartWidget
 {
-    protected ?string $heading = 'Top Visited Customers';
+    protected ?string $heading = 'Top Visited Leads';
 
     protected static bool $isLazy = false;
 
@@ -29,25 +28,30 @@ class TopVisitedCustomersChart extends ChartWidget
         $user = Auth::user();
         $service = app(ActivityScopeService::class);
 
+        // Rank the visited leads themselves and label each bar with the lead
+        // code. An activity belongs to exactly one of a lead or an opportunity
+        // (the model enforces it), and the pipeline codes live on whichever one
+        // it is, so resolve the code across both.
+        $codeExpression = 'COALESCE(leads.lead_code, opportunities.opportunity_code)';
+
         $rows = $service->getActivityQuery($user)
-            ->whereNotNull('customer_id')
-            ->selectRaw('customer_id, COUNT(*) as activity_count')
-            ->groupBy('customer_id')
+            ->leftJoin('opportunities', 'activities.opportunity_id', '=', 'opportunities.id')
+            ->leftJoin('leads', 'activities.lead_id', '=', 'leads.id')
+            ->where(function ($query): void {
+                $query->whereNotNull('activities.lead_id')
+                    ->orWhereNotNull('activities.opportunity_id');
+            })
+            ->selectRaw("{$codeExpression} as lead_code, COUNT(*) as activity_count")
+            ->groupByRaw($codeExpression)
             ->orderByDesc('activity_count')
-            ->orderBy('customer_id')
+            ->orderBy('lead_code')
             ->limit(10)
-            // withTrashed(): a deleted customer still owns its historical
-            // activities, and without this the bar would render unlabelled.
-            ->with(['customer' => fn ($query) => $query->withTrashed()->select('id', 'name')])
             ->get();
 
         // No ->reverse(): with indexAxis 'y', Chart.js draws index 0 at the top,
         // so the descending order from the query is already highest-first.
-        // Names are long ("BALAI BESAR LABORATORIUM KESEHATAN MASYARAKAT
-        // PALEMBANG ...") and chart options are JSON-encoded, so the tick
-        // cannot be trimmed by a JS callback. Trim server-side instead.
         $labels = $rows
-            ->map(fn ($row): string => Str::limit(trim($row->customer?->name ?? 'Customer #'.$row->customer_id), 17))
+            ->map(fn ($row): string => trim((string) $row->lead_code) ?: 'Unknown lead')
             ->all();
 
         $values = $rows

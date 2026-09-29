@@ -6,11 +6,11 @@ use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Department;
 use App\Models\Distributor;
-use App\Models\Item;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Position;
 use App\Models\Principal;
+use App\Models\Product;
 use App\Models\Segment;
 use App\Models\SubSegment;
 use App\Models\Territory;
@@ -24,7 +24,6 @@ class SampleSalesDataSeeder extends Seeder
     {
         $this->call([
             PrincipalSeeder::class,
-            PrincipalProductSeeder::class,
             ProductSeeder::class,
         ]);
 
@@ -56,7 +55,7 @@ class SampleSalesDataSeeder extends Seeder
         );
 
         $principalIds = Principal::pluck('id')->toArray();
-        $itemIds = Item::pluck('id')->toArray();
+        $productIds = Product::pluck('id')->toArray();
 
         $customersData = [
             ['email' => 'rs_central@example.com', 'name' => 'RS Central Jakarta', 'type' => 'hospital_clinic', 'class' => 'tier_1'],
@@ -106,9 +105,9 @@ class SampleSalesDataSeeder extends Seeder
         $orderStatuses = ['draft', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'];
 
         for ($i = 1; $i <= 20; $i++) {
-            $selectedItem = Item::find($itemIds[array_rand($itemIds)]);
+            $selectedProduct = Product::find($productIds[array_rand($productIds)]);
             $qty = rand(5, 100);
-            $totalGross = $selectedItem->unit_price * $qty;
+            $totalGross = $selectedProduct->unit_price * $qty;
             $discount = rand(0, 15);
             $netTotal = $totalGross * (1 - ($discount / 100));
 
@@ -121,7 +120,7 @@ class SampleSalesDataSeeder extends Seeder
                 'spv_position_id' => $spvPos->id,
                 'sales' => [$user?->id ?? User::factory()->create()->id],
                 'end_customer_id' => $customerIds[array_rand($customerIds)],
-                'principal_id' => $selectedItem->principal_id,
+                'principal_id' => $selectedProduct->principal_id,
                 'reg_inst' => collect(['REG', 'INST', 'Consumable'])->random(rand(1, 2))->values()->all(),
                 'sales_type_id' => rand(0, 1) ? 'INAPROC' : 'non-INAPROC',
                 'net_sales_total' => $netTotal,

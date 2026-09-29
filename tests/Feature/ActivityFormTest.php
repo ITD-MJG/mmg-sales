@@ -28,7 +28,7 @@ it('can create a basic activity', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -55,7 +55,7 @@ it('can create an activity with a contact', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -84,7 +84,7 @@ it('can create activity with date within 3 days backdate', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -113,7 +113,7 @@ it('cannot create activity with date older than 3 days', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -138,7 +138,7 @@ it('can create activity for today', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -167,7 +167,7 @@ it('can create activity for future date', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $contact = Contact::factory()->create(['customer_id' => $customer->id]);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
@@ -195,7 +195,7 @@ it('can create activity without a lead', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
 
     livewire(CreateActivity::class)
         ->set('data.customer_id', $customer->id)
@@ -219,7 +219,7 @@ it('can create activity then link to existing lead', function () {
     $user->assignRole('Super Admin');
     actingAs($user);
 
-    $customer = Customer::factory()->create(['type' => 'hospital']);
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
     $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
     ]);

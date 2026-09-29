@@ -7,8 +7,10 @@ use App\DTOs\SalesReportData;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SalesReportService
 {
@@ -137,6 +139,22 @@ class SalesReportService
         return $query->join('order_items', 'orders.id', '=', 'order_items.order_id');
     }
 
+    /**
+     * `orders.sales` holds a JSON array of user ids, so membership has to be
+     * tested per database rather than with a plain equality join.
+     */
+    private static function joinSalesContains(JoinClause $join): void
+    {
+        $raw = match (DB::getDriverName()) {
+            'sqlite' => 'EXISTS (SELECT 1 FROM json_each(orders.sales) WHERE json_each.value = users.id)',
+            'pgsql' => 'orders.sales @> to_jsonb(users.id)',
+            // MariaDB rejects CAST(... AS JSON) and MEMBER OF.
+            default => 'JSON_CONTAINS(orders.sales, CAST(users.id AS CHAR))',
+        };
+
+        $join->whereRaw($raw);
+    }
+
     private function getRevenueByPeriod(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
@@ -156,8 +174,8 @@ class SalesReportService
     {
         return $this->buildBaseQueryWithItems($filters)
             ->join('users', function ($join) {
-                $join->on('orders.sales', '=', 'users.id')
-                    ->where('users.is_active', true);
+                self::joinSalesContains($join);
+                $join->where('users.is_active', true);
             })
             ->selectRaw('users.id as user_id, users.name as user_name, SUM(order_items.subtotal) as revenue, COUNT(DISTINCT orders.id) as orders')
             ->groupBy('users.id', 'users.name')
@@ -176,8 +194,8 @@ class SalesReportService
     {
         return $this->buildBaseQueryWithItems($filters)
             ->join('users', function ($join) {
-                $join->on('orders.sales', '=', 'users.id')
-                    ->where('users.is_active', true);
+                self::joinSalesContains($join);
+                $join->where('users.is_active', true);
             })
             ->join('territories', 'users.territory_id', '=', 'territories.id')
             ->selectRaw('users.territory_id, territories.name as territory_name, SUM(order_items.subtotal) as revenue, COUNT(DISTINCT orders.id) as orders')

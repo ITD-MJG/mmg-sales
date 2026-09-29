@@ -23,8 +23,12 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="mariadb"/>
-        <env name="DB_DATABASE" value="mmg_sales_testing"/>
+        <!-- force="true" is load-bearing: without it PHPUnit only applies these when the
+             variable is not already set in the environment, so an inherited
+             DB_DATABASE=mmg_sales_dev makes RefreshDatabase migrate:fresh the DEV
+             database. That wiped dev once on 2026-09-25. Do not remove. -->
+        <env name="DB_CONNECTION" value="mariadb" force="true"/>
+        <env name="DB_DATABASE" value="mmg_sales_testing" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

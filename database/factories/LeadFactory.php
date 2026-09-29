@@ -16,32 +16,44 @@ class LeadFactory extends Factory
 
     public function definition(): array
     {
-        $opportunityTypes = [
-            'Medical Equipment Procurement',
-            'Surgical Supply Tender',
-            'Diagnostic Imaging Service Contract',
-            'Patient Monitoring System Upgrade',
-            'Lab Equipment Maintenance',
-            'Healthcare IT Implementation',
-            'Pharmaceutical Distribution Partnership',
-            'Emergency Room Refurbishment',
-        ];
-
         return [
-            'title' => fake()->randomElement($opportunityTypes).' - '.fake()->city(),
+            'title' => fake()->randomElement([
+                'Cardiology Equipment Inquiry',
+                'Radiology Supply Enquiry',
+                'New Clinic Setup',
+                'Pharmacy Restock Request',
+                'Lab Reagent Interest',
+            ]).' - '.fake()->city(),
             'customer_name' => fake('id_ID')->company(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake('id_ID')->phoneNumber(),
-            'status' => fake()->randomElement(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']),
+            'status' => fake()->randomElement(['new', 'contacted']),
             'source' => fake()->randomElement(['website', 'referral', 'cold_call', 'trade_show', 'partner', 'other']),
             'priority' => fake()->randomElement(['low', 'medium', 'high', 'urgent']),
-            'estimated_value' => $val = fake()->numberBetween(10000000, 1000000000),
-            'estimated_revenue' => $val * rand(80, 100) / 100,
-            'estimated_completion_date' => fake()->dateTimeBetween('now', '+8 months'),
             'notes' => fake()->paragraph(),
-            'customer_id' => fake()->boolean(30) ? Customer::factory() : null,
+            'customer_id' => Customer::factory(),
             'assigned_to' => User::factory(),
-            'position' => (string) fake()->randomFloat(2, 0, 100),
         ];
+    }
+
+    public function status(string $status): static
+    {
+        return $this->state(fn () => ['status' => $status]);
+    }
+
+    public function converted(): static
+    {
+        return $this->state(fn () => [
+            'status' => 'converted',
+            'converted_at' => now(),
+        ]);
+    }
+
+    public function disqualified(): static
+    {
+        return $this->state(fn () => [
+            'status' => 'disqualified',
+            'disqualified_at' => now(),
+        ]);
     }
 }

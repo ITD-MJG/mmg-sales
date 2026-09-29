@@ -2,21 +2,26 @@
 
 namespace App\Models;
 
+use App\Observers\ActivityObserver;
 use App\Services\ResourceCodeGenerator;
 use App\Traits\HasCode;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use InvalidArgumentException;
 
+#[ObservedBy(ActivityObserver::class)]
 class Activity extends Model
 {
     use HasCode, HasFactory;
 
     protected $fillable = [
         'lead_id',
+        'opportunity_id',
         'user_id',
         'customer_id',
         'contact_id',
@@ -55,6 +60,23 @@ class Activity extends Model
     {
         parent::boot();
 
+        static::saving(function (Activity $activity) {
+            $hasLead = filled($activity->lead_id);
+            $hasOpportunity = filled($activity->opportunity_id);
+
+            if ($hasLead && $hasOpportunity) {
+                throw new InvalidArgumentException(
+                    'Activity cannot belong to both a lead and an opportunity.'
+                );
+            }
+
+            if (! $hasLead && ! $hasOpportunity) {
+                throw new InvalidArgumentException(
+                    'Activity must belong to either a lead or an opportunity.'
+                );
+            }
+        });
+
         // TODO: Re-enable after review
         // static::creating(function ($activity) {
         //     $minDate = now()->subDays(3)->startOfDay();
@@ -77,6 +99,11 @@ class Activity extends Model
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class, 'lead_id');
+    }
+
+    public function opportunity(): BelongsTo
+    {
+        return $this->belongsTo(Opportunity::class, 'opportunity_id');
     }
 
     public function user(): BelongsTo
@@ -106,7 +133,8 @@ class Activity extends Model
 
     /**
      * Whether the user is attached to this activity: the rep who logged it,
-     * a listed attendee, or the creator/collaborator of the parent lead.
+     * a listed attendee, the creator of the parent lead, or anyone attached
+     * to the parent opportunity.
      */
     public function isAccessibleBy(?User $user): bool
     {
@@ -126,11 +154,13 @@ class Activity extends Model
             return true;
         }
 
-        return $this->lead?->isAccessibleBy($user) ?? false;
+        return $this->lead?->created_by === $user->id
+            || ($this->opportunity?->isAccessibleBy($user) ?? false);
     }
 
     /**
-     * Scope to activities the user is attached to (own, attendee, or lead-linked).
+     * Scope to activities the user is attached to (own, attendee, lead-created,
+     * or opportunity-accessible).
      */
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
@@ -141,7 +171,8 @@ class Activity extends Model
         return $query->where(function (Builder $query) use ($user): void {
             $query->where('user_id', $user->id)
                 ->orWhereHas('attendees', fn (Builder $attendees) => $attendees->whereKey($user->getKey()))
-                ->orWhereHas('lead', fn (Builder $lead) => $lead->accessibleBy($user));
+                ->orWhereHas('lead', fn (Builder $lead) => $lead->where('created_by', $user->id))
+                ->orWhereHas('opportunity', fn (Builder $opportunity) => $opportunity->accessibleBy($user));
         });
     }
 }

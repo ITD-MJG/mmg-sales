@@ -4,9 +4,11 @@ use App\Models\Activity;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\Principal;
 use App\Models\Product;
+use App\Services\ResourceCodeGenerator;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
@@ -141,4 +143,20 @@ describe('Order Order Number Generation', function () {
 
         expect($order->order_number)->toMatch('/^ORD-'.date('Y').'-\d{6}$/');
     });
+});
+
+it('generates opportunity codes with the OPP prefix', function () {
+    $generator = app(ResourceCodeGenerator::class);
+
+    $code = $generator->generateForOpportunity('202609');
+
+    expect($code)->toBe('OPP-202609-0001');
+});
+
+it('increments opportunity codes within a month', function () {
+    $generator = app(ResourceCodeGenerator::class);
+
+    Opportunity::factory()->create(['opportunity_code' => 'OPP-202609-0001']);
+
+    expect($generator->generateForOpportunity('202609'))->toBe('OPP-202609-0002');
 });

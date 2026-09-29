@@ -36,6 +36,15 @@ class ResourceCodeGenerator
 
         return sprintf('LEAD-%s-%04d', $yearMonth, $sequence);
     }
+
+    public function generateForOpportunity(?string $yearMonth = null): string
+    {
+        $yearMonth = $yearMonth ?? now()->format('Ym');
+        $sequence = $this->getNextSequence('OPP', $yearMonth, 'opportunities', 'opportunity_code');
+
+        return sprintf('OPP-%s-%04d', $yearMonth, $sequence);
+    }
+
     public function getNextSequenceValue(string $prefix, ?string $partition = null, ?string $table = null, ?string $column = null): int
     {
         return $this->getNextSequence($prefix, $partition, $table, $column);

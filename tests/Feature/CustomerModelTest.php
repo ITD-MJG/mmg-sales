@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Customer;
+use App\Models\Lead;
+use App\Models\Opportunity;
 
 test('customer_name is nullable and accepts string values', function () {
     $customer = Customer::factory()->create(['customer_name' => 'Test Customer Name']);
@@ -33,4 +35,14 @@ test('displayName accessor falls back to name when customer_name is null', funct
     ]);
 
     expect($customer->displayName)->toBe('Fallback Name');
+});
+
+it('relates both raw leads and opportunities', function () {
+    $customer = Customer::factory()->create();
+
+    Lead::factory()->create(['customer_id' => $customer->id]);
+    Opportunity::factory()->create(['customer_id' => $customer->id]);
+
+    expect($customer->leads()->count())->toBe(1)
+        ->and($customer->opportunities()->count())->toBe(1);
 });

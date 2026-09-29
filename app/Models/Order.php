@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Observers\OrderObserver;
 use App\Services\ResourceCodeGenerator;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
+#[ObservedBy(OrderObserver::class)]
 class Order extends Model
 {
     use HasFactory;
@@ -28,11 +31,12 @@ class Order extends Model
         'principal_id',
         'reg_inst',
         'sales_type_id',
+        'discount_on',
         'net_sales_total',
         'jual_kso',
         'distributor_id',
         'order_number',
-        'lead_id',
+        'opportunity_id',
         'subtotal',
         'tax_amount',
         'discount_amount',
@@ -107,7 +111,6 @@ class Order extends Model
         return $this->belongsTo(Position::class, 'spv_position_id');
     }
 
-
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'end_customer_id');
@@ -123,9 +126,9 @@ class Order extends Model
         return $this->belongsTo(Distributor::class);
     }
 
-    public function lead(): BelongsTo
+    public function opportunity(): BelongsTo
     {
-        return $this->belongsTo(Lead::class, 'lead_id');
+        return $this->belongsTo(Opportunity::class, 'opportunity_id');
     }
 
     public function creator(): BelongsTo
@@ -148,7 +151,12 @@ class Order extends Model
         return $this->hasMany(PaymentStatus::class);
     }
 
-    public function getNetSalesTotalAttribute(): float
+    /**
+     * Sum of line items. Kept separate from the `net_sales_total` column,
+     * which is the stored value and is the only source for imported orders
+     * (the import writes a header with no order_items).
+     */
+    public function orderItemsNetTotal(): float
     {
         return (float) $this->orderItems()->sum('subtotal');
     }

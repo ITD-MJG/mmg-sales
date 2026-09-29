@@ -14,7 +14,7 @@ class CustomerFactory extends Factory
     {
         return [
             'name' => fake('id_ID')->company().' '.fake()->randomElement(['Hospital', 'Clinic', 'Pharmacy', 'Lab']),
-            'type' => fake()->randomElement(['hospital', 'clinic', 'pharmacy', 'laboratory', 'distributor', 'other']),
+            'type' => fake()->randomElement(['hospital_clinic', 'pt_cv', 'other']),
             'tax_number' => fake()->unique()->numerify('##.###.###.#-###.###'),
             'address' => fake('id_ID')->address(),
             'city' => fake('id_ID')->city(),
