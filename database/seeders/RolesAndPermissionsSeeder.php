@@ -20,7 +20,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // ── Generate all model permissions ───────────────────────────────
         $models = [
             'customer_group', 'sub_segment', 'sales_type', 'customer', 'department',
-            'distributor', 'activity', 'activity_comment', 'contact', 'product', 'lead', 'segment',
+            'distributor', 'activity', 'activity_comment', 'contact', 'product', 'lead', 'opportunity', 'segment',
             'territory', 'position', 'principal', 'milestone', 'item', 'order',
             'target', 'user',
         ];
@@ -106,6 +106,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $smPermissions = array_merge([
             // Lead
             'view_any_lead', 'view_lead', 'create_lead', 'update_lead', 'delete_lead',
+            // Opportunity
+            'view_any_opportunity', 'view_opportunity', 'create_opportunity', 'update_opportunity', 'delete_opportunity',
             // Activity
             'view_any_activity', 'view_activity', 'create_activity', 'update_activity', 'delete_activity',
             // Activity Comment
