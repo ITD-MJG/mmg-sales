@@ -2,8 +2,11 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Leads\LeadResource;
+use App\Filament\Resources\Opportunities\OpportunityResource;
 use App\Models\User;
 use App\Services\ActivityScopeService;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -41,7 +44,7 @@ class TopVisitedCustomersChart extends ChartWidget
                 $query->whereNotNull('activities.lead_id')
                     ->orWhereNotNull('activities.opportunity_id');
             })
-            ->selectRaw("{$codeExpression} as lead_code, COUNT(*) as activity_count")
+            ->selectRaw("{$codeExpression} as lead_code, MIN(activities.lead_id) as lead_id, MIN(activities.opportunity_id) as opportunity_id, COUNT(*) as activity_count")
             ->groupByRaw($codeExpression)
             ->orderByDesc('activity_count')
             ->orderBy('lead_code')
@@ -56,6 +59,10 @@ class TopVisitedCustomersChart extends ChartWidget
 
         $values = $rows
             ->map(fn ($row): int => (int) $row->activity_count)
+            ->all();
+
+        $urls = $rows
+            ->map(fn ($row): ?string => $this->recordUrl($row))
             ->all();
 
         $colors = [
@@ -78,6 +85,7 @@ class TopVisitedCustomersChart extends ChartWidget
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'borderWidth' => 0,
+                    'urls' => $urls,
                 ],
             ],
             'labels' => $labels,
@@ -89,30 +97,53 @@ class TopVisitedCustomersChart extends ChartWidget
         return 'bar';
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): array|RawJs
     {
-        return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
-            'plugins' => [
-                'legend' => [
-                    'display' => false,
-                ],
-            ],
-            'indexAxis' => 'y',
-            'scales' => [
-                'x' => [
-                    'beginAtZero' => true,
-                    'ticks' => [
-                        'precision' => 0,
-                    ],
-                ],
-                'y' => [
-                    'grid' => [
-                        'display' => false,
-                    ],
-                ],
-            ],
-        ];
+        return RawJs::make(<<<'JS'
+            {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                },
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                    },
+                    y: {
+                        grid: { display: false },
+                    },
+                },
+                onHover: (event, elements) => {
+                    event.native.target.style.cursor = elements.length ? 'pointer' : 'default'
+                },
+                onClick: (event, elements, chart) => {
+                    const index = elements[0]?.index
+                    const url = index === undefined
+                        ? null
+                        : chart.data.datasets[0]?.urls?.[index]
+                    if (url) window.location.href = url
+                },
+            }
+            JS);
+    }
+
+    /**
+     * The bar's lead code is drawn from a lead or an opportunity, so link to
+     * whichever record the activity actually points at.
+     */
+    private function recordUrl(object $row): ?string
+    {
+        if ($row->lead_id) {
+            return LeadResource::getUrl('view', ['record' => $row->lead_id]);
+        }
+
+        if ($row->opportunity_id) {
+            return OpportunityResource::getUrl('view', ['record' => $row->opportunity_id]);
+        }
+
+        return null;
     }
 }

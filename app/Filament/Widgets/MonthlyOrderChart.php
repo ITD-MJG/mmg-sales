@@ -6,11 +6,11 @@ use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
 
-class MonthlyRevenueTrendChart extends ChartWidget
+class MonthlyOrderChart extends ChartWidget
 {
     use HasVisibilityScope;
 
-    protected ?string $heading = 'Monthly Revenue Trend';
+    protected ?string $heading = 'Monthly Order Value';
 
     protected static bool $isLazy = false;
 
@@ -67,7 +67,7 @@ class MonthlyRevenueTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenue (Rp juta)',
+                    'label' => 'Order Value (Rp juta)',
                     'data' => $data,
                     'borderColor' => 'rgb(59, 130, 246)',
                     'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
@@ -80,7 +80,7 @@ class MonthlyRevenueTrendChart extends ChartWidget
     }
 
     /**
-     * Revenue over a continuous month axis is a trend, so a line stays correct.
+     * Order value over a continuous month axis is a trend, so a line stays correct.
      */
     protected function getType(): string
     {

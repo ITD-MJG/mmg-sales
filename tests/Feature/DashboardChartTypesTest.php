@@ -1,7 +1,7 @@
 <?php
 
+use App\Filament\Widgets\MonthlyOrderChart;
 use App\Filament\Widgets\OpportunityStatusChart;
-use App\Filament\Widgets\MonthlyRevenueTrendChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
 use App\Filament\Widgets\TopSellingProductsChart;
@@ -16,6 +16,7 @@ use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Support\RawJs;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
@@ -34,19 +35,27 @@ beforeEach(function () {
 /**
  * Read a widget's chart type and options without rendering it.
  *
- * @return array{type: string, options: array<string, mixed>}
+ * Options may be a plain array or a RawJs literal (for widgets that need
+ * callbacks); `raw` always holds the JavaScript that reaches the page.
+ *
+ * @return array{type: string, options: array<string, mixed>, raw: string}
  */
 function chartSpec(string $widget): array
 {
     $instance = app($widget);
 
+    $options = (function (): array|RawJs {
+        return $this->getOptions();
+    })->call($instance);
+
     return [
         'type' => (function (): string {
             return $this->getType();
         })->call($instance),
-        'options' => (function (): array {
-            return $this->getOptions();
-        })->call($instance),
+        'options' => is_array($options) ? $options : [],
+        'raw' => $options instanceof RawJs
+            ? $options->toHtml()
+            : json_encode($options),
     ];
 }
 
@@ -57,8 +66,8 @@ it('renders lead status as a doughnut, since it is a share of the pipeline', fun
         ->and($spec['options']['plugins']['legend']['display'])->toBeTrue();
 });
 
-it('keeps monthly revenue as a line, since it is a time series', function () {
-    $spec = chartSpec(MonthlyRevenueTrendChart::class);
+it('keeps monthly order value as a line, since it is a time series', function () {
+    $spec = chartSpec(MonthlyOrderChart::class);
 
     expect($spec['type'])->toBe('line');
 });
@@ -81,7 +90,16 @@ it('renders the customer ranking as horizontal bars', function () {
     $spec = chartSpec(TopVisitedCustomersChart::class);
 
     expect($spec['type'])->toBe('bar')
-        ->and($spec['options']['indexAxis'])->toBe('y');
+        ->and($spec['raw'])->toContain("indexAxis: 'y'");
+});
+
+it('links each top-visited bar to its lead or opportunity record', function () {
+    $spec = chartSpec(TopVisitedCustomersChart::class);
+
+    // Filament's @js() strips nested closures, so this widget opts into a raw
+    // JS literal; the handler reads per-bar URLs off the dataset.
+    expect($spec['raw'])->toContain('onClick')
+        ->and($spec['raw'])->toContain('datasets[0]?.urls?.[index]');
 });
 
 it('renders the sales rep ranking as horizontal bars', function () {
@@ -92,12 +110,13 @@ it('renders the sales rep ranking as horizontal bars', function () {
 });
 
 it('exposes no JS callbacks in chart options, which JSON encoding would strip', function () {
+    // TopVisitedCustomersChart is deliberately absent: it needs a click handler
+    // and therefore returns a RawJs literal instead of an array.
     $widgets = [
         OpportunityStatusChart::class,
-        MonthlyRevenueTrendChart::class,
+        MonthlyOrderChart::class,
         RevenueByPrincipalChart::class,
         TopSellingProductsChart::class,
-        TopVisitedCustomersChart::class,
         TopSalesRepresentativeVisitsWidget::class,
     ];
 
@@ -111,7 +130,7 @@ it('exposes no JS callbacks in chart options, which JSON encoding would strip', 
     }
 });
 
-it('reports monthly revenue in millions with the unit named on the axis', function () {
+it('reports monthly order value in millions with the unit named on the axis', function () {
     $order = Order::factory()->create([
         'created_by' => $this->user->id,
         'order_date' => now(),
@@ -120,12 +139,12 @@ it('reports monthly revenue in millions with the unit named on the axis', functi
 
     expect($order->total_amount)->toBeNumeric();
 
-    $instance = app(MonthlyRevenueTrendChart::class);
+    $instance = app(MonthlyOrderChart::class);
     $data = (function (): array {
         return $this->getData();
     })->call($instance);
 
-    $options = chartSpec(MonthlyRevenueTrendChart::class)['options'];
+    $options = chartSpec(MonthlyOrderChart::class)['options'];
 
     // 1.5bn rupiah reads as 1500 on the axis, with the unit stated once.
     expect(max($data['datasets'][0]['data']))->toBe(1500.0)
@@ -209,7 +228,7 @@ it('renders every redesigned widget without error', function () {
 
     foreach ([
         OpportunityStatusChart::class,
-        MonthlyRevenueTrendChart::class,
+        MonthlyOrderChart::class,
         RevenueByPrincipalChart::class,
         TopSellingProductsChart::class,
         TopVisitedCustomersChart::class,
