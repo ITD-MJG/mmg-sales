@@ -51,6 +51,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_product_reports',
             'view_project_reports',
             'view_lead_reports',
+            'view_target_reports',
         ];
 
         foreach ($reportPermissions as $permission) {
