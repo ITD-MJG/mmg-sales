@@ -153,3 +153,25 @@ it('builds a continuous month axis covering the range', function () {
     expect($result->monthlyComparison->pluck('period')->toArray())
         ->toBe(['Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026']);
 });
+
+it('survives a cache round trip on the serializing store', function () {
+    // The suite runs on the array store, which skips serialization entirely and
+    // therefore cannot catch a DTO missing from config/cache.php's
+    // serializable_classes allowlist — reads would come back as
+    // __PHP_Incomplete_Class on any real deployment.
+    config(['cache.default' => 'database']);
+    app('cache')->purge('database');
+
+    $user = User::factory()->create();
+    Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 1, 'monthly_target' => 1234567]);
+
+    $service = app(TargetReportService::class);
+    $filters = targetFilters();
+
+    $first = $service->generate($filters);
+    $second = $service->generate($filters);
+
+    expect($second)->toBeInstanceOf(\App\DTOs\TargetReportData::class)
+        ->and($second->totalTarget)->toBe($first->totalTarget)
+        ->and($second->monthlyComparison)->toHaveCount(12);
+});
