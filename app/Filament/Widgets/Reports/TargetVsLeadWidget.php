@@ -14,7 +14,7 @@ class TargetVsLeadWidget extends ChartWidget
 
     protected ?string $heading = 'Target vs Lead';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     public function getData(): array
     {

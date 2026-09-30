@@ -49,7 +49,7 @@ class TargetReportPage extends Page
 
     public function getFooterWidgetsColumns(): int|array
     {
-        return 1;
+        return 2;
     }
 
     public function filtersForm(Schema $schema): Schema

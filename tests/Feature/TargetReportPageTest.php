@@ -71,3 +71,14 @@ it('builds target vs lead datasets from targets and opportunities', function () 
         ->assertSuccessful()
         ->assertSee('Total Target');
 });
+
+it('lays the two comparison charts side by side under a full-width stats row', function () {
+    targetReportViewer();
+
+    $page = new TargetReportPage;
+
+    expect($page->getFooterWidgetsColumns())->toBe(2)
+        ->and((fn () => $this->columnSpan)->call(new TargetVsLeadWidget))->toBe(1)
+        ->and((fn () => $this->columnSpan)->call(new TargetVsOrderWidget))->toBe(1)
+        ->and((fn () => $this->columnSpan)->call(new TargetReportStatsWidget))->toBe('full');
+});

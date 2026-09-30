@@ -13,8 +13,7 @@ class TargetVsOrderWidget extends ChartWidget
     use InteractsWithPageFilters;
 
     protected ?string $heading = 'Target vs Order';
-
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     public function getData(): array
     {
