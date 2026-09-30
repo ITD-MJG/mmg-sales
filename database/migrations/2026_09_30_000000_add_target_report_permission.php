@@ -10,16 +10,12 @@ return new class extends Migration
     private const PERMISSION = 'view_target_reports';
 
     /**
-     * Roles that already hold every other report permission.
+     * The target report sits alongside the other reports, so it goes to whoever
+     * already has sales report access. Deriving the recipients from the existing
+     * permission rather than a hardcoded role list keeps this correct on
+     * environments whose role names have drifted from the seeder.
      */
-    private const REPORT_ROLES = [
-        'Super Admin',
-        'Management Director',
-        'Sales Regional Manager',
-        'Sales Area Manager',
-        'Marketing Manager',
-        'Sales Manager',
-    ];
+    private const SOURCE_PERMISSION = 'view_sales_reports';
 
     public function up(): void
     {
@@ -27,9 +23,9 @@ return new class extends Migration
 
         $permission = Permission::findOrCreate(self::PERMISSION);
 
-        foreach (self::REPORT_ROLES as $roleName) {
-            Role::where('name', $roleName)->first()?->givePermissionTo($permission);
-        }
+        Role::permission(self::SOURCE_PERMISSION)
+            ->get()
+            ->each(fn (Role $role) => $role->givePermissionTo($permission));
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
