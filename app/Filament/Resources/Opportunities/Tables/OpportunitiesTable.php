@@ -21,20 +21,34 @@ class OpportunitiesTable
 {
     use HasVisibilityScope;
 
+    /**
+     * Records the index page lists, and therefore the set Prev/Next steps
+     * through. Both callers share this so navigation cannot drift from the list.
+     */
+    public static function listVisibilityQuery(Builder $query): Builder
+    {
+        $user = auth()->user();
+
+        // Grouped so the visibility predicate stays one unit: callers append
+        // their own `where` (ordering, navigation), and an ungrouped orWhere
+        // would let `A OR B AND extra` narrow to `A OR (B AND extra)`.
+        return $query->where(function (Builder $query) use ($user): void {
+            // Role-based visibility: staff sees own, managers see subordinates, etc.
+            self::applyVisibilityScope($query, 'created_by');
+
+            // Also include opportunities where the user is a collaborator (skip for global
+            // viewers, whose scope adds no WHERE and would be swallowed by this top-level OR)
+            if ($user && ! $user->hasGlobalVisibility()) {
+                $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
+            }
+        });
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $user = auth()->user();
-
-                // Role-based visibility: staff sees own, managers see subordinates, etc.
-                self::applyVisibilityScope($query, 'created_by');
-
-                // Also include opportunities where the user is a collaborator (skip for global
-                // viewers, whose scope adds no WHERE and would be swallowed by this top-level OR)
-                if ($user && ! $user->hasGlobalVisibility()) {
-                    $query->orWhereHas('collaborators', fn ($q) => $q->where('users.id', $user->id));
-                }
+                self::listVisibilityQuery($query);
 
                 // Sort by latest activity on the opportunity (most recently worked first)
                 return $query->orderByDesc(
