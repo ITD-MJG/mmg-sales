@@ -21,8 +21,29 @@ function runMirror(): void
 }
 
 beforeEach(function () {
-    // Reset any mirrored leads between tests.
-    DB::table('leads')->where('lead_code', 'like', 'LEAD-OPP-%')->orWhere('lead_code', 'like', 'LEAD-2026%')->delete();
+    // Reset any mirrored leads between tests. Mirrored codes always start with
+    // LEAD-, so matching the prefix catches every shape the tests create.
+    DB::table('leads')->where('lead_code', 'like', 'LEAD-%')->delete();
+});
+
+it('copies a production-shaped LEAD- code verbatim', function () {
+    // M1 renamed the column but kept the values, so a production opportunity is
+    // coded with the original lead code. Copying it back is what makes this a
+    // true rollback; prefixing it would invent a code the business never saw.
+    $opportunity = Opportunity::factory()->create([
+        'opportunity_code' => 'LEAD-202605-0001',
+        'stage' => 'proposal',
+        'title' => 'Production Shaped Deal',
+        'customer_id' => Customer::factory(),
+    ]);
+
+    runMirror();
+
+    $lead = Lead::where('lead_code', 'LEAD-202605-0001')->first();
+
+    expect($lead)->not->toBeNull()
+        ->and($lead->title)->toBe('Production Shaped Deal')
+        ->and($lead->customer_id)->toBe($opportunity->customer_id);
 });
 
 it('mirrors an opportunity into a lead with the code prefix swapped', function () {

@@ -30,17 +30,35 @@ use Illuminate\Support\Facades\Schema;
  * removes `opportunities` or its rows. Both tables hold the data afterwards,
  * which is the point of a safety rollback. Idempotent — a lead is keyed by its
  * mirrored `lead_code`, so re-running skips opportunities already copied.
+ *
+ * Codes carry over unchanged. M1 renamed `lead_code` -> `opportunity_code` but
+ * kept the values, so a production opportunity is already coded `LEAD-202605-…`
+ * and needs no rewriting.
  */
 return new class extends Migration
 {
     /**
-     * `OPP-202601-0001` becomes `LEAD-202601-0001`. The swap is 1:1 and both
-     * columns are 20 chars, so the mirrored code fits and stays unique.
+     * Reuse the opportunity's own code wherever possible.
+     *
+     * M1 renamed the column `lead_code` -> `opportunity_code` but kept the
+     * values, so a production opportunity is coded `LEAD-202605-0001` — the
+     * original lead code. Those are copied verbatim, which is what makes the
+     * mirror a true rollback rather than a renaming.
+     *
+     * The other two branches are defensive: `OPP-` for environments that
+     * adopted the new prefix, and a derived fallback so a row can always be
+     * keyed even if its code is null or an unknown shape.
      */
-    private function mirroredLeadCode(string $opportunityCode, int $opportunityId): string
+    private function mirroredLeadCode(?string $opportunityCode, int $opportunityId): string
     {
-        if (str_starts_with($opportunityCode, 'OPP-')) {
-            return 'LEAD-'.substr($opportunityCode, 4);
+        $code = (string) $opportunityCode;
+
+        if (str_starts_with($code, 'LEAD-')) {
+            return $code;
+        }
+
+        if (str_starts_with($code, 'OPP-')) {
+            return 'LEAD-'.substr($code, 4);
         }
 
         return 'LEAD-OPP-'.$opportunityId;
