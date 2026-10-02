@@ -58,7 +58,10 @@ class LeadStatusChart extends ApexChartWidget
                 'type' => ApexChartTypeEnum::Funnel->value,
                 'height' => 280,
             ],
-            'series' => $series,
+            // A funnel is ApexCharts' bar variant, and a bar reads its values
+            // as `series[i][j]`. A flat array renders nothing here — the
+            // values must sit behind a named series.
+            'series' => [['name' => 'Leads', 'data' => $series]],
             'labels' => $labels,
             'colors' => ['#6b7280', '#0ea5e9', '#22c55e', '#ef4444'],
             'legend' => [
@@ -66,14 +69,11 @@ class LeadStatusChart extends ApexChartWidget
                 'position' => 'right',
             ],
             'plotOptions' => [
-                'funnel' => [
-                    // Keep the declared order rather than sorting by value: the
-                    // bands must always read New → Contacted → Converted →
-                    // Disqualified, even when a later status outnumbers an
-                    // earlier one.
-                    'sortData' => false,
-                ],
+                // One colour per band instead of the single series colour.
+                'bar' => ['distributed' => true],
             ],
+            // A bar's legend is named from the x-axis categories, not `labels`.
+            'xaxis' => ['categories' => $labels],
         ];
     }
 }

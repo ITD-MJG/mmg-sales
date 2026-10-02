@@ -55,11 +55,22 @@ it('fixes the top-to-bottom order at New, Contacted, Converted, Disqualified', f
     expect($options['labels'])->toBe(['New', 'Contacted', 'Converted', 'Disqualified']);
 });
 
-it('does not let ApexCharts re-sort the bands by value', function () {
-    // A later status outnumbering an earlier one must not reorder the funnel.
+it('wraps the counts in a named series, which a bar chart requires', function () {
+    // A funnel is ApexCharts' bar variant and reads `series[i][j]`. A flat
+    // array of numbers renders nothing.
     $options = leadStatusOptions(salesStaff());
 
-    expect($options['plotOptions']['funnel']['sortData'])->toBeFalse();
+    expect($options['series'])->toBe([['name' => 'Leads', 'data' => [0, 0, 0, 0]]]);
+});
+
+it('gives each band its own colour and names the legend from the categories', function () {
+    $options = leadStatusOptions(salesStaff());
+
+    // Without `distributed`, every band takes the first colour.
+    expect($options['plotOptions']['bar']['distributed'])->toBeTrue()
+        ->and($options['colors'])->toHaveCount(4)
+        // A bar's legend reads the x-axis categories, not `labels`.
+        ->and($options['xaxis']['categories'])->toBe(['New', 'Contacted', 'Converted', 'Disqualified']);
 });
 
 it('keeps the declared band order even when a later status is largest', function () {
@@ -73,7 +84,7 @@ it('keeps the declared band order even when a later status is largest', function
     // Labels stay in declared order; the values follow them, so index 1 (New)
     // holds the smaller count and index 3 (Disqualified) the larger.
     expect($options['labels'])->toBe(['New', 'Contacted', 'Converted', 'Disqualified'])
-        ->and($options['series'])->toBe([2, 0, 0, 9]);
+        ->and($options['series'][0]['data'])->toBe([2, 0, 0, 9]);
 });
 
 it('counts leads by status', function () {
@@ -86,7 +97,7 @@ it('counts leads by status', function () {
 
     $options = leadStatusOptions($staff);
 
-    expect($options['series'])->toBe([3, 4, 2, 1]);
+    expect($options['series'][0]['data'])->toBe([3, 4, 2, 1]);
 });
 
 it('scopes the counts to the staff member own leads', function () {
@@ -100,7 +111,7 @@ it('scopes the counts to the staff member own leads', function () {
 
     $options = leadStatusOptions($staff);
 
-    expect(array_sum($options['series']))->toBe(2);
+    expect(array_sum($options['series'][0]['data']))->toBe(2);
 });
 
 it('counts every lead for a super admin', function () {
@@ -112,7 +123,7 @@ it('counts every lead for a super admin', function () {
 
     $options = leadStatusOptions($admin);
 
-    expect(array_sum($options['series']))->toBe(6);
+    expect(array_sum($options['series'][0]['data']))->toBe(6);
 });
 
 it('is visible to everyone, unlike the chart it replaced', function () {
