@@ -132,7 +132,8 @@ class TopVisitedCustomersChart extends ChartWidget
 
     /**
      * The bar's lead code is drawn from a lead or an opportunity, so link to
-     * whichever record the activity actually points at.
+     * whichever record the activity actually points at. The opportunities UI is
+     * locked to Super Admin, so a non-admin gets no link rather than a 403.
      */
     private function recordUrl(object $row): ?string
     {
@@ -140,7 +141,7 @@ class TopVisitedCustomersChart extends ChartWidget
             return LeadResource::getUrl('view', ['record' => $row->lead_id]);
         }
 
-        if ($row->opportunity_id) {
+        if ($row->opportunity_id && OpportunityResource::canAccess()) {
             return OpportunityResource::getUrl('view', ['record' => $row->opportunity_id]);
         }
 

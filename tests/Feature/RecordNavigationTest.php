@@ -127,24 +127,12 @@ it('names the neighbouring record in the tooltip', function () {
         ->assertActionHasLabel('nextRecord', 'Next');
 });
 
-it('keeps staff navigation inside the records they may see', function () {
+it('denies staff the opportunity view page now that it is locked to Super Admin', function () {
     $staff = User::factory()->create();
     $staff->assignRole('Sales Staff');
     actingAs($staff);
 
-    $other = User::factory()->create();
-    $other->assignRole('Sales Staff');
+    $opportunity = Opportunity::factory()->create(['opportunity_code' => 'OPP-202601-0001']);
 
-    $ownFirst = Opportunity::factory()->create(['opportunity_code' => 'OPP-202601-0001', 'created_by' => $staff->id]);
-    $ownSecond = Opportunity::factory()->create(['opportunity_code' => 'OPP-202601-0002', 'created_by' => $staff->id]);
-    Opportunity::factory()->create(['opportunity_code' => 'OPP-202601-0003', 'created_by' => $other->id]);
-
-    // The third opportunity belongs to someone else, so Next stops at the
-    // second rather than walking into a record the list would not show.
-    Livewire::test(ViewOpportunity::class, ['record' => $ownFirst->getKey()])
-        ->assertActionHasUrl('nextRecord', OpportunityResource::getUrl('view', ['record' => $ownSecond]))
-        ->assertActionDisabled('previousRecord');
-
-    Livewire::test(ViewOpportunity::class, ['record' => $ownSecond->getKey()])
-        ->assertActionDisabled('nextRecord');
+    $this->get(OpportunityResource::getUrl('view', ['record' => $opportunity]))->assertForbidden();
 });

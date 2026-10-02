@@ -24,12 +24,24 @@ it('lists opportunities for a super admin', function () {
     Livewire::test(ListOpportunities::class)->assertSuccessful();
 });
 
-it('lists opportunities for sales staff', function () {
+it('denies sales staff the opportunities UI — locked to Super Admin', function () {
     $staff = User::factory()->create();
     $staff->assignRole('Sales Staff');
     actingAs($staff);
 
-    Livewire::test(ListOpportunities::class)->assertSuccessful();
+    expect(OpportunityResource::canAccess())->toBeFalse();
+
+    $this->get(OpportunityResource::getUrl('index'))->assertForbidden();
+});
+
+it('denies a management director the opportunities UI', function () {
+    $director = User::factory()->create();
+    $director->assignRole('Management Director');
+    actingAs($director);
+
+    expect(OpportunityResource::canAccess())->toBeFalse();
+
+    $this->get(OpportunityResource::getUrl('index'))->assertForbidden();
 });
 
 it('denies a user with no roles from listing opportunities', function () {
@@ -50,20 +62,19 @@ it('forbids a non-privileged user from creating opportunities', function () {
     $this->get(OpportunityResource::getUrl('create'))->assertForbidden();
 });
 
-it('scopes the opportunity list to the creator for sales staff', function () {
-    $staff = User::factory()->create();
-    $staff->assignRole('Sales Staff');
+it('shows every opportunity to a super admin regardless of creator', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('Super Admin');
 
     $other = User::factory()->create();
     $other->assignRole('Sales Staff');
 
-    $own = Opportunity::factory()->create(['title' => 'Own Deal', 'created_by' => $staff->id]);
+    $own = Opportunity::factory()->create(['title' => 'Own Deal', 'created_by' => $admin->id]);
     $otherDeal = Opportunity::factory()->create(['title' => 'Other Deal', 'created_by' => $other->id]);
 
-    actingAs($staff);
+    actingAs($admin);
 
     Livewire::test(ListOpportunities::class)
         ->assertSuccessful()
-        ->assertCanSeeTableRecords([$own])
-        ->assertCanNotSeeTableRecords([$otherDeal]);
+        ->assertCanSeeTableRecords([$own, $otherDeal]);
 });

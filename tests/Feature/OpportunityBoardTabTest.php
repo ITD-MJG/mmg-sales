@@ -16,7 +16,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->user = User::factory()->create();
-    $this->user->assignRole('Sales Staff');
+    $this->user->assignRole('Super Admin');
 });
 
 it('renders table and board tabs on the opportunities list', function () {
@@ -40,7 +40,7 @@ it('mounts the board component and renders stage columns', function () {
         ->assertSee('Won');
 });
 
-it('board scopes sales staff to their own opportunities', function () {
+it('board shows every opportunity to a super admin', function () {
     actingAs($this->user);
 
     $other = User::factory()->create();
@@ -51,8 +51,7 @@ it('board scopes sales staff to their own opportunities', function () {
 
     $records = Livewire::test(OpportunityBoard::class)->instance()->getBoard()->getBoardRecords('new');
 
-    expect($records)->toHaveCount(1)
-        ->and($records->first()->created_by)->toBe($this->user->id);
+    expect($records)->toHaveCount(2);
 });
 
 it('switching viewTab to board keeps the page successful', function () {
@@ -63,6 +62,14 @@ it('switching viewTab to board keeps the page successful', function () {
     Livewire::test(ListOpportunities::class)
         ->set('viewTab', 'board')
         ->assertSuccessful();
+});
+
+it('denies sales staff the opportunities board', function () {
+    $staff = User::factory()->create();
+    $staff->assignRole('Sales Staff');
+    actingAs($staff);
+
+    $this->get(ListOpportunities::getUrl())->assertForbidden();
 });
 
 it('panel no longer registers a standalone Lead Board page', function () {

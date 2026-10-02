@@ -29,6 +29,16 @@ class OpportunityResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
+    /**
+     * Locked to Super Admin: the CRM rework is still being validated, so only
+     * Super Admin may reach the opportunities UI. Every page aborts with 403
+     * via CanAuthorizeResourceAccess::authorizeAccess(), which calls this.
+     */
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isSuperAdmin() ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return OpportunityForm::configure($schema);
