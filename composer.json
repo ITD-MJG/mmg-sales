@@ -11,6 +11,7 @@
         "guzzlehttp/guzzle": "^7.10",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
+        "leandrocfe/filament-apex-charts": "^5.1",
         "maatwebsite/excel": "^3.1",
         "relaticle/flowforge": "^4.0",
         "spatie/laravel-activitylog": "^5.0",

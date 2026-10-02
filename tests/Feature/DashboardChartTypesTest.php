@@ -59,7 +59,7 @@ function chartSpec(string $widget): array
     ];
 }
 
-it('renders lead status as a doughnut, since it is a share of the pipeline', function () {
+it('renders opportunity status as a doughnut, since it is a share of the pipeline', function () {
     $spec = chartSpec(OpportunityStatusChart::class);
 
     expect($spec['type'])->toBe('doughnut')
