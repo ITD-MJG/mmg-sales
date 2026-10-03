@@ -76,7 +76,7 @@ class PipelineReportPage extends Page
                             ->schema([
                                 Select::make('user_id')
                                     ->label('Sales Representative')
-                                    ->options(fn () => User::whereIn('id', fn ($q) => $q->from('lead_collaborators')->select('user_id'))->pluck('name', 'id'))
+                                    ->options(fn () => User::whereIn('id', fn ($q) => $q->from('opportunity_collaborators')->select('user_id'))->pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('customer_id')

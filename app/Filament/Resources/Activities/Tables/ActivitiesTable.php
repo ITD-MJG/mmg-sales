@@ -43,28 +43,29 @@ class ActivitiesTable
             // Apply base visibility scope (user_id-based filtering)
             self::applyVisibilityScope($query, 'user_id');
 
-            // For non-global-viewer users, also include activities on leads
-            // where the user is the creator or a collaborator,
+            // For non-global-viewer users, also include activities on leads the
+            // user created, and activities on opportunities they collaborate on,
             // but only if the activity's user is in the same territory.
             // Global viewers already see everything, so a top-level OR here
             // would collapse into the only condition.
             if (! $user->hasGlobalVisibility()) {
-                $leadIds = DB::table('lead_collaborators')
+                $opportunityIds = DB::table('opportunity_collaborators')
                     ->where('user_id', $user->id)
-                    ->pluck('lead_id')
-                    ->merge(
-                        DB::table('leads')
-                            ->where('created_by', $user->id)
-                            ->pluck('id')
-                    )
-                    ->unique()
-                    ->toArray();
+                    ->pluck('opportunity_id');
 
-                if (! empty($leadIds)) {
-                    $query->orWhere(function ($q) use ($leadIds, $user) {
-                        $q->whereIn('lead_id', $leadIds);
+                $leadIds = DB::table('leads')
+                    ->where('created_by', $user->id)
+                    ->pluck('id');
 
-                        if (! $user->hasGlobalVisibility() && $user->territory_id) {
+                if ($leadIds->isNotEmpty() || $opportunityIds->isNotEmpty()) {
+                    $query->orWhere(function ($q) use ($leadIds, $opportunityIds, $user) {
+                        $q->whereIn('lead_id', $leadIds->all());
+
+                        if ($opportunityIds->isNotEmpty()) {
+                            $q->orWhereIn('opportunity_id', $opportunityIds->all());
+                        }
+
+                        if ($user->territory_id) {
                             $q->whereHas('user', function ($uq) use ($user): void {
                                 $uq->where('territory_id', $user->territory_id);
                             });
