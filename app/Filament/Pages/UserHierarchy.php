@@ -80,6 +80,12 @@ class UserHierarchy extends Page implements HasTable
                             ->preload()
                             ->searchable(),
                     ])
+
+                    ->fillForm(fn (User $record): array => [
+                        'position_id' => $record->position_id,
+                        'territory_id' => $record->territory_id,
+                        'manager_id' => $record->manager_id,
+                    ])
                     ->action(function (array $data, User $record): void {
                         $record->update($data);
 
