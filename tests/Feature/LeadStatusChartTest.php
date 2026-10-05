@@ -7,9 +7,9 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Livewire;
 
 use function Pest\Laravel\seed;
-use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -31,6 +31,12 @@ function leadStatusOptions(User $user): array
     Auth::logout();
 
     return $options;
+}
+
+/** The lead counts, unwrapped from ApexCharts' series object shape. */
+function leadStatusValues(User $user): array
+{
+    return leadStatusOptions($user)['series'][0]['data'];
 }
 
 function salesStaff(): User
@@ -73,7 +79,7 @@ it('keeps the declared band order even when a later status is largest', function
     // Labels stay in declared order; the values follow them, so index 1 (New)
     // holds the smaller count and index 3 (Disqualified) the larger.
     expect($options['labels'])->toBe(['New', 'Contacted', 'Converted', 'Disqualified'])
-        ->and($options['series'])->toBe([2, 0, 0, 9]);
+        ->and($options['series'][0]['data'])->toBe([2, 0, 0, 9]);
 });
 
 it('counts leads by status', function () {
@@ -86,7 +92,7 @@ it('counts leads by status', function () {
 
     $options = leadStatusOptions($staff);
 
-    expect($options['series'])->toBe([3, 4, 2, 1]);
+    expect($options['series'][0]['data'])->toBe([3, 4, 2, 1]);
 });
 
 it('scopes the counts to the staff member own leads', function () {
@@ -100,7 +106,7 @@ it('scopes the counts to the staff member own leads', function () {
 
     $options = leadStatusOptions($staff);
 
-    expect(array_sum($options['series']))->toBe(2);
+    expect(array_sum($options['series'][0]['data']))->toBe(2);
 });
 
 it('counts every lead for a super admin', function () {
@@ -112,7 +118,7 @@ it('counts every lead for a super admin', function () {
 
     $options = leadStatusOptions($admin);
 
-    expect(array_sum($options['series']))->toBe(6);
+    expect(array_sum($options['series'][0]['data']))->toBe(6);
 });
 
 it('is visible to everyone, unlike the chart it replaced', function () {
@@ -140,4 +146,28 @@ it('shows the opportunity status chart to a super admin', function () {
     $this->actingAs($admin);
 
     expect(OpportunityStatusChart::canView())->toBeTrue();
+});
+
+it('wraps the series in the object shape ApexCharts v6 requires', function () {
+    $staff = salesStaff();
+    Lead::factory()->count(3)->create(['status' => 'new', 'created_by' => $staff->id]);
+
+    $series = leadStatusOptions($staff)['series'];
+
+    // A flat [3, 0, 0, 0] leaves series[0].data undefined in ApexCharts v6, so
+    // the chart renders an empty plot with no error. This is the regression
+    // that made the production dashboard blank.
+    expect($series)->toBeArray()
+        ->and($series[0])->toBeArray()
+        ->and($series[0])->toHaveKeys(['name', 'data'])
+        ->and($series[0]['data'])->toBe([3, 0, 0, 0]);
+});
+
+it('keeps the values numeric so ApexCharts can plot them', function () {
+    $staff = salesStaff();
+    Lead::factory()->count(2)->create(['status' => 'contacted', 'created_by' => $staff->id]);
+
+    foreach (leadStatusValues($staff) as $value) {
+        expect($value)->toBeInt();
+    }
 });

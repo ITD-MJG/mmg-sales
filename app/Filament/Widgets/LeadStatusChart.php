@@ -51,14 +51,22 @@ class LeadStatusChart extends ApexChartWidget
             ->toArray();
 
         $labels = ['New', 'Contacted', 'Converted', 'Disqualified'];
-        $series = array_map(fn ($s) => (int) ($counts[$s] ?? 0), $statuses);
+        $values = array_map(fn ($s) => (int) ($counts[$s] ?? 0), $statuses);
 
         return [
             'chart' => [
                 'type' => ApexChartTypeEnum::Funnel->value,
                 'height' => 280,
             ],
-            'series' => $series,
+            // ApexCharts v6 requires series as an array of series objects; a
+            // flat [87, 101, 16, 3] leaves series[0].data undefined, so nothing
+            // binds and the chart draws an empty plot with no error.
+            'series' => [
+                [
+                    'name' => 'Leads',
+                    'data' => $values,
+                ],
+            ],
             'labels' => $labels,
             'colors' => ['#6b7280', '#0ea5e9', '#22c55e', '#ef4444'],
             'legend' => [
