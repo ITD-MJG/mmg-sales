@@ -7,7 +7,6 @@ use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
 use App\Filament\Resources\Roles\Schemas\RoleForm;
 use App\Filament\Resources\Roles\Tables\RolesTable;
-use App\Models\Department;
 use App\Models\Position;
 use App\Models\Role;
 use BackedEnum;
@@ -33,25 +32,24 @@ class RoleResource extends Resource
     }
 
     /**
-     * Role names follow "{Department} {Position}".
+     * Role names are the position name, and nothing else.
      *
-     * Create and edit must both use this single implementation. They previously
-     * each carried their own copy and drifted apart, so saving a role from the
-     * edit page silently rewrote its name to the older
-     * "{Position} - {Department}" format and broke every role-name check.
+     * Four formats have existed here: "{Position} - {Department}",
+     * "{Department} {Position}", the raw position name, and assorted legacy
+     * literals. Production ran on "{Position} - {Department}" while the code
+     * checked bare position names, so every role check silently failed.
+     *
+     * Create and edit must both call this. They previously each carried their
+     * own copy and drifted apart, which is how the naming broke in the first
+     * place.
+     *
+     * The department is deliberately NOT part of the name. It is already a
+     * column on the role, and prefixing it produced names like
+     * "Sales Sales Supervisor Clinical Diagnostic".
      */
-    public static function generateRoleName(?int $positionId, ?int $departmentId): string
+    public static function generateRoleName(?int $positionId, ?int $departmentId = null): string
     {
-        $position = $positionId ? Position::find($positionId) : null;
-        $department = $departmentId ? Department::find($departmentId) : null;
-
-        $name = $position?->name ?? 'Unnamed';
-
-        if ($department) {
-            $name = $department->name.' '.$name;
-        }
-
-        return $name;
+        return Position::find($positionId)?->name ?? 'Unnamed';
     }
 
     public static function table(Table $table): Table
