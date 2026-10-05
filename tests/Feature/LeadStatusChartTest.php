@@ -171,3 +171,10 @@ it('keeps the values numeric so ApexCharts can plot them', function () {
         expect($value)->toBeInt();
     }
 });
+
+it('distributes the band colours so each status paints and the legend fills', function () {
+    // Without distributed, ApexCharts paints every funnel band with the first
+    // colour and renders no legend entries, silently ignoring the `colors` and
+    // `legend` options the chart sets.
+    expect(leadStatusOptions(salesStaff())['plotOptions']['bar']['distributed'])->toBeTrue();
+});

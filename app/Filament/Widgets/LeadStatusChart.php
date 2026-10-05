@@ -81,6 +81,13 @@ class LeadStatusChart extends ApexChartWidget
                     // earlier one.
                     'sortData' => false,
                 ],
+                'bar' => [
+                    // A funnel is a horizontal bar chart with isFunnel set, and
+                    // without `distributed` every band paints with the first
+                    // colour and the legend stays empty — the per-band `colors`
+                    // and `legend` above would be silently ignored.
+                    'distributed' => true,
+                ],
             ],
         ];
     }
