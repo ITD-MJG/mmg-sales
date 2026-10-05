@@ -4,8 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
-use Leandrocfe\FilamentApexCharts\Enums\ApexChartTypeEnum;
-use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
+use Filament\Widgets\Widget;
 
 /**
  * Status breakdown of the thin `leads` table, as a funnel.
@@ -17,78 +16,75 @@ use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
  * pipeline stages (qualified, proposal, negotiation, won, lost) live on the
  * opportunity, not here. Charting those would render permanently empty bands.
  *
- * A funnel renders in series order, so the top-to-bottom reading is fixed at
- * New → Contacted → Converted → Disqualified and does not depend on the data.
+ * Drawn with Chart.js and chartjs-chart-funnel rather than the ApexCharts
+ * widget the other dashboard charts use. That plugin plots the dataset in the
+ * order given and offers no sort-by-value, which is the behaviour this chart
+ * needs; ApexCharts reordered the bands unless explicitly told not to.
  */
-class LeadStatusChart extends ApexChartWidget
+class LeadStatusChart extends Widget
 {
     use HasVisibilityScope;
 
-    protected static ?string $chartId = 'leadStatusChart';
+    /**
+     * The funnel bands, top to bottom, with the lead status each one counts.
+     *
+     * @var array<string, string>
+     */
+    private const BANDS = [
+        'New' => 'new',
+        'Contacted' => 'contacted',
+        'Converted' => 'converted',
+        'Disqualified' => 'disqualified',
+    ];
 
-    protected static ?string $heading = 'Lead Status';
+    /**
+     * One colour per band, in the same order as BANDS.
+     *
+     * @var list<string>
+     */
+    private const COLORS = ['#6b7280', '#0ea5e9', '#22c55e', '#ef4444'];
 
-    protected static ?int $contentHeight = 280;
+    /**
+     * Render inline rather than behind a lazy placeholder: the chart is a few
+     * hundred bytes of counts, and drawing it needs the canvas in the first
+     * paint.
+     */
+    protected static bool $isLazy = false;
+
+    protected string $view = 'filament.widgets.lead-status-chart';
+
+    protected int|string|array $columnSpan = 1;
 
     public static function canView(): bool
     {
         return true;
     }
 
-    protected function getOptions(): array
+    /**
+     * The labels, values and colours the chart draws.
+     *
+     * @return array{labels: list<string>, values: list<int>, colors: list<string>}
+     */
+    public function getChartData(): array
     {
-        $baseQuery = Lead::query();
+        $query = Lead::query();
 
-        self::applyVisibilityScope($baseQuery, 'created_by');
+        self::applyVisibilityScope($query, 'created_by');
 
-        $statuses = ['new', 'contacted', 'converted', 'disqualified'];
-
-        $counts = (clone $baseQuery)
-            ->whereIn('status', $statuses)
+        $counts = $query
+            ->whereIn('status', array_values(self::BANDS))
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
 
-        $labels = ['New', 'Contacted', 'Converted', 'Disqualified'];
-        $values = array_map(fn ($s) => (int) ($counts[$s] ?? 0), $statuses);
-
         return [
-            'chart' => [
-                'type' => ApexChartTypeEnum::Funnel->value,
-                'height' => 280,
-            ],
-            // ApexCharts v6 requires series as an array of series objects; a
-            // flat [87, 101, 16, 3] leaves series[0].data undefined, so nothing
-            // binds and the chart draws an empty plot with no error.
-            'series' => [
-                [
-                    'name' => 'Leads',
-                    'data' => $values,
-                ],
-            ],
-            'labels' => $labels,
-            'colors' => ['#6b7280', '#0ea5e9', '#22c55e', '#ef4444'],
-            'legend' => [
-                'show' => true,
-                'position' => 'right',
-            ],
-            'plotOptions' => [
-                'funnel' => [
-                    // Keep the declared order rather than sorting by value: the
-                    // bands must always read New → Contacted → Converted →
-                    // Disqualified, even when a later status outnumbers an
-                    // earlier one.
-                    'sortData' => false,
-                ],
-                'bar' => [
-                    // A funnel is a horizontal bar chart with isFunnel set, and
-                    // without `distributed` every band paints with the first
-                    // colour and the legend stays empty — the per-band `colors`
-                    // and `legend` above would be silently ignored.
-                    'distributed' => true,
-                ],
-            ],
+            'labels' => array_keys(self::BANDS),
+            'values' => array_map(
+                fn ($status) => (int) ($counts[$status] ?? 0),
+                array_values(self::BANDS),
+            ),
+            'colors' => self::COLORS,
         ];
     }
 }
