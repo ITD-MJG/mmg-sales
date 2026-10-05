@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Territory;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -15,10 +14,6 @@ class TerritoryFactory extends Factory
     {
         return [
             'name' => fake('id_ID')->city(),
-            'wilayah_code' => fake()->unique()->numerify('##.##'),
-            'type' => fake()->randomElement(['region', 'province', 'city']),
-            'level' => fake()->numberBetween(1, 3),
-            'manager_id' => User::factory(),
         ];
     }
 }
