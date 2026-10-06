@@ -43,6 +43,7 @@ class Lead extends Model
         'disqualified_at',
         'last_contacted_at',
         'lead_code',
+        'position',
     ];
 
     protected $casts = [
