@@ -237,3 +237,76 @@ it('renders every redesigned widget without error', function () {
         livewire($widget)->assertOk();
     }
 });
+
+/**
+ * The three revenue charts are general info: they aggregate products, principals
+ * and monthly totals without naming a contributor, so a viewer with no orders of
+ * their own must still see the org-wide totals. Regression cover for empty
+ * dashboards on hierarchy-scoped users (e.g. a territory RSM whose team created
+ * no orders, and finance-imported orders carrying created_by = null).
+ */
+it('shows org-wide revenue aggregates to a user who owns no orders', function () {
+    $principal = Principal::factory()->create();
+    $product = Product::factory()->create([
+        'name' => 'Centrifuge Tube 50mL',
+        'principal_id' => $principal->id,
+    ]);
+
+    // Orders belong to someone else entirely.
+    $owner = User::factory()->create();
+
+    foreach ([1, 2] as $offset) {
+        $order = Order::factory()->create([
+            'created_by' => $owner->id,
+            'order_date' => now()->subMonths($offset),
+            'total_amount' => 5_000_000,
+        ]);
+
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'item_id' => $product->id,
+            'principal_id' => $principal->id,
+            'quantity' => 4,
+            'subtotal' => 2_500_000,
+        ]);
+    }
+
+    // An order with no creator at all — the finance-import case.
+    $orphan = Order::factory()->create([
+        'created_by' => null,
+        'order_date' => now()->subMonth(),
+        'total_amount' => 5_000_000,
+    ]);
+    OrderItem::factory()->create([
+        'order_id' => $orphan->id,
+        'item_id' => $product->id,
+        'principal_id' => $principal->id,
+        'quantity' => 4,
+        'subtotal' => 2_500_000,
+    ]);
+
+    // A plain user with no orders and no subordinates.
+    $viewer = User::factory()->create();
+    actingAs($viewer);
+
+    $monthly = (function (): array {
+        return $this->getData();
+    })->call(app(MonthlyOrderChart::class));
+
+    $byPrincipal = (function (): array {
+        return $this->getData();
+    })->call(app(RevenueByPrincipalChart::class));
+
+    $topSelling = (function (): array {
+        return $this->getData();
+    })->call(app(TopSellingProductsChart::class));
+
+    // 15,000,000 rupiah == 15 million rupiah on the axis.
+    expect(array_sum($monthly['datasets'][0]['data']))->toBe(15.0);
+
+    expect($byPrincipal['labels'])->toContain($principal->name)
+        ->and((float) $byPrincipal['datasets'][0]['data'][0])->toBe(7_500_000.0);
+
+    expect($topSelling['labels'])->toContain('Centrifuge Tube 5...')
+        ->and($topSelling['datasets'][0]['data'][0])->toBe(12);
+});

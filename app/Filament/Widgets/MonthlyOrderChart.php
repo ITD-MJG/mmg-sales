@@ -18,25 +18,27 @@ class MonthlyOrderChart extends ChartWidget
 
     protected static ?int $sort = 10;
 
-    public static function canView(): bool
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_monthly_revenue_widget');
-    }
+    // Aggregated revenue is general info: it names no individual contributor, so
+    // it is no longer gated. Kept commented rather than deleted so the permission
+    // gate can be restored without re-deriving it.
+    // public static function canView(): bool
+    // {
+    //     $user = auth()->user();
+    //
+    //     if (! $user) {
+    //         return false;
+    //     }
+    //
+    //     return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_monthly_revenue_widget');
+    // }
 
     protected function getData(): array
     {
-        $user = auth()->user();
-
         $baseQuery = Order::query();
 
-        self::applyVisibilityScope($baseQuery, 'created_by');
-
+        // Unscoped on purpose: this chart aggregates order value by month and
+        // names no contributor, so every viewer sees the same totals.
+        // self::applyVisibilityScope($baseQuery, 'created_by');
         // Last 12 months
         $months = collect();
         for ($i = 11; $i >= 0; $i--) {
