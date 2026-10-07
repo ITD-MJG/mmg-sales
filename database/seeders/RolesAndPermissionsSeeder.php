@@ -66,7 +66,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_segment', 'view_segment',
             'view_any_sub_segment', 'view_sub_segment',
             'view_any_territory', 'view_territory',
-            'view_any_distributor', 'view_distributor',
             'view_any_principal', 'view_principal',
             'view_any_product', 'view_product',
             'view_any_sales_type', 'view_sales_type',
@@ -134,8 +133,12 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // ── 5. Management Director ──────────────────────────────────────
-        // Reports access + view reference data + view comments
+        // Reports access + view reference data + view comments. Distributor is
+        // granted explicitly: it is not in the shared reference bundle, since
+        // only master-data owners (Import & Purchasing Supervisor) and global
+        // viewers should reach it.
         $directorPermissions = array_merge($reportPermissions, $viewReference, [
+            'view_any_distributor', 'view_distributor',
             'view_any_activity_comment', 'view_activity_comment',
         ]);
 
@@ -169,6 +172,17 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach ($otherDeptRoles as $roleName) {
             Role::where('name', $roleName)->first()?->syncPermissions([]);
+        }
+
+        // ── Clean up: revoke Distributor view from roles that should not have it ──
+        // These roles are not otherwise managed here (they hold their own 40+ perms),
+        // so only the two distributor view grants are revoked — never syncPermissions([]).
+        foreach (['Sales Representative', 'Sales Supervisor Clinical Diagnostic', 'Sales Staff', 'Sales Supervisor'] as $roleName) {
+            $role = Role::where('name', $roleName)->first();
+
+            if ($role) {
+                $role->revokePermissionTo(['view_any_distributor', 'view_distributor']);
+            }
         }
 
         // ── 7. Logistics Staff ──────────────────────────────────────────
