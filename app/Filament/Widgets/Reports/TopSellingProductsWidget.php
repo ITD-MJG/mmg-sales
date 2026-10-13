@@ -12,6 +12,7 @@ use Filament\Widgets\TableWidget;
 class TopSellingProductsWidget extends TableWidget
 {
     use InteractsWithPageFilters;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table

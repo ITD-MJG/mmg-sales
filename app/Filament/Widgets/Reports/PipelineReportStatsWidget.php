@@ -63,5 +63,4 @@ class PipelineReportStatsWidget extends StatsOverviewWidget
                 ->description('Converted deals only'),
         ];
     }
-
 }

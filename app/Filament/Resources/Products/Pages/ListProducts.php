@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Pages;
 
+use App\Exports\ProductsDataExport;
 use App\Exports\ProductsTemplateExport;
 use App\Filament\Actions\ImportProductsAction;
 use App\Filament\Resources\Products\ProductResource;
@@ -19,6 +20,10 @@ class ListProducts extends ListRecords
     {
         return [
             ImportProductsAction::make(),
+            Action::make('export_products')
+                ->label('Export Products')
+                ->icon(Heroicon::OutlinedDocumentArrowDown)
+                ->action(fn () => Excel::download(new ProductsDataExport, 'products.xlsx')),
             Action::make('download_template')
                 ->label('Download Template')
                 ->icon(Heroicon::OutlinedDocumentArrowDown)

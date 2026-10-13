@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class RevenueByTerritoryChart extends ChartWidget
 {

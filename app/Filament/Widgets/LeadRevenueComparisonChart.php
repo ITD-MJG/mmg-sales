@@ -22,7 +22,7 @@ class LeadRevenueComparisonChart extends ChartWidget
 
     protected function getData(): array
     {
-        if (!$this->record) {
+        if (! $this->record) {
             return [
                 'datasets' => [],
                 'labels' => [],
