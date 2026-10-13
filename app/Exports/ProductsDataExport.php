@@ -5,11 +5,12 @@ namespace App\Exports;
 use App\Models\Product;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, WithTitle
+class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, WithTitle, ShouldAutoSize
 {
     public function collection(): Collection
     {
@@ -19,8 +20,6 @@ class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, W
                 'products.category',
                 'products.description',
                 'products.internal_code',
-                'products.unit_price',
-                'products.ecatalog_price',
                 'products.unit_of_measure',
                 'products.is_active',
                 'principals.name as principal_name',
@@ -33,30 +32,26 @@ class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, W
     public function headings(): array
     {
         return [
-            'name',
-            'category',
-            'description',
-            'internal_code',
-            'unit_price',
-            'ecatalog_price',
-            'unit_of_measure',
-            'is_active',
-            'principal_name',
+            'Principal Name',
+            'Internal Code',
+            'Product Name',
+            'Category',
+            'Description',
+            'Unit of Measure',
+            'Is Active',
         ];
     }
 
     public function map($row): array
     {
         return [
+            $row->principal_name,
+            $row->internal_code,
             $row->name,
             $row->category,
             $row->description,
-            $row->internal_code,
-            $row->unit_price,
-            $row->ecatalog_price,
             $row->unit_of_measure,
             $row->is_active,
-            $row->principal_name,
         ];
     }
 
