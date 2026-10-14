@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Role;
 use App\Traits\HasCode;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -185,6 +186,20 @@ class User extends Authenticatable implements FilamentUser
     public function hasGlobalVisibility(): bool
     {
         return $this->isSuperAdmin() || $this->isManagementDirector();
+    }
+    /**
+     * Whether this territory-scoped manager (RSM/ASM) with a territory may act
+     * on records owned by the given user. Managers without a territory fall
+     * back to relationship-based checks only.
+     */
+    public function managesTerritoryOf(?User $owner): bool
+    {
+        if (! $owner || ! $this->territory_id) {
+            return false;
+        }
+
+        return $this->hasAnyRole(Role::names(Role::territoryScoped()))
+            && $owner->territory_id === $this->territory_id;
     }
 
     /**

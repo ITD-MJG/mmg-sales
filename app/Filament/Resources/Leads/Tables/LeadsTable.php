@@ -171,7 +171,7 @@ class LeadsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn () => auth()->user()?->hasAnyRole(['Super Admin', 'Sales Staff', 'Marketing Staff', 'Logistics Staff', 'Finance & Accounting Staff', 'Sales Supervisor', 'Import & Purchasing Supervisor', 'Sales Regional Manager', 'Sales Area Manager'])),
+                        ->visible(fn () => auth()->user()?->hasAnyRole(['Super Admin', 'Sales Staff', 'Marketing Staff', 'Logistics Staff', 'Finance & Accounting Staff', 'Sales Supervisor', 'Import & Purchasing Supervisor', 'Regional Sales Manager', 'Area Sales Manager'])),
                     ForceDeleteBulkAction::make()
                         ->visible(fn () => auth()->user()?->hasRole('Super Admin')),
                     RestoreBulkAction::make()

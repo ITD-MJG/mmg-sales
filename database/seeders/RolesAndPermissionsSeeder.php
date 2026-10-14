@@ -121,8 +121,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $smRoles = [
             'Sales Staff',
             'Sales Supervisor',
-            'Sales Area Manager',
-            'Sales Regional Manager',
+            'Area Sales Manager',
+            'Regional Sales Manager',
             'Marketing Staff',
             'Marketing Manager',
             'Sales Manager',
@@ -146,8 +146,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── 6. Report access (add report permissions to specific roles) ──
         $reportRoles = [
-            'Sales Regional Manager',
-            'Sales Area Manager',
+            'Regional Sales Manager',
+            'Area Sales Manager',
             'Marketing Manager',
             'Sales Manager',
         ];
@@ -157,7 +157,7 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // ── Clean up: strip permissions from old generic roles ───────────
-        $oldGenericRoles = ['Admin', 'Director', 'Staff', 'Supervisor', 'Regional Sales Manager', 'Area Sales Manager', 'Manager'];
+        $oldGenericRoles = ['Admin', 'Director', 'Staff', 'Supervisor', 'Manager'];
 
         foreach ($oldGenericRoles as $roleName) {
             Role::where('name', $roleName)->first()?->syncPermissions([]);

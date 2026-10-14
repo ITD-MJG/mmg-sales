@@ -9,6 +9,14 @@ class ActivityCommentPolicy extends BasePolicy
     protected string $model = 'activity_comment';
 
     protected array $authorizedRoles = ['Super Admin'];
+    /**
+     * createForActivity is deliberately NOT a write ability here: comments are
+     * conversational metadata, so the read-only global viewer (Management
+     * Director) may add them to any activity they can see. Editing or deleting
+     * a comment remains a normal write restricted to its author.
+     */
+    protected array $writeAbilities = ['update', 'delete', 'restore', 'forceDelete'];
+
 
     /**
      * A comment may be added by anyone attached to the activity: the rep who
