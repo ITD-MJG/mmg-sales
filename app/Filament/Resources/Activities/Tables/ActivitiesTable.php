@@ -142,12 +142,22 @@ class ActivitiesTable
                         default => 'gray',
                     }),
 
+                // The search query is attached to the count column because
+                // `comments_count` is a subquery alias with no real column to
+                // LIKE against; without it Filament would search a column that
+                // does not exist. An activity can carry several comments by
+                // several authors, so matching is `whereHas` rather than an
+                // equality on a single author.
                 TextColumn::make('comments_count')
                     ->label('Comments')
                     ->counts('comments')
                     ->badge()
                     ->color('info')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'comments.user',
+                        fn (Builder $users): Builder => $users->where('name', 'like', "%{$search}%"),
+                    )),
             ])
             ->filters([
                 SelectFilter::make('customer')

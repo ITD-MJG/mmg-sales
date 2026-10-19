@@ -152,11 +152,21 @@ class LeadsTable
                     ->sortable()
                     ->toggleable(),
 
+                // Comments belong to the lead's activities, not the lead, so
+                // they are reached through the hasManyThrough relation. The
+                // search query is attached to the count column because
+                // `activity_comments_count` is a subquery alias with no real
+                // column to LIKE against. A lead can carry several comments by
+                // several authors, so matching is `whereHas`.
                 TextColumn::make('activity_comments_count')
                     ->label('Comments')
                     ->counts('activityComments')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'activityComments.user',
+                        fn (Builder $users): Builder => $users->where('name', 'like', "%{$search}%"),
+                    )),
 
                 TextColumn::make('converted_at')
                     ->label('Converted')
