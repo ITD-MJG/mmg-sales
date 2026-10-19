@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\Leads\RelationManagers;
 
+use App\Filament\Resources\Activities\Schemas\ActivityInfolist;
 use Carbon\Carbon;
+use Filament\Actions\ViewAction;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -11,16 +14,16 @@ class ActivitiesRelationManager extends RelationManager
 {
     protected static string $relationship = 'activities';
 
+    public function infolist(Schema $schema): Schema
+    {
+        return ActivityInfolist::configure($schema);
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('activity_code')
+            ->recordTitleAttribute('subject')
             ->columns([
-                TextColumn::make('activity_code')
-                    ->label('Code')
-                    ->searchable()
-                    ->sortable(),
-
                 TextColumn::make('performed_at')
                     ->label('Date')
                     ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y')) : '-')
@@ -58,6 +61,11 @@ class ActivitiesRelationManager extends RelationManager
                         'Need more info' => 'info',
                         default => 'gray',
                     }),
+            ])
+            ->recordActions([
+                ViewAction::make()
+                    ->modalHeading(fn ($record): string => $record->subject)
+                    ->modalWidth('7xl'),
             ])
             ->modifyQueryUsing(fn ($query) => $query->orderBy('performed_at', 'desc'));
     }

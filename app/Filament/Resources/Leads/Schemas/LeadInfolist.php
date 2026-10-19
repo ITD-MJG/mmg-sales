@@ -77,38 +77,6 @@ class LeadInfolist
                             ]),
                     ]),
 
-                Section::make('Activities History')
-                    ->columnSpanFull()
-                    ->schema([
-                        RepeatableEntry::make('activities')
-                            ->label('')
-                            ->schema([
-                                Grid::make(4)
-                                    ->schema([
-                                        TextEntry::make('performed_at')
-                                            ->label('Date')
-                                            ->dateTime('d M Y H:i'),
-                                        TextEntry::make('subject')
-                                            ->weight('bold'),
-                                        TextEntry::make('type')
-                                            ->badge()
-                                            ->formatStateUsing(fn (string $state): string => ucfirst($state)),
-                                        TextEntry::make('outcome')
-                                            ->badge()
-                                            ->color(fn (string $state): string => match ($state) {
-                                                'Interested' => 'success',
-                                                'Not Interested' => 'danger',
-                                                'No Answer' => 'warning',
-                                                'Need more info' => 'info',
-                                                'Postponed' => 'gray',
-                                                default => 'gray',
-                                            }),
-                                    ]),
-                                TextEntry::make('description')
-                                    ->markdown(),
-                            ])
-                            ->columns(1),
-                    ]),
             ]);
     }
 }
