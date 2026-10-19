@@ -48,6 +48,7 @@ class LeadResource extends Resource
     {
         return [
             RelationManagers\ActivitiesRelationManager::class,
+            RelationManagers\ActivityCommentsRelationManager::class,
             RelationManagers\AuditLogRelationManager::class,
         ];
     }
