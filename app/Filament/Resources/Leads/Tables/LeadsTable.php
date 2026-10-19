@@ -144,6 +144,18 @@ class LeadsTable
                     ->label('Opportunities')
                     ->counts('opportunities')
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('activities_count')
+                    ->label('Activities')
+                    ->counts('activities')
+                    ->sortable()
+                    ->toggleable(),
+
+                TextColumn::make('activity_comments_count')
+                    ->label('Comments')
+                    ->counts('activityComments')
+                    ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('converted_at')
