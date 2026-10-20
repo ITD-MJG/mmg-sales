@@ -141,6 +141,11 @@ class Activity extends Model
         if (! $user) {
             return false;
         }
+        // Global viewers (Super Admin, Management Director) see every activity
+        // and may comment on it — same contract as the activities list.
+        if ($user->hasGlobalVisibility()) {
+            return true;
+        }
 
         if ($user->hasRole('Super Admin')) {
             return true;
@@ -154,8 +159,12 @@ class Activity extends Model
             return true;
         }
 
+        // Territory managers (RSM/ASM) may comment on their reps' activities
+        // even without being creator/attendee/collaborator — mirrors how
+        // ActivityScopeService already shows them these records.
         return $this->lead?->created_by === $user->id
-            || ($this->opportunity?->isAccessibleBy($user) ?? false);
+            || ($this->opportunity?->isAccessibleBy($user) ?? false)
+            || $user->managesTerritoryOf($this->user);
     }
 
     /**

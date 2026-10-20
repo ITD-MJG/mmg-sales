@@ -40,5 +40,4 @@ class SalesReportStatsWidget extends StatsOverviewWidget
                 ->description('Average per order'),
         ];
     }
-
 }

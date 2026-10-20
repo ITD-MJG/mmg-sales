@@ -17,9 +17,16 @@ class OpportunityStatusChart extends ChartWidget
 
     protected static ?string $height = '280px';
 
+    /**
+     * Super Admin only, matching OpportunityResource::canAccess(). This chart
+     * breaks the opportunity pipeline down by stage, which is exactly the data
+     * the locked resource hides — showing it on the dashboard would leak what
+     * the resource withholds. LeadStatusChart occupies this slot for everyone
+     * else.
+     */
     public static function canView(): bool
     {
-        return true;
+        return auth()->user()?->isSuperAdmin() ?? false;
     }
 
     protected function getData(): array

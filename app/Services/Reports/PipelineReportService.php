@@ -4,7 +4,7 @@ namespace App\Services\Reports;
 
 use App\DTOs\PipelineReportData;
 use App\DTOs\ReportFilterData;
-use App\Models\Lead;
+use App\Models\Opportunity;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -26,14 +26,14 @@ class PipelineReportService
         $primaryQuery = $this->buildBaseQuery($filters);
 
         $totalProjects = (clone $primaryQuery)->count();
-        $wonProjects = (clone $primaryQuery)->where('status', 'won')->count();
-        $lostProjects = (clone $primaryQuery)->where('status', 'lost')->count();
+        $wonProjects = (clone $primaryQuery)->where('stage', 'won')->count();
+        $lostProjects = (clone $primaryQuery)->where('stage', 'lost')->count();
 
         $totalPipelineValue = (clone $primaryQuery)->sum('estimated_revenue');
-        $wonValue = (clone $primaryQuery)->where('status', 'won')->sum('estimated_revenue');
-        $lostValue = (clone $primaryQuery)->where('status', 'lost')->sum('estimated_revenue');
+        $wonValue = (clone $primaryQuery)->where('stage', 'won')->sum('estimated_revenue');
+        $lostValue = (clone $primaryQuery)->where('stage', 'lost')->sum('estimated_revenue');
 
-        $nonWonProjects = (clone $primaryQuery)->where('status', '!=', 'won')->count();
+        $nonWonProjects = (clone $primaryQuery)->where('stage', '!=', 'won')->count();
 
         $winRate = $nonWonProjects > 0
             ? ($wonProjects / $nonWonProjects) * 100
@@ -62,8 +62,8 @@ class PipelineReportService
 
     private function buildBaseQuery(ReportFilterData $filters): Builder
     {
-        $query = Lead::query()
-            ->whereBetween('leads.created_at', [$filters->startDate, $filters->endDate]);
+        $query = Opportunity::query()
+            ->whereBetween('opportunities.created_at', [$filters->startDate, $filters->endDate]);
 
         if ($filters->userId) {
             $query->whereHas('collaborators', fn ($q) => $q->where('user_id', $filters->userId));
@@ -78,7 +78,7 @@ class PipelineReportService
         }
 
         if ($filters->leadStatus) {
-            $query->where('status', $filters->leadStatus);
+            $query->where('stage', $filters->leadStatus);
         }
 
         if ($filters->leadSource) {
@@ -95,7 +95,7 @@ class PipelineReportService
     private function calculateAverageSalesCycle(ReportFilterData $filters): int
     {
         $wonProjects = $this->buildBaseQuery($filters)
-            ->where('status', 'won')
+            ->where('stage', 'won')
             ->whereNotNull('closed_at')
             ->get();
 
@@ -111,11 +111,11 @@ class PipelineReportService
     private function getPipelineByStatus(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->selectRaw('status, COUNT(*) as count, SUM(estimated_revenue) as value')
-            ->groupBy('status')
+            ->selectRaw('stage, COUNT(*) as count, SUM(estimated_revenue) as value')
+            ->groupBy('stage')
             ->get()
             ->map(fn ($row) => [
-                'status' => ucfirst($row->status),
+                'status' => ucfirst($row->stage),
                 'count' => $row->count,
                 'value' => (float) $row->value,
             ]);
@@ -124,18 +124,18 @@ class PipelineReportService
     private function getPipelineBySalesRep(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->join('lead_collaborators', 'leads.id', '=', 'lead_collaborators.lead_id')
-            ->join('users as collaborators', 'lead_collaborators.user_id', '=', 'collaborators.id')
+            ->join('opportunity_collaborators', 'opportunities.id', '=', 'opportunity_collaborators.opportunity_id')
+            ->join('users as collaborators', 'opportunity_collaborators.user_id', '=', 'collaborators.id')
             ->join('positions', 'collaborators.position_id', '=', 'positions.id')
             ->join('departments', 'collaborators.department_id', '=', 'departments.id')
             ->where('positions.name', 'not like', '%Director%')
             ->where('departments.name', '!=', 'Marketing')
-            ->leftJoin('users as adders', 'lead_collaborators.added_by', '=', 'adders.id')
+            ->leftJoin('users as adders', 'opportunity_collaborators.added_by', '=', 'adders.id')
             ->selectRaw('
                 collaborators.id as user_id,
                 collaborators.name,
-                COUNT(DISTINCT leads.id) as count,
-                COALESCE(SUM(leads.estimated_revenue), 0) as value,
+                COUNT(DISTINCT opportunities.id) as count,
+                COALESCE(SUM(opportunities.estimated_revenue), 0) as value,
                 GROUP_CONCAT(DISTINCT adders.name SEPARATOR ", ") as creator_names
             ')
             ->groupBy('collaborators.id', 'collaborators.name')
@@ -154,7 +154,7 @@ class PipelineReportService
     private function getMonthlyTrend(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as count, SUM(estimated_revenue) as value')
+            ->selectRaw('YEAR(opportunities.created_at) as year, MONTH(opportunities.created_at) as month, COUNT(*) as count, SUM(opportunities.estimated_revenue) as value')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
@@ -168,8 +168,8 @@ class PipelineReportService
 
     private function getRecentWins(ReportFilterData $filters): Collection
     {
-        return Lead::query()
-            ->where('status', 'won')
+        return Opportunity::query()
+            ->where('stage', 'won')
             ->whereNotNull('closed_at')
             ->when($filters->userId, fn ($q) => $q->where('assigned_to', $filters->userId))
             ->when(! empty($filters->userIds), fn ($q) => $q->whereIn('assigned_to', $filters->userIds))
@@ -181,8 +181,8 @@ class PipelineReportService
             ->get()
             ->map(fn ($project) => [
                 'id' => $project->id,
-                'code' => $project->code,
-                'name' => $project->name,
+                'code' => $project->opportunity_code,
+                'name' => $project->title,
                 'customer' => $project->customer?->name,
                 'value' => (float) $project->estimated_revenue,
                 'sales_rep' => $project->assignedUser?->name,
@@ -192,8 +192,8 @@ class PipelineReportService
 
     private function getRecentLosses(ReportFilterData $filters): Collection
     {
-        return Lead::query()
-            ->where('status', 'lost')
+        return Opportunity::query()
+            ->where('stage', 'lost')
             ->whereNotNull('closed_at')
             ->when($filters->userId, fn ($q) => $q->where('assigned_to', $filters->userId))
             ->when(! empty($filters->userIds), fn ($q) => $q->whereIn('assigned_to', $filters->userIds))
@@ -205,13 +205,12 @@ class PipelineReportService
             ->get()
             ->map(fn ($project) => [
                 'id' => $project->id,
-                'code' => $project->code,
-                'name' => $project->name,
+                'code' => $project->opportunity_code,
+                'name' => $project->title,
                 'customer' => $project->customer?->name,
                 'value' => (float) $project->estimated_revenue,
                 'sales_rep' => $project->assignedUser?->name,
                 'closed_at' => $project->closed_at?->format('d M Y'),
-                'loss_reason' => $project->loss_reason,
             ]);
     }
 
@@ -222,11 +221,11 @@ class PipelineReportService
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn ($project) => [
-                'Code' => $project->code,
-                'Name' => $project->name,
+                'Code' => $project->opportunity_code,
+                'Name' => $project->title,
                 'Customer' => $project->customer?->name,
                 'Sales Rep' => $project->assignedUser?->name,
-                'Status' => ucfirst($project->status),
+                'Status' => ucfirst($project->stage),
                 'Estimated Value' => $project->estimated_revenue,
                 'Confidence Level' => $project->confidence_level,
                 'Created Date' => $project->created_at?->format('d M Y'),

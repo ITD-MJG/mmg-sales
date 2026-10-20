@@ -146,11 +146,15 @@ class Opportunity extends Model
             return false;
         }
 
+
         if ($this->created_by === $user->id) {
             return true;
         }
 
-        return $this->collaborators()->whereKey($user->getKey())->exists();
+        return $this->collaborators()->whereKey($user->getKey())->exists()
+            // Territory managers (RSM/ASM) may access their reps' opportunities
+            // even without being creator/collaborator.
+            || $user->managesTerritoryOf($this->creator);
     }
 
     public function scopeAccessibleBy(Builder $query, User $user): Builder

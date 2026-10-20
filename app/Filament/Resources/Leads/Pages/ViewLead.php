@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads\Pages;
 
+use App\Filament\Actions\ConvertLeadToOpportunityAction;
 use App\Filament\Resources\Leads\LeadResource;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -14,6 +15,7 @@ class ViewLead extends ViewRecord
     {
         return [
             EditAction::make(),
+            ConvertLeadToOpportunityAction::make(),
         ];
     }
 }

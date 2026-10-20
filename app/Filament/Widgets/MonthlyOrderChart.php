@@ -6,11 +6,11 @@ use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
 
-class MonthlyRevenueTrendChart extends ChartWidget
+class MonthlyOrderChart extends ChartWidget
 {
     use HasVisibilityScope;
 
-    protected ?string $heading = 'Monthly Revenue Trend';
+    protected ?string $heading = 'Monthly Order Value';
 
     protected static bool $isLazy = false;
 
@@ -18,25 +18,27 @@ class MonthlyRevenueTrendChart extends ChartWidget
 
     protected static ?int $sort = 10;
 
-    public static function canView(): bool
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_monthly_revenue_widget');
-    }
+    // Aggregated revenue is general info: it names no individual contributor, so
+    // it is no longer gated. Kept commented rather than deleted so the permission
+    // gate can be restored without re-deriving it.
+    // public static function canView(): bool
+    // {
+    //     $user = auth()->user();
+    //
+    //     if (! $user) {
+    //         return false;
+    //     }
+    //
+    //     return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_monthly_revenue_widget');
+    // }
 
     protected function getData(): array
     {
-        $user = auth()->user();
-
         $baseQuery = Order::query();
 
-        self::applyVisibilityScope($baseQuery, 'created_by');
-
+        // Unscoped on purpose: this chart aggregates order value by month and
+        // names no contributor, so every viewer sees the same totals.
+        // self::applyVisibilityScope($baseQuery, 'created_by');
         // Last 12 months
         $months = collect();
         for ($i = 11; $i >= 0; $i--) {
@@ -67,7 +69,7 @@ class MonthlyRevenueTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenue (Rp juta)',
+                    'label' => 'Order Value (Rp juta)',
                     'data' => $data,
                     'borderColor' => 'rgb(59, 130, 246)',
                     'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
@@ -80,7 +82,7 @@ class MonthlyRevenueTrendChart extends ChartWidget
     }
 
     /**
-     * Revenue over a continuous month axis is a trend, so a line stays correct.
+     * Order value over a continuous month axis is a trend, so a line stays correct.
      */
     protected function getType(): string
     {

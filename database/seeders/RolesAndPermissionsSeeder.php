@@ -51,6 +51,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_product_reports',
             'view_project_reports',
             'view_lead_reports',
+            'view_target_reports',
         ];
 
         foreach ($reportPermissions as $permission) {
@@ -65,7 +66,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_segment', 'view_segment',
             'view_any_sub_segment', 'view_sub_segment',
             'view_any_territory', 'view_territory',
-            'view_any_distributor', 'view_distributor',
             'view_any_principal', 'view_principal',
             'view_any_product', 'view_product',
             'view_any_sales_type', 'view_sales_type',
@@ -141,6 +141,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_order', 'view_order',
             'view_any_activity', 'view_activity',
             'view_any_target', 'view_target',
+            'view_any_distributor', 'view_distributor',
             'view_any_activity_comment', 'view_activity_comment',
         ]);
 
@@ -174,6 +175,17 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach ($otherDeptRoles as $roleName) {
             Role::where('name', $roleName)->first()?->syncPermissions([]);
+        }
+
+        // ── Clean up: revoke Distributor view from roles that should not have it ──
+        // These roles are not otherwise managed here (they hold their own 40+ perms),
+        // so only the two distributor view grants are revoked — never syncPermissions([]).
+        foreach (['Sales Representative', 'Sales Supervisor Clinical Diagnostic', 'Sales Staff', 'Sales Supervisor'] as $roleName) {
+            $role = Role::where('name', $roleName)->first();
+
+            if ($role) {
+                $role->revokePermissionTo(['view_any_distributor', 'view_distributor']);
+            }
         }
 
         // ── 7. Logistics Staff ──────────────────────────────────────────

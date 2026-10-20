@@ -2,6 +2,7 @@
 
 namespace App\Filament\Traits;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -13,7 +14,8 @@ trait HasVisibilityScope
      * - Super Admin: sees everything, writes everything
      * - Management department Director: sees everything, writes nothing
      * - Staff: own records only
-     * - Others: own records + subordinates (position OR territory union) + direct reports
+     * - Others: own records + position descendants and direct reports,
+     *   territory-scoped when they have a territory
      */
     public static function applyVisibilityScope(Builder $query, string $userColumn = 'user_id'): Builder
     {
@@ -29,13 +31,12 @@ trait HasVisibilityScope
         }
 
         // Staff - can only see their own records
-        $staffRoles = ['Sales Staff', 'Marketing Staff', 'Logistics Staff', 'Finance & Accounting Staff'];
-        if ($user->hasAnyRole($staffRoles)) {
+        if ($user->hasAnyRole(Role::names(Role::ownRecordsOnly()))) {
             return $query->where($userColumn, $user->id);
         }
 
-        // Other users: resolve subordinates via position OR territory union,
-        // plus direct reports via manager_id
+        // Other users: own records plus everything reachable through the
+        // position hierarchy and the reporting line.
         $subordinateIds = self::getSubordinateUserIds($user);
 
         if (! empty($subordinateIds)) {
@@ -79,18 +80,23 @@ trait HasVisibilityScope
     }
 
     /**
-     * Get IDs of all subordinate users based on position OR territory hierarchy,
-     * plus direct reports (manager_id).
+     * Get IDs of all subordinate users: descendants of the user's position,
+     * plus users who report to them via manager_id.
      *
-     * Logic:
-     *   subordinateIds = (positionDescendants ∪ territoryDescendants) ∪ directReports
+     * When the user has a territory, both groups are restricted to it — that
+     * scoping stops a manager seeing another territory's pipeline, and stops
+     * peers in a shared position from seeing each other's records. When the
+     * user has no territory, the position and reporting-line relationships
+     * alone decide visibility.
      */
     private static function getSubordinateUserIds($user): array
     {
         $userIds = [];
 
-        // Users in descendant positions AND same territory
-        if ($user->position && $user->territory_id) {
+        // Descendant positions. Territory scoping only applies when the manager
+        // actually has a territory: `territory_id` is optional, and requiring it
+        // here silently reduced a territory-less manager to own-records-only.
+        if ($user->position) {
             $descendantPositionIds = array_diff(
                 $user->position->getAllDescendantIds(),
                 [$user->position_id]
@@ -98,7 +104,7 @@ trait HasVisibilityScope
 
             $positionUserIds = User::active()
                 ->whereIn('position_id', $descendantPositionIds)
-                ->where('territory_id', $user->territory_id)
+                ->when($user->territory_id, fn ($query, $territoryId) => $query->where('territory_id', $territoryId))
                 ->where('id', '!=', $user->id)
                 ->pluck('id')
                 ->toArray();
@@ -106,16 +112,14 @@ trait HasVisibilityScope
             $userIds = array_merge($userIds, $positionUserIds);
         }
 
-        // Direct reports in same territory
-        if ($user->territory_id) {
-            $directReportIds = User::active()
-                ->where('manager_id', $user->id)
-                ->where('territory_id', $user->territory_id)
-                ->pluck('id')
-                ->toArray();
+        // Direct reports, same territory scoping rule as above.
+        $directReportIds = User::active()
+            ->where('manager_id', $user->id)
+            ->when($user->territory_id, fn ($query, $territoryId) => $query->where('territory_id', $territoryId))
+            ->pluck('id')
+            ->toArray();
 
-            $userIds = array_merge($userIds, $directReportIds);
-        }
+        $userIds = array_merge($userIds, $directReportIds);
 
         return array_unique($userIds);
     }

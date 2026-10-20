@@ -57,6 +57,7 @@ class ResetPermissions extends Command
             'view_product_reports',
             'view_project_reports',
             'view_lead_reports',
+            'view_target_reports',
         ];
 
         foreach ($reportPermissions as $permission) {
@@ -93,6 +94,7 @@ class ResetPermissions extends Command
             'view_product_reports',
             'view_project_reports',
             'view_lead_reports',
+            'view_target_reports',
         ];
 
         // 1. Super Admin — no permissions (Gate::before bypass)

@@ -24,48 +24,63 @@ class ActivitiesTable
 {
     use HasVisibilityScope;
 
+    /**
+     * Records the index page lists, and therefore the set Prev/Next steps
+     * through. Both callers share this so navigation cannot drift from the list.
+     */
+    public static function listVisibilityQuery(Builder $query): Builder
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return $query;
+        }
+
+        // Grouped so the visibility predicate stays one unit: callers append
+        // their own `where` (ordering, navigation), and an ungrouped orWhere
+        // would let `A OR B AND extra` narrow to `A OR (B AND extra)`.
+        return $query->where(function (Builder $query) use ($user): void {
+            // Apply base visibility scope (user_id-based filtering)
+            self::applyVisibilityScope($query, 'user_id');
+
+            // For non-global-viewer users, also include activities on leads the
+            // user created, and activities on opportunities they collaborate on,
+            // but only if the activity's user is in the same territory.
+            // Global viewers already see everything, so a top-level OR here
+            // would collapse into the only condition.
+            if (! $user->hasGlobalVisibility()) {
+                $opportunityIds = DB::table('opportunity_collaborators')
+                    ->where('user_id', $user->id)
+                    ->pluck('opportunity_id');
+
+                $leadIds = DB::table('leads')
+                    ->where('created_by', $user->id)
+                    ->pluck('id');
+
+                if ($leadIds->isNotEmpty() || $opportunityIds->isNotEmpty()) {
+                    $query->orWhere(function ($q) use ($leadIds, $opportunityIds, $user) {
+                        $q->whereIn('lead_id', $leadIds->all());
+
+                        if ($opportunityIds->isNotEmpty()) {
+                            $q->orWhereIn('opportunity_id', $opportunityIds->all());
+                        }
+
+                        if ($user->territory_id) {
+                            $q->whereHas('user', function ($uq) use ($user): void {
+                                $uq->where('territory_id', $user->territory_id);
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $user = auth()->user();
-
-                if (! $user) {
-                    return $query->orderBy('performed_at', 'desc');
-                }
-
-                // Apply base visibility scope (user_id-based filtering)
-                self::applyVisibilityScope($query, 'user_id');
-
-                // For non-global-viewer users, also include activities on leads
-                // where the user is the creator or a collaborator,
-                // but only if the activity's user is in the same territory.
-                // Global viewers already see everything, so a top-level OR here
-                // would collapse into the only condition.
-                if (! $user->hasGlobalVisibility()) {
-                    $leadIds = DB::table('lead_collaborators')
-                        ->where('user_id', $user->id)
-                        ->pluck('lead_id')
-                        ->merge(
-                            DB::table('leads')
-                                ->where('created_by', $user->id)
-                                ->pluck('id')
-                        )
-                        ->unique()
-                        ->toArray();
-
-                    if (! empty($leadIds)) {
-                        $query->orWhere(function ($q) use ($leadIds, $user) {
-                            $q->whereIn('lead_id', $leadIds);
-
-                            if (! $user->hasGlobalVisibility() && $user->territory_id) {
-                                $q->whereHas('user', function ($uq) use ($user): void {
-                                    $uq->where('territory_id', $user->territory_id);
-                                });
-                            }
-                        });
-                    }
-                }
+                self::listVisibilityQuery($query);
 
                 return $query->orderBy('performed_at', 'desc');
             })
@@ -127,12 +142,22 @@ class ActivitiesTable
                         default => 'gray',
                     }),
 
+                // The search query is attached to the count column because
+                // `comments_count` is a subquery alias with no real column to
+                // LIKE against; without it Filament would search a column that
+                // does not exist. An activity can carry several comments by
+                // several authors, so matching is `whereHas` rather than an
+                // equality on a single author.
                 TextColumn::make('comments_count')
                     ->label('Comments')
                     ->counts('comments')
                     ->badge()
                     ->color('info')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'comments.user',
+                        fn (Builder $users): Builder => $users->where('name', 'like', "%{$search}%"),
+                    )),
             ])
             ->filters([
                 SelectFilter::make('customer')

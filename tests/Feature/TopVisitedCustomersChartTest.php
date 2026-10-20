@@ -10,6 +10,7 @@ use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Support\RawJs;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
@@ -159,4 +160,35 @@ it('scopes the chart to the activities the user may see', function () {
     actingAs($otherUser);
 
     expect(chartData()['labels'])->toBe(['LEAD-202605-0002']);
+});
+
+it('links each bar to the record its activities belong to', function () {
+    $lead = Lead::factory()->create(['lead_code' => 'LEAD-202606-0001']);
+    $opportunity = Opportunity::factory()->create(['opportunity_code' => 'LEAD-202606-0002']);
+
+    logActivities($lead, 1);
+
+    Activity::factory()->forOpportunity($opportunity)->create([
+        'customer_id' => null,
+        'user_id' => $this->user->id,
+        'performed_at' => now(),
+    ]);
+
+    $urls = chartData()['datasets'][0]['urls'];
+
+    expect($urls)->toHaveCount(2)
+        ->and($urls)->each->not->toBeNull()
+        ->and(collect($urls)->filter(fn (string $url): bool => str_contains($url, '/leads/')))->toHaveCount(1)
+        ->and(collect($urls)->filter(fn (string $url): bool => str_contains($url, '/opportunities/')))->toHaveCount(1);
+});
+
+it('ships the bar click handler in a raw JS literal, which @js() would otherwise strip', function () {
+    logActivities(Lead::factory()->create(['lead_code' => 'LEAD-202607-0001']), 1);
+
+    $raw = (function (): RawJs {
+        return $this->getOptions();
+    })->call(livewire(TopVisitedCustomersChart::class)->instance());
+
+    expect($raw->toHtml())->toContain('onClick')
+        ->and($raw->toHtml())->toContain('datasets[0]?.urls?.[index]');
 });

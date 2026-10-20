@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Models\Customer;
 use App\Models\Department;
+use App\Models\Opportunity;
 use App\Models\Position;
 use App\Models\Principal;
 use App\Models\Product;
@@ -50,7 +51,7 @@ class OrderForm
                                 Select::make('order_source')
                                     ->label('Order Source')
                                     ->options([
-                                        'leads' => 'Leads',
+                                        'opportunities' => 'Opportunities',
                                         'manual' => 'Input Manually',
                                     ])
                                     ->required()
@@ -67,10 +68,10 @@ class OrderForm
 
                         Grid::make(4)
                             ->schema([
-                                Select::make('lead_id')
-                                    ->label('Lead')
-                                    ->relationship('lead', 'title')
-                                    ->options(fn () => Lead::query()
+                                Select::make('opportunity_id')
+                                    ->label('Opportunity')
+                                    ->relationship('opportunity', 'title')
+                                    ->options(fn () => Opportunity::query()
                                         ->where(function ($query) {
                                             $userId = auth()->id();
                                             $query->where('assigned_to', $userId)
@@ -79,9 +80,9 @@ class OrderForm
                                         ->pluck('title', 'id'))
                                     ->searchable()
                                     ->preload()
-                                    ->placeholder('Select a lead')
-                                    ->visible(fn ($get) => $get('order_source') === 'leads')
-                                    ->required(fn ($get) => $get('order_source') === 'leads')
+                                    ->placeholder('Select an opportunity')
+                                    ->visible(fn ($get) => $get('order_source') === 'opportunities')
+                                    ->required(fn ($get) => $get('order_source') === 'opportunities')
                                     ->live()
                                     ->columnSpan(2)
                                     ->afterStateUpdated(function ($set, $get, ?string $state) {
@@ -94,21 +95,21 @@ class OrderForm
                                             return;
                                         }
 
-                                        $lead = Lead::with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state);
-                                        if (! $lead) {
+                                        $opportunity = Opportunity::with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state);
+                                        if (! $opportunity) {
                                             return;
                                         }
 
-                                        $set('end_customer_id', $lead->customer_id);
-                                        $set('notes', $lead->notes);
-                                        $salesReps = collect([$lead->creator?->id])
-                                            ->merge($lead->collaborators->pluck('id'))
+                                        $set('end_customer_id', $opportunity->customer_id);
+                                        $set('notes', $opportunity->notes);
+                                        $salesReps = collect([$opportunity->creator?->id])
+                                            ->merge($opportunity->collaborators->pluck('id'))
                                             ->filter()
                                             ->values()
                                             ->toArray();
                                         $set('sales', $salesReps);
 
-                                        $orderItems = $lead->products->map(fn ($product) => [
+                                        $orderItems = $opportunity->products->map(fn ($product) => [
                                             'principal_id' => $product->principal_id,
                                             'item_id' => $product->id,
                                             'quantity' => 1,
@@ -191,7 +192,7 @@ class OrderForm
                                     ->options(fn () => User::where('department_id', Department::where('code', 'SAL')->value('id'))
                                         ->pluck('name', 'id'))
                                     ->default(fn () => $user?->id ? [$user->id] : [])
-                                    ->disabled(fn ($get) => $get('order_source') === 'leads' && $get('lead_id'))
+                                    ->disabled(fn ($get) => $get('order_source') === 'opportunities' && $get('opportunity_id'))
                                     ->preload()
                                     ->searchable(),
                                 Select::make('pm_jpm_pe_position_id')

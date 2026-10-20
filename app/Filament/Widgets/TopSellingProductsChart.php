@@ -19,26 +19,29 @@ class TopSellingProductsChart extends ChartWidget
 
     protected static ?int $sort = 30;
 
-    public static function canView(): bool
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_top_selling_products_widget');
-    }
+    // Aggregated sales are general info: they name no individual contributor, so
+    // they are no longer gated. Kept commented rather than deleted so the
+    // permission gate can be restored without re-deriving it.
+    // public static function canView(): bool
+    // {
+    //     $user = auth()->user();
+    //
+    //     if (! $user) {
+    //         return false;
+    //     }
+    //
+    //     return $user->hasRole('Super Admin') || $user->hasPermissionTo('view_top_selling_products_widget');
+    // }
 
     protected function getData(): array
     {
-        $user = auth()->user();
-
         $baseQuery = OrderItem::query();
 
-        // Scope via the parent order's created_by
-        self::applyVisibilityScope($baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id'), 'orders.created_by');
-
+        // Unscoped on purpose: the ranking names products, not contributors, so
+        // every viewer sees the same totals. The orders join is still needed to
+        // filter on order_date and to reach the quantity column.
+        // self::applyVisibilityScope($baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id'), 'orders.created_by');
+        $baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id');
         $data = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())
             ->join('products', 'order_items.item_id', '=', 'products.id')

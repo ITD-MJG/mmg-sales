@@ -40,5 +40,4 @@ class CustomerReportStatsWidget extends StatsOverviewWidget
                 ->description('Revenue / Customer'),
         ];
     }
-
 }

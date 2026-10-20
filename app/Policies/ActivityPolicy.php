@@ -38,16 +38,16 @@ class ActivityPolicy extends BasePolicy
         return $model->user_id === $user->id;
     }
 
+    /**
+     * A thin lead has no collaborators — attachment is an opportunity concept.
+     * Only its creator (and a Super Admin) may log activities against it.
+     */
     public function createForLead(User $user, $lead): bool
     {
         if ($user->hasRole('Super Admin')) {
             return true;
         }
 
-        if ($lead->created_by === $user->id) {
-            return true;
-        }
-
-        return $lead->collaborators()->where('user_id', $user->id)->exists();
+        return $lead->created_by === $user->id;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Leads\RelationManagers;
 
 use App\Models\Activity;
+use App\Models\ActivityComment;
 use App\Models\Lead;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -11,7 +12,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -28,8 +28,8 @@ class ActivityCommentsRelationManager extends RelationManager
     }
 
     /**
-     * Only users attached to the lead (creator or collaborator) with the
-     * create permission may comment on its activities.
+     * Only users attached to the lead (its creator) with the create permission
+     * may comment, and only on activities they belong to.
      */
     protected function getCreateAuthorizationResponse(): Response
     {
@@ -38,7 +38,7 @@ class ActivityCommentsRelationManager extends RelationManager
 
         $allowed = $user?->hasPermissionTo('create_activity_comment')
             && $lead instanceof Lead
-            && $lead->isAccessibleBy($user);
+            && ($user->hasGlobalVisibility() || $lead->created_by === $user->id);
 
         return $allowed ? Response::allow() : Response::deny();
     }
@@ -66,25 +66,6 @@ class ActivityCommentsRelationManager extends RelationManager
             ]);
     }
 
-    public function infolist(Schema $schema): Schema
-    {
-        return $schema
-            ->components([
-                TextEntry::make('activity.activity_code')
-                    ->label('Activity'),
-                TextEntry::make('user.name')
-                    ->label('Author'),
-                TextEntry::make('comment')
-                    ->columnSpanFull(),
-                TextEntry::make('created_at')
-                    ->dateTime('d M Y H:i')
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime('d M Y H:i')
-                    ->placeholder('-'),
-            ]);
-    }
-
     public function table(Table $table): Table
     {
         return $table
@@ -92,6 +73,7 @@ class ActivityCommentsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('activity.activity_code')
                     ->label('Activity')
+                    ->description(fn (ActivityComment $record): ?string => $record->activity?->subject)
                     ->searchable(),
                 TextColumn::make('user.name')
                     ->label('Author')

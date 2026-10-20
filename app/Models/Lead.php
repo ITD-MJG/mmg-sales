@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -43,6 +44,7 @@ class Lead extends Model
         'disqualified_at',
         'last_contacted_at',
         'lead_code',
+        'position',
     ];
 
     protected $casts = [
@@ -103,6 +105,11 @@ class Lead extends Model
     public function latestActivity(): HasOne
     {
         return $this->hasOne(Activity::class, 'lead_id')->latestOfMany('performed_at');
+    }
+
+    public function activityComments(): HasManyThrough
+    {
+        return $this->hasManyThrough(ActivityComment::class, Activity::class, 'lead_id');
     }
 
     public function opportunities(): HasMany
