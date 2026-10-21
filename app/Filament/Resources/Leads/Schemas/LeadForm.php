@@ -95,17 +95,18 @@ class LeadForm
                                     ->columns(1),
                             ]),
                         Section::make('Estimation')
-                            ->columnSpanFull()
+                            ->columnSpan(1)
                             ->columns(2)
                             ->schema([
                                 TextInput::make('estimated_revenue')
                                     ->label('Expected Revenue')
                                     ->numeric()
-                                    ->prefix('IDR'),
+                                    ->prefix('IDR')
+                                    ->columnSpanFull(),
                             ]),
                         Section::make('Pipeline & Status')
-                            ->columnSpanFull()
-                            ->columns(2)
+                            ->columnSpan(1)
+                            ->columns(3)
                             ->schema([
                                 Select::make('source')
                                     ->options([
