@@ -25,8 +25,8 @@ class ProductsTable
         return $table
             ->modifyQueryUsing(fn ($query) => $query->orderBy('created_at', 'desc'))
             ->columns([
-                TextColumn::make('internal_code')
-                    ->label('Internal Code')
+                TextColumn::make('product_acc_code')
+                    ->label('Principal Code')
                     ->searchable()
                     ->sortable(),
 
