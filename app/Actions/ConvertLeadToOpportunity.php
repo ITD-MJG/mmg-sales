@@ -76,6 +76,8 @@ class ConvertLeadToOpportunity
                     'opportunity_id' => $opportunity->id,
                 ]);
 
+            $opportunity->products()->sync($locked->products()->pluck('products.id'));
+
             $locked->update([
                 'status' => 'converted',
                 'converted_at' => now(),

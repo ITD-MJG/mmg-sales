@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Models\User;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -31,11 +33,35 @@ class LeadForm
                                     ->preload()
                                     ->required()
                                     ->live(),
-                                Select::make('assigned_to')
+                                Select::make('assigned_users')
                                     ->label('Assigned To')
-                                    ->relationship('assignedUser', 'name')
+                                    ->multiple()
+                                    ->options(User::pluck('name', 'id'))
                                     ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->afterStateHydrated(function ($component, $state, $record): void {
+                                        if (! $record) {
+                                            return;
+                                        }
+
+                                        $component->state(array_values(array_unique(array_filter([
+                                            $record->assigned_to,
+                                            ...$record->collaborators->pluck('id')->all(),
+                                        ]))));
+                                    })
+                                    ->dehydrated(false)
+                                    ->saveRelationshipsUsing(function ($record, ?array $state): void {
+                                        $userIds = array_values(array_unique(array_map('intval', $state ?? [])));
+                                        $primaryAssigneeId = array_shift($userIds);
+
+                                        $record->assigned_to = $primaryAssigneeId;
+                                        $record->save();
+
+                                        $record->collaborators()->syncWithPivotValues(
+                                            $userIds,
+                                            ['added_by' => auth()->id()],
+                                        );
+                                    }),
                             ]),
 
                         Section::make('Contact Information')
@@ -53,6 +79,30 @@ class LeadForm
                 Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
+                        Section::make('Products')
+                            ->columnSpanFull()
+                            ->schema([
+                                Repeater::make('leadProductItems')
+                                    ->relationship()
+                                    ->schema([
+                                        Select::make('product_id')
+                                            ->label('Product')
+                                            ->relationship('product', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->required(),
+                                    ])
+                                    ->columns(1),
+                            ]),
+                        Section::make('Estimation')
+                            ->columnSpanFull()
+                            ->columns(2)
+                            ->schema([
+                                TextInput::make('estimated_revenue')
+                                    ->label('Expected Revenue')
+                                    ->numeric()
+                                    ->prefix('IDR'),
+                            ]),
                         Section::make('Pipeline & Status')
                             ->columnSpanFull()
                             ->columns(2)
@@ -90,7 +140,6 @@ class LeadForm
                                     ->required()
                                     ->searchable(),
                             ]),
-
                         Section::make('Notes')
                             ->columnSpanFull()
                             ->schema([

@@ -7,6 +7,7 @@ use App\Traits\HasCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -38,6 +39,7 @@ class Lead extends Model
         'source',
         'priority',
         'notes',
+        'estimated_revenue',
         'assigned_to',
         'created_by',
         'converted_at',
@@ -51,6 +53,7 @@ class Lead extends Model
         'converted_at' => 'datetime',
         'disqualified_at' => 'datetime',
         'last_contacted_at' => 'datetime',
+        'estimated_revenue' => 'decimal:2',
     ];
 
     public function generateCode(): string
@@ -95,6 +98,23 @@ class Lead extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function collaborators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'lead_collaborators')
+            ->withPivot('added_by')
+            ->withTimestamps();
+    }
+
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'lead_product')->withTimestamps();
+    }
+
+    public function leadProductItems(): HasMany
+    {
+        return $this->hasMany(LeadProduct::class, 'lead_id');
     }
 
     public function activities(): HasMany
