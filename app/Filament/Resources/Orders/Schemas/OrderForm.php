@@ -336,6 +336,10 @@ class OrderForm
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
+                                            ->mask(fn (TextInput\Mask $mask) => $mask
+                                                ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
+                                            )
+                                            ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
                                             ->live()
                                             ->readOnly(fn ($get) => ! $get('principal_id') || ! $get('item_id'))
@@ -347,6 +351,10 @@ class OrderForm
                                         TextInput::make('subtotal')
                                             ->label('Line Total')
                                             ->numeric()
+                                            ->mask(fn (TextInput\Mask $mask) => $mask
+                                                ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
+                                            )
+                                            ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
                                             ->readOnly()
                                             ->columnSpanFull(),
@@ -365,6 +373,10 @@ class OrderForm
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
                                     ->numeric()
+                                    ->mask(fn (TextInput\Mask $mask) => $mask
+                                        ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
+                                    )
+                                    ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
                                 TextInput::make('discount_on')
@@ -377,6 +389,10 @@ class OrderForm
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
                                     ->numeric()
+                                    ->mask(fn (TextInput\Mask $mask) => $mask
+                                        ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
+                                    )
+                                    ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
                             ]),
