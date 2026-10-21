@@ -121,7 +121,7 @@ class ActivitiesTable
                     })
                     ->sortable(),
 
-                TextColumn::make('lead.creator.name')
+                TextColumn::make('user.name')
                     ->label('Creator')
                     ->searchable()
                     ->sortable(),

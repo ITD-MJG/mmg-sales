@@ -37,6 +37,30 @@ it('can export activities to excel', function () {
     });
 });
 
+
+it('shows the activity owner as creator instead of the lead creator', function () {
+    $leadCreator = User::factory()->create();
+    $activityCreator = User::factory()->create();
+    $customer = Customer::factory()->create();
+    $lead = \App\Models\Lead::factory()->create([
+        'customer_id' => $customer->id,
+        'created_by' => $leadCreator->id,
+    ]);
+    $activity = Activity::factory()->create([
+        'lead_id' => $lead->id,
+        'customer_id' => $customer->id,
+        'user_id' => $activityCreator->id,
+    ]);
+
+    $columns = \App\Filament\Resources\Activities\Tables\ActivitiesTable::configure(\Filament\Tables\Table::make())
+        ->getColumns();
+    $creatorColumn = collect($columns)->first(fn ($column) => $column->getName() === 'user.name' && $column->getLabel() === 'Creator');
+
+    expect($creatorColumn)->not->toBeNull();
+    expect($activity->user->name)->toBe($activityCreator->name);
+    expect($activity->lead->creator->name)->toBe($leadCreator->name);
+});
+
 it('can export filtered activities to excel', function () {
     Excel::fake();
 
