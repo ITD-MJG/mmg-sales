@@ -2,8 +2,10 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\Activity;
 use Filament\Tables;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,7 +17,7 @@ class CustomerRecentActivitiesWidget extends TableWidget
 
     protected static ?int $sort = 2;
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
@@ -38,6 +40,9 @@ class CustomerRecentActivitiesWidget extends TableWidget
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Subject')
                     ->limit(30),
+
+                ViewAction::make()
+                    ->url(fn (Activity $record): string => ActivityResource::getUrl('view', ['record' => $record])),
             ])
             ->paginated([5, 10])
             ->defaultPaginationPageOption(5);

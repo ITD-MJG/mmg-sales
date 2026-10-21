@@ -24,85 +24,84 @@ class ActivityForm
     {
         return $schema
             ->components([
-                // Always visible: Project & Customer selection
-                Section::make('Lead & Customer')
-                    ->columnSpanFull()
-                    ->columns(2)
-                    ->schema([
-                        Select::make('lead_id')
-                            ->label('Lead')
-                            ->relationship(
-                                name: 'lead',
-                                titleAttribute: 'title',
-                            )
-                            ->getOptionLabelFromRecordUsing(fn (Lead $record) => "{$record->lead_code} - {$record->customer_name}")
-                            ->searchable(['lead_code', 'title', 'customer_name'])
-                            ->preload()
-                            ->live()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('customer_id', null);
-                                if ($lead = Lead::find($state)) {
-                                    $set('customer_id', $lead->customer_id);
-                                }
-                            }),
-
-                        Select::make('customer_id')
-                            ->label('Customer')
-                            ->relationship('customer', 'name', fn ($query) => $query->where('status', 'active'))
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->live()
-                            ->dehydrated(),
-                        Action::make('createLead')
-                            ->label('Create Lead')
-                            ->icon('heroicon-m-plus')
-                            ->color('primary')
-                            ->visible(fn ($get): bool => filled($get('customer_id')) && blank($get('lead_id')))
-                            ->form([
-                                TextInput::make('title')
-                                    ->required()
-                                    ->maxLength(255),
-                                Select::make('status')
-                                    ->options([
-                                        'new' => 'New',
-                                        'contacted' => 'Contacted',
-                                        'qualified' => 'Qualified',
-                                        'proposal' => 'Proposal',
-                                        'negotiation' => 'Negotiation',
-                                        'won' => 'Won',
-                                        'lost' => 'Lost',
-                                    ])
-                                    ->default('new'),
-                                Select::make('priority')
-                                    ->options([
-                                        'low' => 'Low',
-                                        'medium' => 'Medium',
-                                        'high' => 'High',
-                                    ])
-                                    ->default('medium'),
-                            ])
-                            ->action(function (array $data, callable $get, callable $set): void {
-                                $customerId = $get('customer_id');
-                                $customer = Customer::find($customerId);
-
-                                $lead = Lead::create([
-                                    'title' => $data['title'],
-                                    'status' => $data['status'],
-                                    'priority' => $data['priority'],
-                                    'customer_id' => $customerId,
-                                    'customer_name' => $customer?->name,
-                                    'created_by' => auth()->id(),
-                                ]);
-
-                                $set('lead_id', $lead->id);
-                            }),
-                    ]),
-
-                // Core Information + Interaction Details (side-by-side)
+                // Lead & customer context alongside core activity information
                 Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
+                        Section::make('Lead & Customer')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('lead_id')
+                                    ->label('Lead')
+                                    ->relationship(
+                                        name: 'lead',
+                                        titleAttribute: 'title',
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn (Lead $record) => "{$record->lead_code} - {$record->customer_name}")
+                                    ->searchable(['lead_code', 'title', 'customer_name'])
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $set('customer_id', null);
+                                        if ($lead = Lead::find($state)) {
+                                            $set('customer_id', $lead->customer_id);
+                                        }
+                                    }),
+
+                                Select::make('customer_id')
+                                    ->label('Customer')
+                                    ->relationship('customer', 'name', fn ($query) => $query->where('status', 'active'))
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    ->live()
+                                    ->dehydrated(),
+
+                                Action::make('createLead')
+                                    ->label('Create Lead')
+                                    ->icon('heroicon-m-plus')
+                                    ->color('primary')
+                                    ->visible(fn ($get): bool => filled($get('customer_id')) && blank($get('lead_id')))
+                                    ->form([
+                                        TextInput::make('title')
+                                            ->required()
+                                            ->maxLength(255),
+                                        Select::make('status')
+                                            ->options([
+                                                'new' => 'New',
+                                                'contacted' => 'Contacted',
+                                                'qualified' => 'Qualified',
+                                                'proposal' => 'Proposal',
+                                                'negotiation' => 'Negotiation',
+                                                'won' => 'Won',
+                                                'lost' => 'Lost',
+                                            ])
+                                            ->default('new'),
+                                        Select::make('priority')
+                                            ->options([
+                                                'low' => 'Low',
+                                                'medium' => 'Medium',
+                                                'high' => 'High',
+                                            ])
+                                            ->default('medium'),
+                                    ])
+                                    ->action(function (array $data, callable $get, callable $set): void {
+                                        $customerId = $get('customer_id');
+                                        $customer = Customer::find($customerId);
+
+                                        $lead = Lead::create([
+                                            'title' => $data['title'],
+                                            'status' => $data['status'],
+                                            'priority' => $data['priority'],
+                                            'customer_id' => $customerId,
+                                            'customer_name' => $customer?->name,
+                                            'created_by' => auth()->id(),
+                                        ]);
+
+                                        $set('lead_id', $lead->id);
+                                    }),
+                            ]),
+
                         Section::make('Core Information')
                             ->columns(2)
                             ->schema([
@@ -154,6 +153,12 @@ class ActivityForm
                                     ->preload()
                                     ->visible(fn ($get) => $get('customer_id')),
                             ]),
+                    ]),
+
+                // Core Information + Interaction Details (side-by-side)
+                Grid::make(2)
+                    ->columnSpanFull()
+                    ->schema([
 
                         Section::make('Interaction Details')
                             ->columns(2)
