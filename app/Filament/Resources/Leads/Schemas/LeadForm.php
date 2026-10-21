@@ -21,6 +21,7 @@ class LeadForm
                     ->columnSpanFull()
                     ->schema([
                         Section::make('Lead Details')
+                            ->columns(2)
                             ->schema([
                                 TextInput::make('title')
                                     ->label('Lead Title')
@@ -61,7 +62,8 @@ class LeadForm
                                             $userIds,
                                             ['added_by' => auth()->id()],
                                         );
-                                    }),
+                                    })
+                                    ->columnSpanFull(),
                             ]),
 
                         Section::make('Contact Information')
