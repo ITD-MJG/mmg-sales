@@ -1,10 +1,12 @@
 <?php
 
 use App\Models\Lead;
+use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 
 uses(RefreshDatabase::class);
 
@@ -34,4 +36,43 @@ it('stores selected collaborators while preserving creator and primary assignee'
         ->and($lead->fresh()->assigned_to)->toBe($assignee->id)
         ->and($lead->collaborators()->pluck('users.id')->all())->toBe([$collaborator->id])
         ->and(Schema::hasTable('lead_collaborators'))->toBeTrue();
+});
+
+it('stores the principal selected for each product on a lead', function () {
+    $principal = Principal::factory()->create();
+    $product = Product::factory()->create(['principal_id' => $principal->id]);
+    $lead = Lead::factory()->create();
+
+    $leadProduct = $lead->leadProductItems()->create([
+        'principal_id' => $principal->id,
+        'product_id' => $product->id,
+    ]);
+
+    expect($leadProduct->fresh()->principal_id)->toBe($principal->id)
+        ->and($leadProduct->fresh()->product_id)->toBe($product->id);
+});
+
+it('rejects a product that does not belong to its selected principal', function () {
+    $principal = Principal::factory()->create();
+    $otherPrincipal = Principal::factory()->create();
+    $product = Product::factory()->create(['principal_id' => $principal->id]);
+
+    $validator = Validator::make([
+        'principal_id' => $otherPrincipal->id,
+        'product_id' => $product->id,
+    ], [
+        'principal_id' => ['required', 'exists:principals,id'],
+        'product_id' => [
+            'required',
+            'exists:products,id',
+            function (string $attribute, mixed $value, Closure $fail) use ($otherPrincipal): void {
+                if (Product::query()->whereKey($value)->where('principal_id', $otherPrincipal->id)->doesntExist()) {
+                    $fail('The selected product does not belong to this principal.');
+                }
+            },
+        ],
+    ]);
+
+    expect($validator->fails())->toBeTrue()
+        ->and($validator->errors()->has('product_id'))->toBeTrue();
 });

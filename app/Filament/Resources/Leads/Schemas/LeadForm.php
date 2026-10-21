@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Models\Principal;
+use App\Models\Product;
 use App\Models\User;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -9,7 +11,9 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class LeadForm
 {
@@ -87,14 +91,29 @@ class LeadForm
                                 Repeater::make('leadProductItems')
                                     ->relationship()
                                     ->schema([
-                                        Select::make('product_id')
-                                            ->label('Product')
-                                            ->relationship('product', 'name')
+                                        Select::make('principal_id')
+                                            ->label('Principal')
+                                            ->options(Principal::query()->orderBy('name')->pluck('name', 'id'))
+                                            ->live()
+                                            ->afterStateUpdated(fn ($set) => $set('product_id', null))
                                             ->searchable()
                                             ->preload()
                                             ->required(),
+                                        Select::make('product_id')
+                                            ->label('Product')
+                                            ->options(fn (Get $get) => Product::query()
+                                                ->where('principal_id', $get('principal_id'))
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
+                                            ->disabled(fn (Get $get): bool => blank($get('principal_id')))
+                                            ->rules(fn (Get $get): array => [
+                                                'required',
+                                                Rule::exists('products', 'id')->where('principal_id', $get('principal_id')),
+                                            ])
+                                            ->searchable()
+                                            ->preload(),
                                     ])
-                                    ->columns(1),
+                                    ->columns(2),
                             ]),
                         Section::make('Estimation')
                             ->columnSpan(1)

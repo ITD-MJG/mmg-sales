@@ -14,7 +14,13 @@ class LeadProduct extends Pivot
     protected $fillable = [
         'lead_id',
         'product_id',
+        'principal_id',
     ];
+
+    public function principal(): BelongsTo
+    {
+        return $this->belongsTo(Principal::class);
+    }
 
     public function lead(): BelongsTo
     {
