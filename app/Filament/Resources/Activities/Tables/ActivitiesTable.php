@@ -82,6 +82,8 @@ class ActivitiesTable
             ->modifyQueryUsing(function (Builder $query) {
                 self::listVisibilityQuery($query);
 
+                $query->with('attendees:id,name');
+
                 return $query->orderBy('performed_at', 'desc');
             })
             ->columns([
@@ -125,11 +127,14 @@ class ActivitiesTable
                     ->label('Creator')
                     ->searchable()
                     ->sortable(),
-
-                TextColumn::make('user.name')
-                    ->label('Assignee')
-                    ->searchable()
-                    ->sortable(),
+                TextColumn::make('attendees')
+                    ->label('Assigned To')
+                    ->state(fn (Activity $record): ?string => $record->attendees->first()?->name)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas('attendees', fn (Builder $attendees): Builder => $attendees->where('users.name', 'like', "%{$search}%")))
+                    ->formatStateUsing(fn (?string $state, Activity $record): ?string => $state === null ? null : $state.($record->attendees->count() > 1 ? ' + '.($record->attendees->count() - 1) : ''))
+                    ->tooltip(fn (Activity $record): ?string => $record->attendees->count() > 1 ? $record->attendees->skip(1)->pluck('name')->implode(', ') : null)
+                    ->placeholder('Unassigned')
+                    ->toggleable(),
 
                 TextColumn::make('outcome')
                     ->label('Status')

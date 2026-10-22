@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Activities\Schemas;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\Activity;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -138,13 +140,18 @@ class ActivityForm
                                     ->default(now()),
 
                                 Select::make('attendees')
-                                    ->label('Other Sales Reps')
-                                    ->relationship('attendees', 'name')
+                                    ->label('Assigned To')
                                     ->multiple()
-                                    ->preload()
+                                    ->options(fn () => User::query()->active()->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
-                                    ->columnSpanFull()
-                                    ->visible(fn ($get) => $get('type') === 'Shared Meeting'),
+                                    ->preload()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function (Select $component, ?Activity $record): void {
+                                        $component->state($record?->attendees()->pluck('users.id')->all() ?? []);
+                                    })
+                                    ->saveRelationshipsUsing(function (Activity $record, ?array $state): void {
+                                        $record->attendees()->sync($state ?? []);
+                                    }),
 
                                 Select::make('contact_id')
                                     ->label('Contact Person')
