@@ -115,7 +115,7 @@ class LeadForm
                                     ->label('Expected Revenue')
                                     ->numeric()
                                     ->prefix('IDR')
-                                    ->mask(fn (TextInput\Mask $mask) => $mask->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 0, isSigned: false))
+                                    ->mask('9{1,3}(\\.9{3})*')
                                     ->stripCharacters('.')
                                     ->columnSpanFull(),
                                 DatePicker::make('expected_closing_date')
