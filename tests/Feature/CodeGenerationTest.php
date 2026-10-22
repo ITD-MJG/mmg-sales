@@ -76,10 +76,10 @@ describe('Model Code Generation', function () {
     });
 
     it('generates product_code when creating product', function () {
-        $product = Product::factory()->create();
+        $principal = Principal::factory()->create(['initial' => 'IFT']);
+        $product = Product::factory()->for($principal)->create();
 
-        expect($product->product_code)->not->toBeNull();
-        expect($product->product_code)->toMatch('/^[A-Z0-9]+-TD-\d{6}$/');
+        expect($product->product_code)->toBe('IFT-TD-00001');
     });
 
     it('generates sequential codes for multiple leads', function () {

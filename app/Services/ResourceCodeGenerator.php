@@ -45,6 +45,39 @@ class ResourceCodeGenerator
         return sprintf('OPP-%s-%04d', $yearMonth, $sequence);
     }
 
+    public function getNextProductSequence(string $initial): int
+    {
+        return DB::transaction(function () use ($initial): int {
+            $prefix = strtoupper($initial).'-TD';
+            $partition = strtoupper($initial);
+
+            $sequence = DB::table('code_sequences')
+                ->where('prefix', $prefix)
+                ->where('partition', $partition)
+                ->lockForUpdate()
+                ->first();
+
+            $latestCode = DB::table('products')
+                ->where('product_code', 'like', $prefix.'-%')
+                ->whereRaw("SUBSTRING_INDEX(product_code, '-', -1) REGEXP '^[0-9]{5}$'")
+                ->orderByRaw('CAST(SUBSTRING_INDEX(product_code, "-", -1) AS UNSIGNED) DESC')
+                ->value('product_code');
+
+            $currentMax = $latestCode === null
+                ? 0
+                : (int) substr($latestCode, strrpos($latestCode, '-') + 1);
+
+            $nextValue = max($currentMax, (int) ($sequence->sequence_value ?? 0)) + 1;
+
+            DB::table('code_sequences')->updateOrInsert(
+                ['prefix' => $prefix, 'partition' => $partition],
+                ['sequence_value' => $nextValue, 'updated_at' => now(), 'created_at' => $sequence?->created_at ?? now()],
+            );
+
+            return $nextValue;
+        });
+    }
+
     public function getNextSequenceValue(string $prefix, ?string $partition = null, ?string $table = null, ?string $column = null): int
     {
         return $this->getNextSequence($prefix, $partition, $table, $column);

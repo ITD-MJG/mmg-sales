@@ -34,7 +34,7 @@ class Product extends Model
         'principal_id',
     ];
 
-    protected $codeColumn = 'internal_code';
+    protected $codeColumn = 'product_code';
 
     protected function casts(): array
     {
@@ -55,8 +55,8 @@ class Product extends Model
         $initial = $principal?->initial ?? 'XX';
 
         $generator = app(ResourceCodeGenerator::class);
-        $sequence = $generator->getNextSequenceValue('TD', null, $this->getTable(), $this->getCodeColumnName());
+        $sequence = $generator->getNextProductSequence($initial);
 
-        return sprintf('%s-TD-%06d', strtoupper($initial), $sequence);
+        return sprintf('%s-TD-%05d', strtoupper($initial), $sequence);
     }
 }
