@@ -15,6 +15,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Support\RawJs;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -335,10 +336,7 @@ class OrderForm
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
-                                            ->numeric()
-                                            ->mask(fn (TextInput\Mask $mask) => $mask
-                                                ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
-                                            )
+                                            ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                             ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
                                             ->live()
@@ -350,10 +348,7 @@ class OrderForm
                                     ->schema([
                                         TextInput::make('subtotal')
                                             ->label('Line Total')
-                                            ->numeric()
-                                            ->mask(fn (TextInput\Mask $mask) => $mask
-                                                ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
-                                            )
+                                            ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                             ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
                                             ->readOnly()
@@ -372,10 +367,7 @@ class OrderForm
                             ->schema([
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
-                                    ->numeric()
-                                    ->mask(fn (TextInput\Mask $mask) => $mask
-                                        ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
-                                    )
+                                    ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
@@ -388,10 +380,7 @@ class OrderForm
                                     ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, $get)),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
-                                    ->numeric()
-                                    ->mask(fn (TextInput\Mask $mask) => $mask
-                                        ->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 2)
-                                    )
+                                    ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
