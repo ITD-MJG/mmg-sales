@@ -40,6 +40,7 @@ class Lead extends Model
         'priority',
         'notes',
         'estimated_revenue',
+        'expected_closing_date',
         'created_by',
         'converted_at',
         'disqualified_at',
@@ -53,6 +54,7 @@ class Lead extends Model
         'disqualified_at' => 'datetime',
         'last_contacted_at' => 'datetime',
         'estimated_revenue' => 'decimal:2',
+        'expected_closing_date' => 'date',
     ];
 
     public function generateCode(): string

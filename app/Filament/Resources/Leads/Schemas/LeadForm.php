@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Leads\Schemas;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -57,7 +58,6 @@ class LeadForm
                                             $userIds,
                                             ['added_by' => auth()->id()],
                                         );
-                                        $record->forceFill(['assigned_to' => null])->saveQuietly();
                                     })
                                     ->columnSpanFull(),
                             ]),
@@ -115,7 +115,12 @@ class LeadForm
                                     ->label('Expected Revenue')
                                     ->numeric()
                                     ->prefix('IDR')
+                                    ->mask(fn (TextInput\Mask $mask) => $mask->money(prefix: '', thousandsSeparator: '.', decimalSeparator: ',', decimalPlaces: 0, isSigned: false))
+                                    ->stripCharacters('.')
                                     ->columnSpanFull(),
+                                DatePicker::make('expected_closing_date')
+                                    ->label('Expected Closing')
+                                    ->native(false),
                             ]),
                         Section::make('Pipeline & Status')
                             ->columnSpan(1)
