@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Targets;
 
 use App\Filament\Resources\Targets\Pages\ManageTargets;
+use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Target;
 use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
@@ -16,9 +17,12 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TargetResource extends Resource
 {
+    use HasVisibilityScope;
+
     protected static ?string $model = Target::class;
 
     protected static bool $shouldRegisterNavigation = true;
@@ -100,13 +104,7 @@ class TargetResource extends Resource
             ->filters([
                 //
             ])
-            ->modifyQueryUsing(function ($query): void {
-                $user = auth()->user();
-
-                if (! $user->hasGlobalVisibility()) {
-                    $query->where('user_id', $user->id);
-                }
-            })
+            ->modifyQueryUsing(fn (Builder $query) => self::applyVisibilityScope($query, 'user_id'))
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),
