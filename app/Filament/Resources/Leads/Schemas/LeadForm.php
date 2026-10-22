@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\RawJs;
 use Illuminate\Validation\Rule;
 
 class LeadForm
@@ -115,7 +116,7 @@ class LeadForm
                                     ->label('Expected Revenue')
                                     ->numeric()
                                     ->prefix('IDR')
-                                    ->mask('9{1,3}(\\.9{3})*')
+                                    ->mask(RawJs::make('$money($input, ".", "", 0)'))
                                     ->stripCharacters('.')
                                     ->columnSpanFull(),
                                 DatePicker::make('expected_closing_date')
