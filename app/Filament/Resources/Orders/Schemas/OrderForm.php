@@ -368,6 +368,7 @@ class OrderForm
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
                                     ->mask(RawJs::make('$money($input, ".", ",", 2)'))
+                                    ->step('0.01')
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
@@ -380,6 +381,7 @@ class OrderForm
                                     ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, $get)),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
+                                    ->step('0.01')
                                     ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
