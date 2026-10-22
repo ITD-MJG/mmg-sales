@@ -28,6 +28,7 @@ class LeadsTable
             ->modifyQueryUsing(function (Builder $query) {
                 // Role-based visibility: staff sees own, managers see subordinates, etc.
                 self::applyVisibilityScope($query, 'created_by');
+                $query->with(['collaborators:id,name']);
 
                 // Sort by latest activity on the lead (most recently worked leads first)
                 return $query->orderByDesc(
@@ -98,10 +99,12 @@ class LeadsTable
                     ->sortable()
                     ->toggleable(),
 
-                TextColumn::make('assignedUser.name')
+                TextColumn::make('collaborators')
                     ->label('Assigned To')
-                    ->searchable()
-                    ->sortable()
+                    ->state(fn (Lead $record): ?string => $record->collaborators->first()?->name)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas('collaborators', fn (Builder $collaborators): Builder => $collaborators->where('users.name', 'like', "%{$search}%")))
+                    ->formatStateUsing(fn (?string $state, Lead $record): ?string => $state === null ? null : $state.($record->collaborators->count() > 1 ? ' + '.($record->collaborators->count() - 1) : ''))
+                    ->tooltip(fn (Lead $record): ?string => $record->collaborators->count() > 1 ? $record->collaborators->skip(1)->pluck('name')->implode(', ') : null)
                     ->placeholder('Unassigned')
                     ->toggleable(),
 

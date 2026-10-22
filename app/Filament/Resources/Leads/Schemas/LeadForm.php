@@ -45,27 +45,19 @@ class LeadForm
                                     ->searchable()
                                     ->preload()
                                     ->afterStateHydrated(function ($component, $state, $record): void {
-                                        if (! $record) {
-                                            return;
+                                        if ($record) {
+                                            $component->state($record->collaborators->modelKeys());
                                         }
-
-                                        $component->state(array_values(array_unique(array_filter([
-                                            $record->assigned_to,
-                                            ...$record->collaborators->pluck('id')->all(),
-                                        ]))));
                                     })
                                     ->dehydrated(false)
                                     ->saveRelationshipsUsing(function ($record, ?array $state): void {
                                         $userIds = array_values(array_unique(array_map('intval', $state ?? [])));
-                                        $primaryAssigneeId = array_shift($userIds);
-
-                                        $record->assigned_to = $primaryAssigneeId;
-                                        $record->save();
 
                                         $record->collaborators()->syncWithPivotValues(
                                             $userIds,
                                             ['added_by' => auth()->id()],
                                         );
+                                        $record->forceFill(['assigned_to' => null])->saveQuietly();
                                     })
                                     ->columnSpanFull(),
                             ]),

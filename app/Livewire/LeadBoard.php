@@ -6,6 +6,7 @@ use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Schema;
@@ -47,12 +48,16 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
                         ->color('gray'),
 
                     Group::make([
-                        TextEntry::make('assignedUser.name')
+                        RepeatableEntry::make('collaborators')
                             ->label('')
-                            ->badge()
-                            ->icon('heroicon-m-user')
-                            ->color('gray')
-                            ->placeholder('Unassigned'),
+                            ->schema([
+                                TextEntry::make('name')
+                                    ->badge()
+                                    ->icon('heroicon-m-user')
+                                    ->color('gray'),
+                            ])
+                            ->columns(2)
+                            ->placeholder('No assignees'),
 
                         TextEntry::make('priority')
                             ->label('')
@@ -86,7 +91,7 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
 
     public function getBoardQuery(): ?Builder
     {
-        $query = Lead::query()->with(['latestActivity', 'assignedUser']);
+        $query = Lead::query()->with(['latestActivity', 'collaborators:id,name']);
 
         // Same visibility contract as LeadsTable::configure()
         self::applyVisibilityScope($query, 'created_by');

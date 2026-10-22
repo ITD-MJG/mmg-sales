@@ -64,7 +64,7 @@ class ConvertLeadToOpportunity
                 'source' => $locked->source,
                 'priority' => $locked->priority,
                 'notes' => $locked->notes,
-                'assigned_to' => $locked->assigned_to,
+                'assigned_to' => null,
                 'created_by' => $locked->created_by,
                 'converted_from_lead_id' => $locked->getKey(),
                 'converted_at' => now(),
@@ -77,6 +77,8 @@ class ConvertLeadToOpportunity
                 ]);
 
             $opportunity->products()->sync($locked->products()->pluck('products.id'));
+
+            $opportunity->collaborators()->syncWithPivotValues($locked->collaborators()->pluck('users.id')->all(), ['added_by' => auth()->id()]);
 
             $locked->update([
                 'status' => 'converted',

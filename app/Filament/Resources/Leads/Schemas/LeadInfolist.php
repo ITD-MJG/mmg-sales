@@ -37,8 +37,12 @@ class LeadInfolist
                             ->copyable(),
                         TextEntry::make('phone')
                             ->copyable(),
-                        TextEntry::make('assignedUser.name')
+                        RepeatableEntry::make('collaborators')
                             ->label('Assigned To')
+                            ->schema([
+                                TextEntry::make('name'),
+                            ])
+                            ->columns(2)
                             ->placeholder('Unassigned'),
                         TextEntry::make('creator.name')
                             ->label('Created By'),

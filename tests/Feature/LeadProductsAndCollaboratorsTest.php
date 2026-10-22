@@ -21,21 +21,16 @@ it('stores expected revenue and selected products on a lead', function () {
         ->and(Schema::hasTable('lead_product'))->toBeTrue();
 });
 
-it('stores selected collaborators while preserving creator and primary assignee', function () {
+it('stores all assigned users as collaborators and preserves the creator', function () {
     $creator = User::factory()->create();
-    $assignee = User::factory()->create();
-    $collaborator = User::factory()->create();
-    $lead = Lead::factory()->create([
-        'created_by' => $creator->id,
-        'assigned_to' => $assignee->id,
-    ]);
+    $users = User::factory()->count(2)->create();
+    $lead = Lead::factory()->create(['created_by' => $creator->id]);
 
-    $lead->collaborators()->attach($collaborator->id, ['added_by' => $creator->id]);
+    $lead->collaborators()->syncWithPivotValues($users->modelKeys(), ['added_by' => $creator->id]);
 
     expect($lead->fresh()->created_by)->toBe($creator->id)
-        ->and($lead->fresh()->assigned_to)->toBe($assignee->id)
-        ->and($lead->collaborators()->pluck('users.id')->all())->toBe([$collaborator->id])
-        ->and(Schema::hasTable('lead_collaborators'))->toBeTrue();
+        ->and($lead->collaborators()->pluck('users.id')->all())->toEqualCanonicalizing($users->modelKeys())
+        ->and(Schema::hasColumn('leads', 'assigned_to'))->toBeFalse();
 });
 
 it('stores the principal selected for each product on a lead', function () {

@@ -40,7 +40,6 @@ class Lead extends Model
         'priority',
         'notes',
         'estimated_revenue',
-        'assigned_to',
         'created_by',
         'converted_at',
         'disqualified_at',
@@ -88,11 +87,6 @@ class Lead extends Model
     public function contactPerson(): BelongsTo
     {
         return $this->belongsTo(Contact::class, 'contact_person');
-    }
-
-    public function assignedUser(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     public function creator(): BelongsTo
