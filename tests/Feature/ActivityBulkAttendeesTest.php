@@ -8,14 +8,14 @@ use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
-it('attaches the fixed activity attendees to all existing activities without changing their sales reps', function () {
+it('adds named users as attendees on every existing activity without changing sales reps', function () {
     $barat = Territory::factory()->create(['name' => 'Barat']);
     $timur = Territory::factory()->create(['name' => 'Timur']);
     $other = Territory::factory()->create(['name' => 'Other']);
 
     $aart = User::factory()->create(['name' => 'Aart van Wingerden']);
-    $donny = User::factory()->create(['name' => 'Donny Seprana']);
-    $hapsarendra = User::factory()->create(['name' => 'Hapsarendra', 'territory_id' => $barat->id]);
+    $donny = User::factory()->create(['name' => 'Donny Seprana Marabunta']);
+    $hapsarendra = User::factory()->create(['name' => 'R. Hapsarendra Gunung Drajat', 'territory_id' => $barat->id]);
     $rudi = User::factory()->create(['name' => 'Rudi Candra Aditama', 'territory_id' => $timur->id]);
 
     $baratRep = User::factory()->create(['territory_id' => $barat->id]);
