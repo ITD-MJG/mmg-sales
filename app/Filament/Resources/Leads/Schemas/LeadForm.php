@@ -118,7 +118,7 @@ class LeadForm
                                     ->prefix('IDR')
                                     ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                     ->stripCharacters('.')
-                                    ->columnSpanFull(),
+                                    ->columnSpan(1),
                                 DatePicker::make('expected_closing_date')
                                     ->label('Expected Closing')
                                     ->native(false),
