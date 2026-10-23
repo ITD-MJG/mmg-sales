@@ -117,6 +117,10 @@ class ActivityForm
                                         'Shared Meeting' => 'Shared Meeting',
                                         'Demo' => 'Product Demo',
                                         'Presentation' => 'Presentation',
+                                        'Internal Meeting' => 'Internal Meeting',
+                                        'Monthly Meeting' => 'Monthly Meeting',
+                                        'Event' => 'Event',
+                                        'Exhibition' => 'Exhibition',
                                         'Administrative' => 'Administrative',
                                     ])
                                     ->required()
