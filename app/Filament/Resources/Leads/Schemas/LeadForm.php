@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
-use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
@@ -15,7 +14,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
-use Illuminate\Validation\Rule;
 
 class LeadForm
 {
@@ -84,34 +82,51 @@ class LeadForm
                                 Repeater::make('leadProductItems')
                                     ->relationship()
                                     ->schema([
-                                        Select::make('principal_id')
-                                            ->label('Principal')
-                                            ->options(Principal::query()->orderBy('name')->pluck('name', 'id'))
+                                        Select::make('product_id')
+                                            ->label('Product')
+                                            ->options(fn () => Product::query()
+                                                ->where('is_active', true)
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
                                             ->live()
-                                            ->afterStateUpdated(fn ($set) => $set('product_id', null))
+                                            ->afterStateUpdated(function ($state, $set): void {
+                                                $set('unit_price', $state ? Product::query()->find($state)?->unit_price : null);
+                                            })
                                             ->searchable()
                                             ->preload()
                                             ->required(),
-                                        Select::make('product_id')
-                                            ->label('Product')
-                                            ->options(fn (Get $get) => Product::query()
-                                                ->where('principal_id', $get('principal_id'))
-                                                ->orderBy('name')
-                                                ->pluck('name', 'id'))
-                                            ->disabled(fn (Get $get): bool => blank($get('principal_id')))
-                                            ->rules(fn (Get $get): array => [
-                                                'required',
-                                                Rule::exists('products', 'id')->where('principal_id', $get('principal_id')),
-                                            ])
-                                            ->searchable()
-                                            ->preload(),
+                                        TextInput::make('quantity')
+                                            ->label('Qty')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateTotalValue($get, $set)),
+                                        TextInput::make('unit_price')
+                                            ->label('Unit Price')
+                                            ->numeric()
+                                            ->prefix('IDR')
+                                            ->mask(RawJs::make('$money($input, ",", ".", 0)'))
+                                            ->stripCharacters('.')
+                                            ->required()
+                                            ->live()
+                                            ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateTotalValue($get, $set)),
                                     ])
-                                    ->columns(2),
+                                    ->columns(3),
                             ]),
                         Section::make('Estimation')
-                            ->columnSpan(1)
+                            ->columnSpanFull()
                             ->columns(2)
                             ->schema([
+                                TextInput::make('total_value')
+                                    ->label('Total Value')
+                                    ->numeric()
+                                    ->prefix('IDR')
+                                    ->readOnly()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull(),
                                 TextInput::make('estimated_revenue')
                                     ->label('Expected Revenue')
                                     ->numeric()
@@ -124,7 +139,7 @@ class LeadForm
                                     ->native(false),
                             ]),
                         Section::make('Pipeline & Status')
-                            ->columnSpan(1)
+                            ->columnSpanFull()
                             ->columns(3)
                             ->schema([
                                 Select::make('source')
@@ -169,5 +184,13 @@ class LeadForm
                             ]),
                     ]),
             ]);
+    }
+
+    private static function updateTotalValue(Get $get, $set): void
+    {
+        $quantity = (float) ($get('quantity') ?? 0);
+        $unitPrice = (float) str_replace('.', '', (string) ($get('unit_price') ?? 0));
+
+        $set('total_value', $quantity * $unitPrice);
     }
 }
