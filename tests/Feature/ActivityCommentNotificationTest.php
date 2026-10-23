@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\Activity;
 use App\Models\ActivityComment;
 use App\Models\Opportunity;
@@ -105,7 +106,7 @@ it('notifies each recipient only once', function () {
     Notification::assertSentToTimes($rep, ActivityCommentPosted::class, 1);
 });
 
-it('writes a Filament database notification record', function () {
+it('writes a Filament database notification record with a link to the activity', function () {
     $rep = User::factory()->create();
     $author = User::factory()->create();
     $activity = Activity::factory()->create(['user_id' => $rep->id]);
@@ -119,7 +120,26 @@ it('writes a Filament database notification record', function () {
 
     expect($notification)->not->toBeNull()
         ->and($notification->data['format'])->toBe('filament')
-        ->and($notification->data['title'])->toContain($activity->activity_code);
+        ->and($notification->data['title'])->toContain($activity->activity_code)
+        ->and($notification->data['actions'][0]['url'])->toBe(
+            ActivityResource::getUrl('view', ['record' => $activity])
+        );
+});
+
+it('omits the activity link when the activity no longer exists', function () {
+    $rep = User::factory()->create();
+    $author = User::factory()->create();
+    $activity = Activity::factory()->create(['user_id' => $rep->id]);
+    $comment = ActivityComment::factory()->create([
+        'activity_id' => $activity->id,
+        'user_id' => $author->id,
+    ]);
+
+    $activity->delete();
+
+    $data = (new ActivityCommentPosted($comment->refresh()))->toDatabase($rep);
+
+    expect($data['actions'])->toBe([]);
 });
 
 it('sends the notification over the mail channel', function () {

@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\ActivityComment;
+use Filament\Actions\Action;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -37,6 +39,12 @@ class ActivityCommentPosted extends Notification implements ShouldQueue
             'title' => 'New comment on '.($activity?->activity_code ?? 'an activity'),
             'body' => $this->comment->user->name.' commented: '.str($this->comment->comment)->limit(80),
             'status' => 'info',
+            'actions' => $activity ? [
+                Action::make('viewActivity')
+                    ->label('View Activity')
+                    ->url(ActivityResource::getUrl('view', ['record' => $activity]))
+                    ->toArray(),
+            ] : [],
             'activity_id' => $activity?->id,
             'comment_id' => $this->comment->id,
         ];
