@@ -29,6 +29,10 @@ class ProductsTable
                     ->label('Principal Code')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('internal_code')
+                    ->label('Item Code')
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('name')
                     ->label('Product Name')
