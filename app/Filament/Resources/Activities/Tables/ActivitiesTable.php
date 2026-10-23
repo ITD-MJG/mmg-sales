@@ -36,6 +36,10 @@ class ActivitiesTable
             return $query;
         }
 
+        if ($user->department?->name === 'Marketing') {
+            return $query->whereHas('lead');
+        }
+
         // Grouped so the visibility predicate stays one unit: callers append
         // their own `where` (ordering, navigation), and an ungrouped orWhere
         // would let `A OR B AND extra` narrow to `A OR (B AND extra)`.

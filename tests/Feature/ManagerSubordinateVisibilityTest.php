@@ -3,6 +3,7 @@
 use App\Filament\Resources\Activities\Tables\ActivitiesTable;
 use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Activity;
+use App\Models\Department;
 use App\Models\Lead;
 use App\Models\Position;
 use App\Models\Territory;
@@ -165,4 +166,17 @@ it('shows activities assigned to a staff user as an attendee', function () {
     $activity->attendees()->attach($staff);
 
     expect(visibleActivityIds($staff))->toContain($activity->id);
+});
+
+it('shows all Lead-linked activities to Marketing department users', function () {
+    $marketingDepartment = Department::factory()->create(['name' => 'Marketing']);
+    $marketingUser = User::factory()->create(['department_id' => $marketingDepartment->id]);
+    $otherUser = User::factory()->create();
+
+    $lead = Lead::factory()->create(['created_by' => $otherUser->id]);
+    $leadActivity = Activity::factory()->forLead($lead)->create(['user_id' => $otherUser->id]);
+    $unrelatedActivity = Activity::factory()->create(['user_id' => $otherUser->id]);
+
+    expect(visibleActivityIds($marketingUser))->toContain($leadActivity->id)
+        ->and(visibleActivityIds($marketingUser))->not->toContain($unrelatedActivity->id);
 });
