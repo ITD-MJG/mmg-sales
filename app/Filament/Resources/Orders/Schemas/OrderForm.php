@@ -59,10 +59,10 @@ class OrderForm
                                     ->label('Lead / Opportunity')
                                     ->options(fn ($get) => match ($get('order_source')) {
                                         'leads' => Lead::query()
-                                            ->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))
+                                            ->where('created_by', auth()->id())
                                             ->pluck('title', 'id'),
                                         'opportunities' => Opportunity::query()
-                                            ->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))
+                                            ->where('created_by', auth()->id())
                                             ->pluck('title', 'id'),
                                         default => [],
                                     })
@@ -77,8 +77,8 @@ class OrderForm
                                     ->afterStateUpdated(function ($set, $get, ?string $state): void {
                                         $sourceType = $get('order_source');
                                         $source = match ($sourceType) {
-                                            'leads' => $state ? Lead::query()->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
-                                            'opportunities' => $state ? Opportunity::query()->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                            'leads' => $state ? Lead::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                            'opportunities' => $state ? Opportunity::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
                                             default => null,
                                         };
 

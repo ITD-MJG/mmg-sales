@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
-test('manual source permits a user to choose sales and marketing reps', function () {
+test('manual source permits manual selection from Sales and Marketing departments', function () {
     $sales = Department::factory()->create(['name' => 'Sales', 'code' => 'SAL']);
     $marketing = Department::factory()->create(['name' => 'Marketing', 'code' => 'MKT']);
     $finance = Department::factory()->create(['name' => 'Finance', 'code' => 'FNA']);
@@ -37,12 +37,11 @@ test('manual source permits a user to choose sales and marketing reps', function
         });
 });
 
-test('selecting a lead prefills customer, source details, products, creator and collaborators', function () {
+test('selecting an owned lead prefills customer, source details, products, creator and collaborators', function () {
     $sales = Department::factory()->create(['name' => 'Sales', 'code' => 'SAL']);
     $marketing = Department::factory()->create(['name' => 'Marketing', 'code' => 'MKT']);
     $creator = User::factory()->create(['department_id' => $sales->id]);
     $collaborator = User::factory()->create(['department_id' => $marketing->id]);
-    $outsideDepartmentUser = User::factory()->create();
     $actor = User::factory()->create();
     $customer = Customer::factory()->create();
     $principal = Principal::factory()->create(['is_active' => true]);
@@ -83,7 +82,7 @@ test('selecting a lead prefills customer, source details, products, creator and 
 test('changing the source or clearing its record resets source-populated fields for manual entry', function () {
     $actor = User::factory()->create();
     $customer = Customer::factory()->create();
-    $lead = Lead::factory()->create(['customer_id' => $customer->id]);
+    $lead = Lead::factory()->create(['customer_id' => $customer->id, 'created_by' => $actor->id]);
 
     $component = Livewire::actingAs($actor)->test(CreateOrder::class);
 
