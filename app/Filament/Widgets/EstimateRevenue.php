@@ -9,7 +9,7 @@ class EstimateRevenue extends ChartWidget
 {
     protected ?string $heading = 'Expected Revenue by Closing Month';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     protected static bool $isLazy = false;
 
