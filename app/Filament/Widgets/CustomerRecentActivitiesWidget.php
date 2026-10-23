@@ -4,8 +4,8 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\Activity;
+use Filament\Actions\Action;
 use Filament\Tables;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,8 +40,11 @@ class CustomerRecentActivitiesWidget extends TableWidget
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Subject')
                     ->limit(30),
-
-                ViewAction::make()
+            ])
+            ->recordActions([
+                Action::make('view')
+                    ->label('View')
+                    ->icon('heroicon-m-eye')
                     ->url(fn (Activity $record): string => ActivityResource::getUrl('view', ['record' => $record])),
             ])
             ->paginated([5, 10])

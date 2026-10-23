@@ -50,3 +50,14 @@ it('customer recent activities widget displays only this customer data', functio
         ->assertCanSeeTableRecords([$activityThisCustomer])
         ->assertCanNotSeeTableRecords([$activityOtherCustomer]);
 });
+
+it('customer recent activities widget exposes a working view action', function () {
+    Activity::factory()->create([
+        'customer_id' => $this->customer->id,
+        'subject' => 'Viewable Customer Activity',
+    ]);
+
+    livewire(CustomerRecentActivitiesWidget::class, ['record' => $this->customer])
+        ->assertSuccessful()
+        ->assertSee('View');
+});
