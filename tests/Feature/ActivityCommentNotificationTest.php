@@ -121,12 +121,15 @@ it('writes a Filament database notification record with a link to the activity',
     expect($notification)->not->toBeNull()
         ->and($notification->data['format'])->toBe('filament')
         ->and($notification->data['title'])->toContain($activity->activity_code)
+        ->and($notification->data['activity_id'])->toBe($activity->id)
+        ->and($notification->data['comment_id'])->not->toBeNull()
         ->and($notification->data['actions'][0]['url'])->toBe(
             ActivityResource::getUrl('view', ['record' => $activity])
-        );
+        )
+        ->and($notification->data['actions'][0]['label'])->toBe('View Activity');
 });
 
-it('omits the activity link when the activity no longer exists', function () {
+it('omits the activity action when the activity no longer exists', function () {
     $rep = User::factory()->create();
     $author = User::factory()->create();
     $activity = Activity::factory()->create(['user_id' => $rep->id]);

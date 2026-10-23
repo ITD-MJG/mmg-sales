@@ -5,12 +5,13 @@ namespace App\Notifications;
 use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\ActivityComment;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Notification as LaravelNotification;
 
-class ActivityCommentPosted extends Notification implements ShouldQueue
+class ActivityCommentPosted extends LaravelNotification implements ShouldQueue
 {
     use Queueable;
 
@@ -33,21 +34,21 @@ class ActivityCommentPosted extends Notification implements ShouldQueue
     {
         $activity = $this->comment->activity;
 
-        return [
-            'format' => 'filament',
-            'duration' => 'persistent',
-            'title' => 'New comment on '.($activity?->activity_code ?? 'an activity'),
-            'body' => $this->comment->user->name.' commented: '.str($this->comment->comment)->limit(80),
-            'status' => 'info',
-            'actions' => $activity ? [
+        $notification = FilamentNotification::make()
+            ->title('New comment on '.($activity?->activity_code ?? 'an activity'))
+            ->body($this->comment->user->name.' commented: '.str($this->comment->comment)->limit(80))
+            ->info()
+            ->persistent()
+            ->actions($activity ? [
                 Action::make('viewActivity')
                     ->label('View Activity')
-                    ->url(ActivityResource::getUrl('view', ['record' => $activity]))
-                    ->toArray(),
-            ] : [],
+                    ->url(ActivityResource::getUrl('view', ['record' => $activity])),
+            ] : []);
+
+        return array_merge($notification->toDatabase()->data, [
             'activity_id' => $activity?->id,
             'comment_id' => $this->comment->id,
-        ];
+        ]);
     }
 
     public function toMail(object $notifiable): MailMessage
