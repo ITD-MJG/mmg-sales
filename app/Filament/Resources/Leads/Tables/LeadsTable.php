@@ -70,9 +70,17 @@ class LeadsTable
                     ->tooltip(fn (string $state): ?string => strlen($state) > 32 ? $state : null)
                     ->toggleable(),
 
-                TextColumn::make('contactPerson.name')
-                    ->label('Contact Person')
-                    ->searchable()
+                TextColumn::make('estimated_revenue')
+                    ->label('Exp. Revenue')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(),
+
+                TextColumn::make('expected_closing_date')
+                    ->label('Exp. Closing')
+                    ->date('d M Y')
+                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y')) : '-')
+                    ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('status')
