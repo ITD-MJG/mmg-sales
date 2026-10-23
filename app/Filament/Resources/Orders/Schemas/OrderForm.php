@@ -3,9 +3,8 @@
 namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Models\Customer;
-use App\Models\Department;
+use App\Models\Lead;
 use App\Models\Opportunity;
-use App\Models\Position;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
@@ -27,109 +26,115 @@ class OrderForm
     {
         /** @var User $user */
         $user = auth()->user();
-        $userPosition = $user?->position;
-
-        $findAncestorByLevel = function (?Position $position, int $targetLevel): ?int {
-            if (! $position) {
-                return null;
-            }
-
-            $current = $position;
-            while ($current && $current->level > $targetLevel) {
-                $current = $current->parent;
-            }
-
-            return $current?->id;
-        };
 
         return $schema
             ->components([
                 Section::make('Order Details')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(4)
+                        Grid::make(3)
                             ->schema([
                                 Select::make('order_source')
                                     ->label('Order Source')
                                     ->options([
+                                        'leads' => 'Leads',
                                         'opportunities' => 'Opportunities',
                                         'manual' => 'Input Manually',
                                     ])
                                     ->required()
                                     ->live()
+                                    ->afterStateUpdated(function ($set): void {
+                                        $set('source_record_id', null);
+                                        $set('end_customer_id', null);
+                                        $set('notes', null);
+                                        $set('sales', []);
+                                        $set('orderItems', []);
+                                        $set('subtotal', 0);
+                                        $set('total_amount', 0);
+                                        $set('net_sales_total', 0);
+                                    })
                                     ->default('manual')
-                                    ->dehydrated(false)
-                                    ->columnSpan(2),
-                                DatePicker::make('order_date')
-                                    ->label('Order Date')
-                                    ->default(now())
-                                    ->required()
-                                    ->columnSpan(2),
-                            ]),
-
-                        Grid::make(4)
-                            ->schema([
-                                Select::make('opportunity_id')
-                                    ->label('Opportunity')
-                                    ->relationship('opportunity', 'title')
-                                    ->options(fn () => Opportunity::query()
-                                        ->where(function ($query) {
-                                            $userId = auth()->id();
-                                            $query->where('assigned_to', $userId)
-                                                ->orWhere('created_by', $userId);
-                                        })
-                                        ->pluck('title', 'id'))
+                                    ->dehydrated(false),
+                                Select::make('source_record_id')
+                                    ->label('Lead / Opportunity')
+                                    ->options(fn ($get) => match ($get('order_source')) {
+                                        'leads' => Lead::query()
+                                            ->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))
+                                            ->pluck('title', 'id'),
+                                        'opportunities' => Opportunity::query()
+                                            ->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))
+                                            ->pluck('title', 'id'),
+                                        default => [],
+                                    })
                                     ->searchable()
                                     ->preload()
-                                    ->placeholder('Select an opportunity')
-                                    ->visible(fn ($get) => $get('order_source') === 'opportunities')
-                                    ->required(fn ($get) => $get('order_source') === 'opportunities')
+                                    ->placeholder('Select a lead or opportunity')
                                     ->live()
-                                    ->columnSpan(2)
-                                    ->afterStateUpdated(function ($set, $get, ?string $state) {
-                                        if (! $state) {
+                                    ->dehydrated(false)
+                                    ->visible(fn ($get) => in_array($get('order_source'), ['leads', 'opportunities'], true))
+                                    ->required(false)
+                                    ->columnSpan(1)
+                                    ->afterStateUpdated(function ($set, $get, ?string $state): void {
+                                        $sourceType = $get('order_source');
+                                        $source = match ($sourceType) {
+                                            'leads' => $state ? Lead::query()->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                            'opportunities' => $state ? Opportunity::query()->where(fn (Builder $query) => $query->where('created_by', auth()->id())->orWhere('assigned_to', auth()->id()))->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                            default => null,
+                                        };
+
+                                        if (! $source) {
                                             $set('end_customer_id', null);
                                             $set('notes', null);
                                             $set('sales', []);
                                             $set('orderItems', []);
+                                            $set('subtotal', 0);
+                                            $set('total_amount', 0);
+                                            $set('net_sales_total', 0);
 
                                             return;
                                         }
 
-                                        $opportunity = Opportunity::with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state);
-                                        if (! $opportunity) {
-                                            return;
-                                        }
-
-                                        $set('end_customer_id', $opportunity->customer_id);
-                                        $set('notes', $opportunity->notes);
-                                        $salesReps = collect([$opportunity->creator?->id])
-                                            ->merge($opportunity->collaborators->pluck('id'))
+                                        $set('end_customer_id', $source->customer_id);
+                                        $set('notes', $source->notes);
+                                        $salesIds = collect([$source->creator?->id])
+                                            ->merge($source->collaborators->pluck('id'))
                                             ->filter()
+                                            ->unique()
                                             ->values()
-                                            ->toArray();
-                                        $set('sales', $salesReps);
+                                            ->all();
+                                        $set('sales', $salesIds);
 
-                                        $orderItems = $opportunity->products->map(fn ($product) => [
-                                            'principal_id' => $product->principal_id,
-                                            'item_id' => $product->id,
-                                            'quantity' => 1,
-                                            'price_type' => 'unit_price',
-                                            'unit_price' => $product->unit_price ?? 0,
-                                            'current_price' => $product->unit_price ?? 0,
-                                            'subtotal' => $product->unit_price ?? 0,
-                                        ])->toArray();
+                                        $items = $source->products->map(function ($product) use ($sourceType): array {
+                                            $quantity = $sourceType === 'leads' ? ($product->pivot->quantity ?? 1) : 1;
+                                            $unitPrice = $sourceType === 'leads'
+                                                ? ($product->pivot->unit_price ?? $product->unit_price ?? 0)
+                                                : ($product->unit_price ?? 0);
+                                            $principalId = $product->pivot->principal_id ?? $product->principal_id;
 
-                                        $set('orderItems', $orderItems);
+                                            return [
+                                                'principal_id' => $principalId,
+                                                'item_id' => $product->id,
+                                                'quantity' => $quantity,
+                                                'price_type' => 'unit_price',
+                                                'unit_price' => $unitPrice,
+                                                'current_price' => $unitPrice,
+                                                'subtotal' => $unitPrice * $quantity,
+                                            ];
+                                        })->toArray();
+
+                                        $set('orderItems', $items);
                                     }),
-                                TextInput::make('payment_method')
-                                    ->label('Payment Method')
-                                    ->placeholder('e.g. Bank Transfer, Credit Card')
-                                    ->columnSpan(2),
+                                DatePicker::make('order_date')
+                                    ->label('Order Date')
+                                    ->default(now())
+                                    ->required(),
                             ]),
 
                         Grid::make(3)
                             ->schema([
+                                TextInput::make('payment_method')
+                                    ->label('Payment Method')
+                                    ->placeholder('e.g. Bank Transfer, Credit Card'),
                                 Select::make('reg_inst')
                                     ->label('Type')
                                     ->multiple()
@@ -176,84 +181,58 @@ class OrderForm
                     ]),
 
                 Section::make('Sales Details')
-                    ->columnSpanFull()
                     ->schema([
-                        Grid::make(6)
-                            ->schema([
-                                Select::make('department_id')
-                                    ->label('Department')
-                                    ->relationship('department', 'name')
-                                    ->default($user?->department_id)
-                                    ->required()
-                                    ->preload()
-                                    ->searchable(),
-                                Select::make('sales')
-                                    ->label('Sales')
-                                    ->multiple()
-                                    ->options(fn () => User::where('department_id', Department::where('code', 'SAL')->value('id'))
-                                        ->pluck('name', 'id'))
-                                    ->default(fn () => $user?->id ? [$user->id] : [])
-                                    ->disabled(fn ($get) => $get('order_source') === 'opportunities' && $get('opportunity_id'))
-                                    ->preload()
-                                    ->searchable(),
-                                Select::make('pm_jpm_pe_position_id')
-                                    ->label('PM/JPM/PE')
-                                    ->options(fn () => Position::whereBetween('level', [Position::RSM_LEVEL, Position::SR_LEVEL])->pluck('name', 'id'))
-                                    ->default(null)
-                                    ->preload()
-                                    ->searchable(),
-                                Select::make('spv_position_id')
-                                    ->label('Supervisor')
-                                    ->options(fn () => Position::where('level', Position::SPV_LEVEL)->pluck('name', 'id'))
-                                    ->default(fn () => $findAncestorByLevel($userPosition, Position::SPV_LEVEL))
-                                    ->preload()
-                                    ->searchable(),
-                                Select::make('rsm_asm_position_id')
-                                    ->label('RSM/ASM')
-                                    ->options(fn () => Position::whereIn('level', [Position::RSM_LEVEL, Position::ASM_LEVEL])->pluck('name', 'id'))
-                                    ->default(fn () => $findAncestorByLevel($userPosition, Position::RSM_LEVEL))
-                                    ->preload()
-                                    ->searchable(),
-                                Select::make('head_position_id')
-                                    ->label('Head')
-                                    ->options(fn () => Position::where('level', Position::DIRECTOR_LEVEL)->pluck('name', 'id'))
-                                    ->default(fn () => $findAncestorByLevel($userPosition, Position::DIRECTOR_LEVEL))
-                                    ->preload()
-                                    ->searchable(),
-                            ]),
+                        Select::make('sales')
+                            ->label('Sales / Marketing')
+                            ->multiple()
+                            ->options(fn () => User::query()
+                                ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
+                                ->pluck('name', 'id'))
+                            ->default(fn () => $user?->id ? [$user->id] : [])
+                            ->preload()
+                            ->afterStateUpdated(function ($set, $get, $state): void {
+                                if (! $state || $get('source_record_id')) {
+                                    return;
+                                }
+
+                                $allowedIds = User::query()
+                                    ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
+                                    ->pluck('id');
+
+                                $set('sales', array_values(array_intersect($state, $allowedIds->all())));
+                            })
+                            ->searchable(),
                     ]),
 
                 Section::make('Customer Details')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Select::make('end_customer_id')
-                                    ->label('End Customer')
-                                    ->relationship(
-                                        name: 'customer',
-                                        titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active'),
-                                    )
-                                    ->searchable()
-                                    ->required()
-                                    ->preload()
-                                    ->live()
-                                    ->afterStateUpdated(function ($set, $state) {
-                                        if (! $state) {
-                                            $set('billing_address', null);
+                        Select::make('end_customer_id')
+                            ->label('End Customer')
+                            ->relationship(
+                                name: 'customer',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active'),
+                            )
+                            ->searchable()
+                            ->required()
+                            ->preload()
+                            ->live()
+                            ->columnSpanFull()
+                            ->afterStateUpdated(function ($set, $state) {
+                                if (! $state) {
+                                    $set('billing_address', null);
 
-                                            return;
-                                        }
+                                    return;
+                                }
 
-                                        $customer = Customer::find($state);
-                                        if (! $customer) {
-                                            return;
-                                        }
+                                $customer = Customer::find($state);
+                                if (! $customer) {
+                                    return;
+                                }
 
-                                        $set('billing_address', $customer->address);
-                                    }),
-                            ]),
+                                $set('billing_address', $customer->address);
+                            }),
 
                         Grid::make(2)
                             ->schema([
