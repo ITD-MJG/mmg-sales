@@ -14,12 +14,16 @@ class LeadProduct extends Pivot
     protected $fillable = [
         'lead_id',
         'product_id',
-        'principal_id',
+        'quantity',
+        'unit_price',
     ];
 
-    public function principal(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(Principal::class);
+        return [
+            'quantity' => 'integer',
+            'unit_price' => 'decimal:2',
+        ];
     }
 
     public function lead(): BelongsTo
