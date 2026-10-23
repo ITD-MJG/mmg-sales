@@ -42,30 +42,15 @@ class CustomersTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('type')
-                    ->label('Type')
-                    ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'hospital_clinic' => 'Hospital/Apothecary/Clinic',
-                        'pt_cv' => 'PT/CV',
-                        'other' => 'Other',
-                    })
-                    ->color(fn (string $state): string => match ($state) {
-                        'hospital_clinic' => 'primary',
-                        'pt_cv' => 'info',
-                        'other' => 'gray',
-                    }),
-
-                TextColumn::make('city')
-                    ->label('City')
-                    ->searchable()
+                TextColumn::make('activities_count')
+                    ->label('Activity Count')
+                    ->counts('activities')
                     ->sortable(),
 
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean()
                     ->sortable(),
-
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
