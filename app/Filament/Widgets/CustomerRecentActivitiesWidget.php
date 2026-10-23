@@ -5,7 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\Activity;
 use Filament\Tables;
-use Filament\Tables\Actions\ViewAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
