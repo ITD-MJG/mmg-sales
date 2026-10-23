@@ -2,9 +2,12 @@
 
 namespace App\Observers;
 
+use App\Filament\Resources\Activities\ActivityResource;
 use App\Models\ActivityComment;
 use App\Models\User;
-use App\Notifications\ActivityCommentPosted;
+use App\Notifications\ActivityCommentEmail;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Collection;
 
 class ActivityCommentObserver
@@ -26,8 +29,20 @@ class ActivityCommentObserver
             ->reject(fn (User $user): bool => $user->is($comment->user))
             ->unique('id');
 
+        $notification = Notification::make()
+            ->title('New comment on '.$activity->activity_code)
+            ->body($comment->user->name.' commented: '.str($comment->comment)->limit(80))
+            ->info()
+            ->persistent()
+            ->actions([
+                Action::make('viewActivity')
+                    ->label('View Activity')
+                    ->url(ActivityResource::getUrl('view', ['record' => $activity])),
+            ]);
+
         foreach ($recipients as $recipient) {
-            $recipient->notify(new ActivityCommentPosted($comment));
+            $notification->sendToDatabase($recipient, isEventDispatched: true);
+            $recipient->notify(new ActivityCommentEmail($comment));
         }
     }
 
