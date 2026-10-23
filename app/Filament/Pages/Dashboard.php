@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
@@ -27,6 +28,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             LeadStatusChart::class,
+            EstimateRevenue::class,
             MonthlyOrderChart::class,
             RevenueByPrincipalChart::class,
             TopSellingProductsChart::class,
