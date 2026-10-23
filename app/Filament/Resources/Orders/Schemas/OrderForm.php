@@ -15,10 +15,10 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Support\RawJs;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
 
 class OrderForm
@@ -302,7 +302,7 @@ class OrderForm
                                     ->schema([
                                         Select::make('principal_id')
                                             ->label('Principal')
-                                            ->options(fn () => Principal::all()->pluck('name', 'id'))
+                                            ->options(fn () => Principal::query()->where('is_active', true)->pluck('name', 'id'))
                                             ->searchable()
                                             ->required()
                                             ->live()
@@ -332,7 +332,7 @@ class OrderForm
                                             ])
                                             ->default('unit_price')
                                             ->live()
-                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get))
+                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get, true))
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
@@ -341,7 +341,7 @@ class OrderForm
                                             ->prefix('IDR')
                                             ->live()
                                             ->readOnly(fn ($get) => ! $get('principal_id') || ! $get('item_id'))
-                                            ->afterStateUpdated(fn ($set, $get) => $set('subtotal', (int) $get('quantity') * (float) $get('unit_price')))
+                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get))
                                             ->columnSpan(1),
                                     ]),
                                 Grid::make(1)
@@ -367,8 +367,8 @@ class OrderForm
                             ->schema([
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
-                                    ->mask(RawJs::make('$money($input, ".", ",", 2)'))
-                                    ->step('0.01')
+                                    ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                    ->step('1')
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
@@ -381,8 +381,8 @@ class OrderForm
                                     ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, $get)),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
-                                    ->step('0.01')
-                                    ->mask(RawJs::make('$money($input, ".", ",", 2)'))
+                                    ->step('1')
+                                    ->mask(RawJs::make('$money($input, ".", ",", 0)'))
                                     ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
                                     ->readOnly(),
@@ -397,13 +397,26 @@ class OrderForm
             ]);
     }
 
-    protected static function updateLineTotal($set, $get): void
+    private static function parseMoney(mixed $value): float
+    {
+        if (! is_string($value)) {
+            return (float) $value;
+        }
+
+        $parts = explode(',', $value, 2);
+        $integerPart = (float) str_replace('.', '', $parts[0]);
+        $fractionalPart = isset($parts[1]) ? (float) ('0.'.preg_replace('/\D/', '', $parts[1])) : 0;
+
+        return $integerPart + $fractionalPart;
+    }
+
+    protected static function updateLineTotal($set, $get, bool $refreshPrice = false): void
     {
         $itemId = $get('item_id');
         $quantity = (int) $get('quantity');
         $priceType = $get('price_type') ?? 'unit_price';
 
-        if ($itemId) {
+        if ($refreshPrice && $itemId) {
             $product = Product::find($itemId);
             if ($product) {
                 $unitPrice = $priceType === 'ecatalog_price'
@@ -414,8 +427,8 @@ class OrderForm
             }
         }
 
-        $unitPrice = (float) $get('unit_price');
-        $lineTotal = $quantity * $unitPrice;
+        $unitPrice = self::parseMoney($get('unit_price'));
+        $lineTotal = round($quantity * $unitPrice, 2);
         $set('subtotal', $lineTotal);
     }
 
@@ -427,15 +440,15 @@ class OrderForm
         if ($orderItems && is_array($orderItems)) {
             foreach ($orderItems as $item) {
                 $quantity = (int) ($item['quantity'] ?? 0);
-                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $unitPrice = self::parseMoney($item['unit_price'] ?? 0);
                 $grossSales += $quantity * $unitPrice;
             }
         }
 
-        $set('subtotal', $grossSales);
+        $set('subtotal', round($grossSales));
 
         $discountPercent = (float) $get('discount_on');
-        $netSales = $grossSales * (1 - ($discountPercent / 100));
+        $netSales = round($grossSales * (1 - ($discountPercent / 100)));
         $set('total_amount', $netSales);
         $set('net_sales_total', $netSales);
     }
@@ -444,7 +457,7 @@ class OrderForm
     {
         $grossSales = (float) $get('subtotal');
         $discountPercent = (float) $get('discount_on');
-        $netSales = $grossSales * (1 - ($discountPercent / 100));
+        $netSales = round($grossSales * (1 - ($discountPercent / 100)));
         $set('total_amount', $netSales);
         $set('net_sales_total', $netSales);
     }

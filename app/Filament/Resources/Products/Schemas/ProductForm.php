@@ -7,6 +7,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProductForm
 {
@@ -50,7 +51,7 @@ class ProductForm
                 Section::make('Supplier & Inventory')
                     ->schema([
                         Select::make('principal_id')
-                            ->relationship('principal', 'name')
+                            ->relationship('principal', 'name', modifyQueryUsing: fn (Builder $query) => $query->where('is_active', true))
                             ->searchable()
                             ->preload(),
                         TextInput::make('unit_of_measure')
