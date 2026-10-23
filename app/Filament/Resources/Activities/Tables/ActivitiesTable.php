@@ -43,6 +43,8 @@ class ActivitiesTable
             // Apply base visibility scope (user_id-based filtering)
             self::applyVisibilityScope($query, 'user_id');
 
+            $query->orWhereHas('attendees', fn (Builder $attendees): Builder => $attendees->whereKey($user->id));
+
             // For non-global-viewer users, also include activities on leads the
             // user created, and activities on opportunities they collaborate on,
             // but only if the activity's user is in the same territory.

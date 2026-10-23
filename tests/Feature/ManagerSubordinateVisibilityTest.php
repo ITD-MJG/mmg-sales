@@ -155,3 +155,14 @@ it('still restricts Sales Staff to their own records', function () {
     expect($ids)->toContain($ownLead->id)
         ->and($ids)->not->toContain($peerLead->id);
 });
+
+it('shows activities assigned to a staff user as an attendee', function () {
+    $territory = Territory::factory()->create();
+    [, $staff] = managerWithTeam($territory->id);
+    $creator = User::factory()->create(['territory_id' => $territory->id]);
+    $lead = Lead::factory()->create(['created_by' => $creator->id]);
+    $activity = Activity::factory()->forLead($lead)->create(['user_id' => $creator->id]);
+    $activity->attendees()->attach($staff);
+
+    expect(visibleActivityIds($staff))->toContain($activity->id);
+});
