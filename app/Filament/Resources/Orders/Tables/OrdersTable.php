@@ -46,7 +46,7 @@ class OrdersTable
                     ->limit(25)
                     ->tooltip(fn ($state) => $state),
 
-                TextColumn::make('net_sales_total')
+                TextColumn::make('total_amount')
                     ->label('Net Sales')
                     ->money('IDR')
                     ->sortable(),
