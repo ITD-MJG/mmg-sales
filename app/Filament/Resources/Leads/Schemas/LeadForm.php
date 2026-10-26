@@ -90,11 +90,21 @@ class LeadForm
                                                 ->pluck('name', 'id'))
                                             ->live()
                                             ->afterStateUpdated(function ($state, $set): void {
-                                                $set('unit_price', $state ? Product::query()->find($state)?->unit_price : null);
+                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                $set('unit_price', $product?->unit_price);
+                                                $set('principal_name', $product?->principal?->name);
                                             })
                                             ->searchable()
                                             ->preload()
                                             ->required(),
+                                        TextInput::make('principal_name')
+                                            ->label('Principal')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function (TextInput $component, Get $get): void {
+                                                $productId = $get('product_id');
+                                                $component->state($productId ? Product::query()->with('principal')->find($productId)?->principal?->name : null);
+                                            }),
                                         TextInput::make('quantity')
                                             ->label('Qty')
                                             ->numeric()
