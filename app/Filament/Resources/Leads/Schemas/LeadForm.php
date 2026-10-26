@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
-use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
@@ -15,7 +14,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
-use Illuminate\Validation\Rule;
 
 class LeadForm
 {
@@ -82,49 +80,72 @@ class LeadForm
                             ->columnSpanFull()
                             ->schema([
                                 Repeater::make('leadProductItems')
+                                    ->label('Products list')
                                     ->relationship()
                                     ->schema([
-                                        Select::make('principal_id')
-                                            ->label('Principal')
-                                            ->options(Principal::query()->orderBy('name')->pluck('name', 'id'))
+                                        Select::make('product_id')
+                                            ->label('Product')
+                                            ->options(fn () => Product::query()
+                                                ->where('is_active', true)
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
                                             ->live()
-                                            ->afterStateUpdated(fn ($set) => $set('product_id', null))
+                                            ->afterStateUpdated(function ($state, Get $get, $set): void {
+                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                $set('unit_price', $product?->unit_price);
+                                                $set('principal_name', $product?->principal?->name);
+                                                $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))));
+                                            })
                                             ->searchable()
                                             ->preload()
                                             ->required(),
-                                        Select::make('product_id')
-                                            ->label('Product')
-                                            ->options(fn (Get $get) => Product::query()
-                                                ->where('principal_id', $get('principal_id'))
-                                                ->orderBy('name')
-                                                ->pluck('name', 'id'))
-                                            ->disabled(fn (Get $get): bool => blank($get('principal_id')))
-                                            ->rules(fn (Get $get): array => [
-                                                'required',
-                                                Rule::exists('products', 'id')->where('principal_id', $get('principal_id')),
-                                            ])
-                                            ->searchable()
-                                            ->preload(),
+                                        TextInput::make('quantity')
+                                            ->label('Qty')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->required()
+                                            ->live(debounce: 500)
+                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
+                                        TextInput::make('unit_price')
+                                            ->label('Unit Price')
+                                            ->numeric()
+                                            ->prefix('IDR')
+                                            ->mask(RawJs::make('$money($input, ",", ".", 0)'))
+                                            ->stripCharacters('.')
+                                            ->live(debounce: 500)
+                                            ->required()
+                                            ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
+                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
                                     ])
-                                    ->columns(2),
+                                    ->columns(4),
                             ]),
                         Section::make('Estimation')
-                            ->columnSpan(1)
+                            ->columnSpanFull()
                             ->columns(2)
                             ->schema([
+                                TextInput::make('total_value')
+                                    ->label('Total Value')
+                                    ->numeric()
+                                    ->prefix('IDR')
+                                    ->readOnly()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull(),
                                 TextInput::make('estimated_revenue')
                                     ->label('Expected Revenue')
                                     ->numeric()
                                     ->prefix('IDR')
                                     ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                     ->stripCharacters('.')
-                                    ->columnSpan(1),
+                                    ->columnSpan(1)
+                                    ->required(),
                                 DatePicker::make('expected_closing_date')
                                     ->label('Expected Closing')
-                                    ->native(false),
+                                    ->native(false)
+                                    ->required(),
                             ]),
                         Section::make('Pipeline & Status')
-                            ->columnSpan(1)
+                            ->columnSpanFull()
                             ->columns(3)
                             ->schema([
                                 Select::make('source')
