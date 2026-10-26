@@ -124,7 +124,7 @@ class LeadForm
                                             ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
                                             ->afterStateUpdated(fn (Get $get, $set) => self::updateTotalValue($get, $set)),
                                     ])
-                                    ->columns(3),
+                                    ->columns(4),
                             ]),
                         Section::make('Estimation')
                             ->columnSpanFull()
