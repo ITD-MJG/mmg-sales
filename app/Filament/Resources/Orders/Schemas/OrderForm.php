@@ -130,7 +130,7 @@ class OrderForm
                                     ->required(),
                             ]),
 
-                        Grid::make(3)
+                        Grid::make(4)
                             ->schema([
                                 TextInput::make('po_number')
                                     ->label('PO Number')
