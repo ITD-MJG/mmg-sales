@@ -31,6 +31,12 @@ class LeadsTable
 
                 return $query->orderByDesc('leads.created_at');
             })
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make()
+                    ->visible(fn (Lead $record) => self::canModifyRecord($record, 'created_by')),
+                ConvertLeadToOpportunityAction::make(),
+            ])
             ->columns([
                 TextColumn::make('lead_code')
                     ->label('Lead Code')
@@ -188,12 +194,6 @@ class LeadsTable
             ])
             ->filters([
                 TrashedFilter::make(),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make()
-                    ->visible(fn (Lead $record) => self::canModifyRecord($record, 'created_by')),
-                ConvertLeadToOpportunityAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
