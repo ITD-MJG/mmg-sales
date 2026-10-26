@@ -6,7 +6,6 @@ use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Schema;
@@ -48,15 +47,11 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
                         ->color('gray'),
 
                     Group::make([
-                        RepeatableEntry::make('collaborators')
+                        TextEntry::make('collaborators')
                             ->label('')
-                            ->schema([
-                                TextEntry::make('name')
-                                    ->badge()
-                                    ->icon('heroicon-m-user')
-                                    ->color('gray'),
-                            ])
-                            ->columns(2)
+                            ->state(fn (Lead $record): ?string => $record->collaborators->first()?->name)
+                            ->formatStateUsing(fn (?string $state, Lead $record): ?string => $state === null ? null : $state.($record->collaborators->count() > 1 ? ' + '.($record->collaborators->count() - 1) : ''))
+                            ->tooltip(fn (Lead $record): ?string => $record->collaborators->count() > 1 ? $record->collaborators->skip(1)->pluck('name')->implode(', ') : null)
                             ->placeholder('No assignees'),
 
                         TextEntry::make('priority')
