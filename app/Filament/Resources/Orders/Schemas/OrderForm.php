@@ -189,9 +189,10 @@ class OrderForm
                             ->label('Sales / Marketing')
                             ->multiple()
                             ->options(fn () => User::query()
+                                ->when(! in_array($user?->department?->code, ['SAL', 'MKT'], true), fn (Builder $query) => $query->whereHas('department', fn (Builder $departmentQuery) => $departmentQuery->where('code', 'SAL')))
                                 ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
                                 ->pluck('name', 'id'))
-                            ->default(fn () => $user?->id ? [$user->id] : [])
+                            ->default(fn () => in_array($user?->department?->code, ['SAL', 'MKT'], true) ? [$user->id] : [])
                             ->preload()
                             ->afterStateUpdated(function ($set, $get, $state): void {
                                 if (! $state || $get('source_record_id')) {

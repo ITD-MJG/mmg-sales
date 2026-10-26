@@ -122,3 +122,17 @@ test('selecting an opportunity prefills creator and collaborators in sales selec
             'sales' => [$creator->id, $collaborator->id],
         ]);
 });
+
+test('users outside Sales and Marketing default to no sales and only see Sales users', function () {
+    $sales = Department::factory()->create(['name' => 'Sales', 'code' => 'SAL']);
+    $marketing = Department::factory()->create(['name' => 'Marketing', 'code' => 'MKT']);
+    $finance = Department::factory()->create(['name' => 'Finance', 'code' => 'FNA']);
+    $salesUser = User::factory()->create(['name' => 'Sales User', 'department_id' => $sales->id]);
+    User::factory()->create(['name' => 'Marketing User', 'department_id' => $marketing->id]);
+    $actor = User::factory()->create(['department_id' => $finance->id]);
+
+    Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->assertFormSet(['sales' => []])
+        ->assertFormFieldExists('sales', fn ($field) => $field->getOptions() === [$salesUser->id => $salesUser->name]);
+});
