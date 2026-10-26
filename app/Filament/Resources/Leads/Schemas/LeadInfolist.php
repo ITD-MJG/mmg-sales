@@ -37,18 +37,38 @@ class LeadInfolist
                             ->copyable(),
                         TextEntry::make('phone')
                             ->copyable(),
-                        RepeatableEntry::make('collaborators')
+                        TextEntry::make('collaborators.name')
                             ->label('Assigned To')
-                            ->schema([
-                                TextEntry::make('name'),
-                            ])
-                            ->columns(2)
+                            ->listWithLineBreaks(false)
                             ->placeholder('Unassigned'),
                         TextEntry::make('creator.name')
                             ->label('Created By'),
                         TextEntry::make('created_at')
                             ->label('Created')
                             ->dateTime('d M Y H:i'),
+                    ]),
+
+                Section::make('Products')
+                    ->columnSpanFull()
+                    ->schema([
+                        RepeatableEntry::make('leadProductItems')
+                            ->columns(4)
+                            ->label('')
+                            ->table([
+                                RepeatableEntry\TableColumn::make('Product'),
+                                RepeatableEntry\TableColumn::make('Principal'),
+                                RepeatableEntry\TableColumn::make('Quantity'),
+                                RepeatableEntry\TableColumn::make('Unit Price'),
+                            ])
+                            ->schema([
+                                TextEntry::make('product.name')
+                                    ->weight('bold'),
+                                TextEntry::make('principal.name'),
+                                TextEntry::make('quantity'),
+                                TextEntry::make('unit_price')
+                                    ->money('IDR'),
+                            ])
+                            ->placeholder('No products yet'),
                     ]),
 
                 Grid::make(2)
