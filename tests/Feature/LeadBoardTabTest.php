@@ -39,6 +39,19 @@ it('mounts the board component and renders status columns', function () {
         ->assertSee('Disqualified');
 });
 
+it('displays collaborators in the compact assigned-to format', function () {
+    actingAs($this->user);
+
+    $lead = Lead::factory()->create(['status' => 'new', 'created_by' => $this->user->id]);
+    $collaborators = User::factory()->count(3)->create();
+    $lead->collaborators()->attach($collaborators->pluck('id'));
+
+    Livewire::test(LeadBoard::class)
+        ->assertSee($collaborators[0]->name.' + 2')
+        ->assertDontSee($collaborators[1]->name)
+        ->assertDontSee($collaborators[2]->name);
+});
+
 it('board shows every lead to a super admin', function () {
     actingAs($this->user);
 
