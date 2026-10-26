@@ -93,6 +93,7 @@ class LeadForm
                                             ->afterStateUpdated(function ($state, Get $get, $set): void {
                                                 $product = $state ? Product::query()->with('principal')->find($state) : null;
                                                 $set('unit_price', $product?->unit_price);
+                                                self::updateLineTotal($get, $set);
                                                 $set('principal_name', $product?->principal?->name);
                                                 $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))));
                                             })
@@ -114,7 +115,7 @@ class LeadForm
                                             ->minValue(1)
                                             ->required()
                                             ->live(debounce: 500)
-                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
@@ -124,9 +125,32 @@ class LeadForm
                                             ->live(debounce: 500)
                                             ->required()
                                             ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
-                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
+                                        TextInput::make('line_total')
+                                            ->label('Line Total')
+                                            ->numeric()
+                                            ->prefix('IDR')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(fn (TextInput $component, Get $get) => $component->state(self::calculateLineTotal($get)))
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set))
+                                            ->live(),
                                     ])
-                                    ->columns(4),
+                                    ->columns(5)
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
+                                        TextInput::make('line_total')
+                                            ->label('Line Total')
+                                            ->numeric()
+                                            ->prefix('IDR')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(fn (TextInput $component, Get $get) => $component->state(self::calculateLineTotal($get)))
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set))
+                                            ->live(),
+                                    ])
+                                    ->columns(5),
+
+
                             ]),
                         Section::make('Estimation')
                             ->columnSpanFull()
@@ -200,11 +224,35 @@ class LeadForm
             ]);
     }
 
-    private static function updateTotalValue(Get $get, $set): void
+    private static function calculateLineTotal(Get $get): float
     {
         $quantity = (float) ($get('quantity') ?? 0);
         $unitPrice = (float) str_replace('.', '', (string) ($get('unit_price') ?? 0));
 
-        $set('total_value', $quantity * $unitPrice);
+        return $quantity * $unitPrice;
+    }
+
+    private static function calculateItemTotal(array $item): float
+    {
+        $quantity = (float) ($item['quantity'] ?? 0);
+        $unitPrice = (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0));
+
+        return $quantity * $unitPrice;
+    }
+
+    private static function updateLineTotal(Get $get, $set): void
+    {
+        $lineTotal = self::calculateLineTotal($get);
+
+        $set('line_total', $lineTotal);
+        self::updateTotalValue($get, $set);
+    }
+
+    private static function updateTotalValue(Get $get, $set): void
+    {
+        $items = $get('../../leadProductItems') ?? [];
+        $total = collect($items)->sum(fn (array $item): float => self::calculateItemTotal($item));
+
+        $set('../../total_value', $total);
     }
 }
