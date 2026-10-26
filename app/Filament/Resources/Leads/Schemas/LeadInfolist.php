@@ -69,6 +69,10 @@ class LeadInfolist
                                     ->money('IDR'),
                             ])
                             ->placeholder('No products yet'),
+                        TextEntry::make('total_value')
+                            ->label('Total Value')
+                            ->money('IDR')
+                            ->state(fn ($record): float => $record->leadProductItems->sum(fn ($item): float => (float) $item->quantity * (float) $item->unit_price)),
                     ]),
 
                 Grid::make(2)
