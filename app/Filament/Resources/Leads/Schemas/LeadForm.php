@@ -80,7 +80,6 @@ class LeadForm
                             ->columnSpanFull()
                             ->schema([
                                 Repeater::make('leadProductItems')
-                                    ->label('Products list')
                                     ->relationship()
                                     ->schema([
                                         Select::make('product_id')
@@ -90,11 +89,8 @@ class LeadForm
                                                 ->orderBy('name')
                                                 ->pluck('name', 'id'))
                                             ->live()
-                                            ->afterStateUpdated(function ($state, Get $get, $set): void {
-                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
-                                                $set('unit_price', $product?->unit_price);
-                                                $set('principal_name', $product?->principal?->name);
-                                                $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))));
+                                            ->afterStateUpdated(function ($state, $set): void {
+                                                $set('unit_price', $state ? Product::query()->find($state)?->unit_price : null);
                                             })
                                             ->searchable()
                                             ->preload()
@@ -105,20 +101,20 @@ class LeadForm
                                             ->default(1)
                                             ->minValue(1)
                                             ->required()
-                                            ->live(debounce: 500)
-                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
+                                            ->live()
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateTotalValue($get, $set)),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
                                             ->prefix('IDR')
                                             ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                             ->stripCharacters('.')
-                                            ->live(debounce: 500)
                                             ->required()
+                                            ->live()
                                             ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
-                                            ->afterStateUpdated(fn (Get $get, $set) => $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))))),
+                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateTotalValue($get, $set)),
                                     ])
-                                    ->columns(4),
+                                    ->columns(3),
                             ]),
                         Section::make('Estimation')
                             ->columnSpanFull()
@@ -137,12 +133,10 @@ class LeadForm
                                     ->prefix('IDR')
                                     ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                     ->stripCharacters('.')
-                                    ->columnSpan(1)
-                                    ->required(),
+                                    ->columnSpan(1),
                                 DatePicker::make('expected_closing_date')
                                     ->label('Expected Closing')
-                                    ->native(false)
-                                    ->required(),
+                                    ->native(false),
                             ]),
                         Section::make('Pipeline & Status')
                             ->columnSpanFull()
@@ -190,5 +184,13 @@ class LeadForm
                             ]),
                     ]),
             ]);
+    }
+
+    private static function updateTotalValue(Get $get, $set): void
+    {
+        $quantity = (float) ($get('quantity') ?? 0);
+        $unitPrice = (float) str_replace('.', '', (string) ($get('unit_price') ?? 0));
+
+        $set('total_value', $quantity * $unitPrice);
     }
 }
