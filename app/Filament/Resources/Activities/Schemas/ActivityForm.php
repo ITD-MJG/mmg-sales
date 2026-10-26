@@ -203,11 +203,13 @@ class ActivityForm
                                 TextInput::make('location')
                                     ->columnSpanFull()
                                     ->maxLength(255)
-                                    ->visible(fn ($get) => in_array($get('type'), ['In-person Meeting', 'Shared Meeting'])),
+                                    ->visible(fn ($get) => in_array($get('type'), ['In-person Meeting', 'Shared Meeting']))
+                                    ->required(fn ($get): bool => in_array($get('type'), ['In-person Meeting', 'Shared Meeting'])),
 
                                 TextInput::make('meeting_link')
                                     ->url()
-                                    ->visible(fn ($get) => in_array($get('type'), ['Online Meeting', 'Shared Meeting'])),
+                                    ->visible(fn ($get) => in_array($get('type'), ['Online Meeting', 'Shared Meeting']))
+                                    ->required(fn ($get): bool => in_array($get('type'), ['Online Meeting', 'Shared Meeting'])),
 
                                 Select::make('messaging_platform')
                                     ->options([
@@ -215,11 +217,13 @@ class ActivityForm
                                         'Telegram' => 'Telegram',
                                         'Other' => 'Other',
                                     ])
-                                    ->visible(fn ($get) => $get('type') === 'Messaging'),
+                                    ->visible(fn ($get) => $get('type') === 'Messaging')
+                                    ->required(fn ($get): bool => $get('type') === 'Messaging'),
 
                                 DateTimePicker::make('visit_started_at')
                                     ->label('Started At')
                                     ->live()
+                                    ->required(fn ($get): bool => in_array($get('type'), ['Online Meeting', 'In-person Meeting', 'Shared Meeting', 'Demo', 'Presentation']))
                                     ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                         $endedAt = $get('visit_ended_at');
                                         if ($state && $endedAt) {
@@ -232,6 +236,7 @@ class ActivityForm
                                 DateTimePicker::make('visit_ended_at')
                                     ->label('Ended At')
                                     ->live()
+                                    ->required(fn ($get): bool => in_array($get('type'), ['Online Meeting', 'In-person Meeting', 'Shared Meeting', 'Demo', 'Presentation']))
                                     ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                         $startedAt = $get('visit_started_at');
                                         if ($startedAt && $state) {
@@ -245,6 +250,7 @@ class ActivityForm
 
                                 Select::make('outcome')
                                     ->columnSpanFull()
+                                    ->required(fn ($get): bool => in_array($get('type'), ['Online Meeting', 'In-person Meeting', 'Shared Meeting', 'Demo', 'Presentation', 'Messaging']))
                                     ->options([
                                         'Interested' => 'Interested',
                                         'No Answer' => 'No Answer',
