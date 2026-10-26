@@ -132,6 +132,9 @@ class OrderForm
 
                         Grid::make(3)
                             ->schema([
+                                TextInput::make('po_number')
+                                    ->label('PO Number')
+                                    ->placeholder('Enter PO number'),
                                 TextInput::make('payment_method')
                                     ->label('Payment Method')
                                     ->placeholder('e.g. Bank Transfer, Credit Card'),
