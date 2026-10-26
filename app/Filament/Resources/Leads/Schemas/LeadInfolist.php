@@ -63,7 +63,7 @@ class LeadInfolist
                             ->schema([
                                 TextEntry::make('product.name')
                                     ->weight('bold'),
-                                TextEntry::make('principal.name'),
+                                TextEntry::make('product.principal.name'),
                                 TextEntry::make('quantity'),
                                 TextEntry::make('unit_price')
                                     ->money('IDR'),
