@@ -95,7 +95,6 @@ class LeadForm
                                                 $set('unit_price', $product?->unit_price);
                                                 self::updateLineTotal($get, $set);
                                                 $set('principal_name', $product?->principal?->name);
-                                                $set('../../total_value', collect($get('../../leadProductItems') ?? [])->sum(fn (array $item): float => (float) ($item['quantity'] ?? 0) * (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0))));
                                             })
                                             ->searchable()
                                             ->preload()
@@ -136,21 +135,7 @@ class LeadForm
                                             ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set))
                                             ->live(),
                                     ])
-                                    ->columns(5)
-                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
-                                        TextInput::make('line_total')
-                                            ->label('Line Total')
-                                            ->numeric()
-                                            ->prefix('IDR')
-                                            ->readOnly()
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(fn (TextInput $component, Get $get) => $component->state(self::calculateLineTotal($get)))
-                                            ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set))
-                                            ->live(),
-                                    ])
                                     ->columns(5),
-
-
                             ]),
                         Section::make('Estimation')
                             ->columnSpanFull()
