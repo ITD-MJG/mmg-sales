@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Exports\OrderItemsExport;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
@@ -19,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrderForm
 {
@@ -276,6 +279,32 @@ class OrderForm
                     ]),
 
                 Section::make('Product Details')
+                    ->headerActions([
+                        Action::make('exportOrderItems')
+                            ->label('Export to Excel')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->action(function ($livewire, $get) {
+                                $items = collect($get('orderItems') ?? []);
+                                $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
+                                $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
+
+                                $items = $items->map(function (array $item) use ($products, $principals): array {
+                                    $product = filled($item['item_id'] ?? null) ? ($products[$item['item_id']] ?? null) : null;
+                                    $principal = filled($item['principal_id'] ?? null) ? ($principals[$item['principal_id']] ?? null) : null;
+
+                                    return [
+                                        ...$item,
+                                        'item_name' => $product,
+                                        'principal_name' => $principal,
+                                    ];
+                                })->all();
+
+                                return Excel::download(
+                                    new OrderItemsExport($items),
+                                    'order-products.xlsx',
+                                );
+                            }),
+                    ])
                     ->columnSpanFull()
                     ->schema([
                         Repeater::make('orderItems')
