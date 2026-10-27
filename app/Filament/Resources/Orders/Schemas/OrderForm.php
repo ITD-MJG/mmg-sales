@@ -313,14 +313,7 @@ class OrderForm
                                     ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
                                     ->required(),
                             ])
-                            ->action(function (array $data, $record, $livewire, $get, $set): void {
-                                $order = $record instanceof Order
-                                    ? $record
-                                    : ($livewire->record ?? new Order);
-                                if (! $order->exists) {
-                                    Notification::make()->danger()->title('Save the order before importing items')->send();
-                                    return;
-                                }
+                            ->action(function (array $data, $get, $set): void {
                                 $path = \Illuminate\Support\Facades\Storage::disk('local')->path($data['file']);
                                 $import = new OrderItemsImport();
                                 Excel::import($import, $path);
