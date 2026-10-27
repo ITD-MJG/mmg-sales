@@ -27,6 +27,7 @@ class Product extends Model
         'category',
         'description',
         'internal_code',
+        'product_acc_code',
         'unit_price',
         'ecatalog_price',
         'unit_of_measure',

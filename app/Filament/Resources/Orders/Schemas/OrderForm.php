@@ -3,19 +3,23 @@
 namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Exports\OrderItemsExport;
+use App\Imports\OrderItemsImport;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\Order;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -287,22 +291,50 @@ class OrderForm
                                 $items = collect($get('orderItems') ?? []);
                                 $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
                                 $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
-
                                 $items = $items->map(function (array $item) use ($products, $principals): array {
-                                    $product = filled($item['item_id'] ?? null) ? ($products[$item['item_id']] ?? null) : null;
-                                    $principal = filled($item['principal_id'] ?? null) ? ($principals[$item['principal_id']] ?? null) : null;
-
-                                    return [
-                                        ...$item,
-                                        'item_name' => $product,
-                                        'principal_name' => $principal,
+                                    return [...$item,
+                                        'item_name' => $products[$item['item_id'] ?? null] ?? null,
+                                        'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
                                     ];
                                 })->all();
-
                                 return Excel::download(
                                     new OrderItemsExport($items),
                                     'order-products.xlsx',
                                 );
+                            }),
+                        Action::make('importOrderItems')
+                            ->label('Import Products')
+                            ->icon('heroicon-o-arrow-up-tray')
+                            ->form([
+                                FileUpload::make('file')
+                                    ->label('Excel File')
+                                    ->disk('local')
+                                    ->directory('imports')
+                                    ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                                    ->required(),
+                            ])
+                            ->action(function (array $data, $record, $livewire, $get, $set): void {
+                                $order = $record instanceof Order
+                                    ? $record
+                                    : ($livewire->record ?? new Order);
+                                if (! $order->exists) {
+                                    Notification::make()->danger()->title('Save the order before importing items')->send();
+                                    return;
+                                }
+                                $path = \Illuminate\Support\Facades\Storage::disk('local')->path($data['file']);
+                                $import = new OrderItemsImport();
+                                Excel::import($import, $path);
+
+                                $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
+                                self::calculateOrderTotals($set, $get);
+
+                                if ($import->failures() !== []) {
+                                    Notification::make()
+                                        ->warning()
+                                        ->title('Some rows were not imported')
+                                        ->body(collect($import->failures())->map(fn ($failure) => 'Row '.$failure['row'].': '.$failure['reason'])->implode(' '))
+                                        ->send();
+                                }
                             }),
                     ])
                     ->columnSpanFull()
