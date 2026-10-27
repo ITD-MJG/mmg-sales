@@ -29,7 +29,6 @@ class OrderItemsImport implements ToCollection, WithHeadingRow
             $identifiers = array_filter([
                 'internal_code' => $data['internal_code'] ?? null,
                 'product_acc_code' => $data['principle_code'] ?? null,
-                'name' => $data['item_description'] ?? null,
             ], fn ($value): bool => filled($value));
 
             if ($identifiers === []) {

@@ -18,7 +18,7 @@ beforeEach(function () {
     HeadingRowFormatter::default('slug');
 });
 
-test('imports using the row principal and matches either catalog code or description', function (string $header, string $key, string $value) {
+test('imports using either internal code or principle code', function (string $key, string $value) {
     $principal = Principal::factory()->create(['name' => 'Acme']);
     $product = Product::factory()->create([
         'principal_id' => $principal->id,
@@ -30,7 +30,7 @@ test('imports using the row principal and matches either catalog code or descrip
     $existing = OrderItem::factory()->create(['order_id' => $order->id]);
     $row = [
         'principle' => 'Acme', 'internal_code' => '', 'principle_code' => '',
-        'item_description' => '', 'qty' => 3, 'unit_price' => 1250,
+        'item_description' => 'Analyzer', 'qty' => 3, 'unit_price' => 1250,
     ];
     $row[$key] = $value;
     $import = new OrderItemsImport;
@@ -48,9 +48,8 @@ test('imports using the row principal and matches either catalog code or descrip
         ])
         ->and($existing->exists)->toBeTrue();
 })->with([
-    'Internal Code' => ['Internal Code', 'internal_code', 'INT-1'],
-    'Principle Code' => ['Principle Code', 'principle_code', 'PR-1'],
-    'Item Description' => ['Item Description', 'item_description', 'Analyzer'],
+    'Internal Code' => ['internal_code', 'INT-1'],
+    'Principle Code' => ['principle_code', 'PR-1'],
 ]);
 
 test('uses row product principal when the principal name cell is blank', function () {
@@ -63,7 +62,7 @@ test('uses row product principal when the principal name cell is blank', functio
     $import = new OrderItemsImport;
 
     $import->collection(new Collection([
-        collect(['principle' => '', 'principle_code' => 'PR-1', 'qty' => 2, 'unit_price' => 500]),
+        collect(['principle' => '', 'principle_code' => 'PR-1', 'item_description' => 'Analyzer', 'qty' => 2, 'unit_price' => 500]),
     ]));
 
     expect($import->items())->toHaveCount(1)
@@ -101,7 +100,7 @@ test('reads the provided spreadsheet headers and skips blank lines', function ()
     $spreadsheet = new Spreadsheet;
     $spreadsheet->getActiveSheet()->fromArray([
         ['No', 'Principle', 'No DO/DN', 'Internal Code', 'Principle Code', 'Item Description', 'Qty', 'Uom', 'Unit Price'],
-        [1, 'Acme', null, 'INT-1', 'PR-1', null, 3, 'Unit', 1250],
+        [1, 'Acme', null, 'INT-1', 'PR-1', 'Analyzer', 3, 'Unit', 1250],
         [null, null, null, null, null, null, null, null, null],
     ]);
     $path = tempnam(sys_get_temp_dir(), 'order-items-').'.xlsx';
