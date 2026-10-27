@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\Position;
 use App\Models\Territory;
 use App\Models\User;
+use App\Policies\LeadPolicy;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -130,6 +131,15 @@ it('shows subordinate activities when the manager has no territory assigned', fu
     expect($ids)->toContain($subordinateActivity->id)
         ->and($ids)->toContain($directReportActivity->id);
 });
+it('shows all leads to users with production Marketing roles', function (string $roleName) {
+    $marketingUser = User::factory()->create();
+    $marketingUser->assignRole($roleName);
+    $salesLead = Lead::factory()->create(['created_by' => User::factory()->create()->id]);
+
+    expect(visibleLeadIds($marketingUser))->toContain($salesLead->id);
+    expect(app(LeadPolicy::class)->view($marketingUser, $salesLead))->toBeTrue();
+
+})->with(['Marketing Staff', 'Marketing Manager']);
 
 it('still hides leads from another territory', function () {
     $territory = Territory::factory()->create();

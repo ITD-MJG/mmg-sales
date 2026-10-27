@@ -10,6 +10,12 @@ class LeadPolicy extends BasePolicy
 
     protected array $authorizedRoles = ['Super Admin'];
 
+    public function view(User $user, $model): bool
+    {
+        return $user->hasPermissionTo("view_{$this->model}")
+            && ($user->hasAnyRole(['Marketing Staff', 'Marketing Manager']) || $model->created_by === $user->id);
+    }
+
     /**
      * Determine whether the user can update the model.
      * Staff can only update their own leads.

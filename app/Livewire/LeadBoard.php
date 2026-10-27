@@ -89,7 +89,9 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
         $query = Lead::query()->with(['latestActivity', 'collaborators:id,name']);
 
         // Same visibility contract as LeadsTable::configure()
-        self::applyVisibilityScope($query, 'created_by');
+        if (! auth()->user()?->hasAnyRole(['Marketing Staff', 'Marketing Manager'])) {
+            self::applyVisibilityScope($query, 'created_by');
+        }
 
         return $query;
     }
