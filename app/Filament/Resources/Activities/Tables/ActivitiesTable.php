@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Activities\Tables;
 
-use App\Exports\ActivitiesExport;
 use App\Enums\Role;
+use App\Exports\ActivitiesExport;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Activity;
 use App\Models\ActivityComment;
@@ -160,6 +160,13 @@ class ActivitiesTable
                     )),
             ])
             ->filters([
+                SelectFilter::make('outcome')
+                    ->options([
+                        'Interested' => 'Interested',
+                        'Not Interested' => 'Not Interested',
+                        'No Answer' => 'No Answer',
+                        'Need more info' => 'Need more info',
+                    ]),
                 SelectFilter::make('customer')
                     ->label('Customer')
                     ->relationship('customer', 'name', fn ($query) => $query->orderBy('name'))
