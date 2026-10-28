@@ -25,7 +25,9 @@ class LeadsTable
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                self::applyVisibilityScope($query, 'created_by');
+                if (! auth()->user()?->hasAnyRole(['Marketing Staff', 'Marketing Manager'])) {
+                    self::applyVisibilityScope($query, 'created_by');
+                }
                 $query->with(['collaborators:id,name']);
 
                 return $query->orderByDesc('leads.created_at');

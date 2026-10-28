@@ -16,7 +16,9 @@ class LeadPolicy extends BasePolicy
             return false;
         }
 
-        if ($lead->created_by === $user->id || in_array($lead->created_by, $user->subordinateUserIds(), true)) {
+        if ($user->hasAnyRole(['Marketing Staff', 'Marketing Manager'])
+            || $lead->created_by === $user->id
+            || in_array($lead->created_by, $user->subordinateUserIds(), true)) {
             return true;
         }
 

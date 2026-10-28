@@ -110,12 +110,12 @@ it('keeps staff visibility limited to their own leads', function () {
         ->and(visibleLeadIds($staff))->not->toContain($peerLead->id);
 });
 
-it('keeps Marketing Staff visibility limited to their own leads', function () {
-    $marketingStaff = User::factory()->create();
-    $marketingStaff->assignRole('Marketing Staff');
-    $ownLead = Lead::factory()->create(['created_by' => $marketingStaff->id]);
-    $otherLead = Lead::factory()->create(['created_by' => User::factory()->create()->id]);
+it('allows Marketing Staff and Marketing Manager to see all leads', function (string $roleName) {
+    $marketingUser = User::factory()->create();
+    $marketingUser->assignRole($roleName);
+    $otherUser = User::factory()->create();
+    $otherLead = Lead::factory()->create(['created_by' => $otherUser->id]);
 
-    expect(visibleLeadIds($marketingStaff))->toContain($ownLead->id)
-        ->and(visibleLeadIds($marketingStaff))->not->toContain($otherLead->id);
-});
+    expect(visibleLeadIds($marketingUser))->toContain($otherLead->id)
+        ->and(app(LeadPolicy::class)->view($marketingUser, $otherLead))->toBeTrue();
+})->with(['Marketing Staff', 'Marketing Manager']);
