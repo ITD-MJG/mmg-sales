@@ -88,3 +88,20 @@ it('does not match activities or leads on unrelated comment text', function () {
         ->searchTable('Budget confirmed')
         ->assertCanNotSeeTableRecords([$lead]);
 });
+
+it('prioritizes activities created by the current user over activities they attend', function () {
+    $created = Activity::factory()->create([
+        'user_id' => $this->user->id,
+        'subject' => 'Created by current user',
+        'performed_at' => now()->subDay(),
+    ]);
+    $collaborated = Activity::factory()->create([
+        'subject' => 'Attended by current user',
+        'performed_at' => now(),
+    ]);
+    $collaborated->attendees()->attach($this->user);
+
+    livewire(ListActivities::class)
+        ->assertCanSeeTableRecords([$created, $collaborated])
+        ->assertSeeInOrder(['Created by current user', 'Attended by current user']);
+});
