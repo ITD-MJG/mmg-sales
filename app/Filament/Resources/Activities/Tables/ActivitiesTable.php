@@ -90,7 +90,9 @@ class ActivitiesTable
 
                 $query->with('attendees:id,name');
 
-                return $query->orderBy('performed_at', 'desc');
+                return $query
+                    ->orderByRaw('CASE WHEN user_id = ? THEN 0 ELSE 1 END', [auth()->id()])
+                    ->orderByDesc('performed_at');
             })
             ->columns([
                 TextColumn::make('activity_code')
@@ -129,10 +131,16 @@ class ActivitiesTable
                     })
                     ->sortable(),
 
-                TextColumn::make('user.name')
-                    ->label('Creator')
+                TextColumn::make('lead.creator.name')
+                    ->label('Lead Creator')
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('user.name')
+                    ->label('Activity Creator')
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('attendees')
                     ->label('Assigned To')
                     ->state(fn (Activity $record): ?string => $record->attendees->first()?->name)
