@@ -3,10 +3,10 @@
 namespace Database\Factories;
 
 use App\Models\Customer;
-use App\Models\Department;
+
 use App\Models\Distributor;
 use App\Models\Order;
-use App\Models\Position;
+
 use App\Models\Principal;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,12 +26,8 @@ class OrderFactory extends Factory
         return [
             'tahun' => now()->year,
             'bulan' => now()->month,
-            'department_id' => Department::factory(),
-            'head_position_id' => Position::factory(),
-            'pm_jpm_pe_position_id' => Position::factory(),
-            'rsm_asm_position_id' => Position::factory(),
-            'spv_position_id' => Position::factory(),
-            'sales' => null,
+            'department_id' => null,
+            'sales_id' => User::factory(),
             'end_customer_id' => Customer::factory(),
             'principal_id' => Principal::factory(),
             'reg_inst' => fake()->randomElements(['REG', 'INST', 'Consumable'], random_int(1, 2)),

@@ -22,11 +22,7 @@ class Order extends Model
         'tahun',
         'bulan',
         'department_id',
-        'head_position_id',
-        'pm_jpm_pe_position_id',
-        'rsm_asm_position_id',
-        'spv_position_id',
-        'sales',
+        'sales_id',
         'end_customer_id',
         'principal_id',
         'reg_inst',
@@ -55,7 +51,7 @@ class Order extends Model
     {
         return [
             'reg_inst' => 'array',
-            'sales' => 'array',
+            'sales_id' => 'integer',
             'order_date' => 'date',
             'expected_delivery_date' => 'date',
             'actual_delivery_date' => 'date',
@@ -91,24 +87,9 @@ class Order extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function headPosition(): BelongsTo
+    public function sales(): BelongsTo
     {
-        return $this->belongsTo(Position::class, 'head_position_id');
-    }
-
-    public function pmJpmPePosition(): BelongsTo
-    {
-        return $this->belongsTo(Position::class, 'pm_jpm_pe_position_id');
-    }
-
-    public function rsmAsmPosition(): BelongsTo
-    {
-        return $this->belongsTo(Position::class, 'rsm_asm_position_id');
-    }
-
-    public function spvPosition(): BelongsTo
-    {
-        return $this->belongsTo(Position::class, 'spv_position_id');
+        return $this->belongsTo(User::class, 'sales_id');
     }
 
     public function customer(): BelongsTo

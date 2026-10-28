@@ -4,11 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Department;
 use App\Models\Distributor;
 use App\Models\Lead;
 use App\Models\Order;
-use App\Models\Position;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\Segment;
@@ -27,12 +25,6 @@ class SampleSalesDataSeeder extends Seeder
             ProductSeeder::class,
         ]);
 
-        $dept = Department::where('code', 'SALES')->first() ?? Department::first();
-        $headPos = Position::where('code', 'HEAD')->first() ?? Position::first();
-        $rsmPos = Position::where('code', 'RSM')->first() ?? Position::first();
-        $asmPos = Position::where('code', 'ASM')->first() ?? Position::first();
-        $spvPos = Position::where('code', 'SPV')->first() ?? Position::first();
-        $srPos = Position::where('code', 'SR')->first() ?? Position::first();
         $user = User::first();
 
         $cities = Territory::where('type', 'city')->limit(5)->get();
@@ -114,11 +106,8 @@ class SampleSalesDataSeeder extends Seeder
             Order::create([
                 'tahun' => 2025,
                 'bulan' => rand(1, 3),
-                'department_id' => $dept->id,
-                'head_position_id' => $headPos->id,
-                'rsm_asm_position_id' => $rsmPos->id,
-                'spv_position_id' => $spvPos->id,
-                'sales' => [$user?->id ?? User::factory()->create()->id],
+                'department_id' => null,
+                'sales_id' => $user?->id ?? User::factory()->create()->id,
                 'end_customer_id' => $customerIds[array_rand($customerIds)],
                 'principal_id' => $selectedProduct->principal_id,
                 'reg_inst' => collect(['REG', 'INST', 'Consumable'])->random(rand(1, 2))->values()->all(),

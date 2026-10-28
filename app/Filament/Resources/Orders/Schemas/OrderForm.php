@@ -54,7 +54,7 @@ class OrderForm
                                         $set('source_record_id', null);
                                         $set('end_customer_id', null);
                                         $set('notes', null);
-                                        $set('sales', []);
+                                        $set('sales_id', null);
                                         $set('orderItems', []);
                                         $set('subtotal', 0);
                                         $set('total_amount', 0);
@@ -92,7 +92,7 @@ class OrderForm
                                         if (! $source) {
                                             $set('end_customer_id', null);
                                             $set('notes', null);
-                                            $set('sales', []);
+                                            $set('sales_id', null);
                                             $set('orderItems', []);
                                             $set('subtotal', 0);
                                             $set('total_amount', 0);
@@ -103,13 +103,8 @@ class OrderForm
 
                                         $set('end_customer_id', $source->customer_id);
                                         $set('notes', $source->notes);
-                                        $salesIds = collect([$source->creator?->id])
-                                            ->merge($source->collaborators->pluck('id'))
-                                            ->filter()
-                                            ->unique()
-                                            ->values()
-                                            ->all();
-                                        $set('sales', $salesIds);
+                                        $salesId = $source->creator?->id ?? $source->collaborators->first()?->id;
+                                        $set('sales_id', $salesId);
 
                                         $items = $source->products->map(function ($product) use ($sourceType): array {
                                             $quantity = $sourceType === 'leads' ? ($product->pivot->quantity ?? 1) : 1;
@@ -192,26 +187,14 @@ class OrderForm
 
                 Section::make('Sales Details')
                     ->schema([
-                        Select::make('sales')
+                        Select::make('sales_id')
                             ->label('Sales / Marketing')
-                            ->multiple()
                             ->options(fn () => User::query()
                                 ->when(! in_array($user?->department?->code, ['SAL', 'MKT'], true), fn (Builder $query) => $query->whereHas('department', fn (Builder $departmentQuery) => $departmentQuery->where('code', 'SAL')))
                                 ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
                                 ->pluck('name', 'id'))
-                            ->default(fn () => in_array($user?->department?->code, ['SAL', 'MKT'], true) ? [$user->id] : [])
+                            ->default(fn () => in_array($user?->department?->code, ['SAL', 'MKT'], true) ? $user->id : null)
                             ->preload()
-                            ->afterStateUpdated(function ($set, $get, $state): void {
-                                if (! $state || $get('source_record_id')) {
-                                    return;
-                                }
-
-                                $allowedIds = User::query()
-                                    ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
-                                    ->pluck('id');
-
-                                $set('sales', array_values(array_intersect($state, $allowedIds->all())));
-                            })
                             ->searchable(),
                     ]),
 

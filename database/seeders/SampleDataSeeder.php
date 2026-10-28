@@ -6,11 +6,9 @@ use App\Models\Activity;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Department;
 use App\Models\Distributor;
 use App\Models\Lead;
 use App\Models\Order;
-use App\Models\Position;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\Segment;
@@ -31,8 +29,6 @@ class SampleDataSeeder extends Seeder
         ]);
 
         $users = User::all();
-        $departments = Department::all();
-        $positions = Position::all();
 
         $principals = Principal::all();
         $products = Product::all();
@@ -131,11 +127,8 @@ class SampleDataSeeder extends Seeder
                 'principal_id' => $product->principal_id,
                 'sales_type_id' => $salesTypes[array_rand($salesTypes)],
                 'distributor_id' => $distributors->random()->id,
-                'department_id' => $srUser->department_id ?? $departments->random()->id,
-                'sales' => [$srUser->id],
-                'spv_position_id' => $positions->where('code', 'SPV')->first()->id,
-                'rsm_asm_position_id' => $positions->where('code', 'RSM')->first()->id,
-                'head_position_id' => $positions->where('code', 'HEAD')->first()->id,
+                'department_id' => null,
+                'sales_id' => $srUser->id,
                 'created_by' => $srUser->id,
                 'order_date' => $lead->converted_at ?? Carbon::now(),
                 'total_amount' => $lead->estimated_value,

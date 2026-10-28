@@ -29,7 +29,7 @@ test('manual source permits manual selection from Sales and Marketing department
         ->test(CreateOrder::class)
         ->assertFormFieldExists('source_record_id')
         ->assertFormFieldIsNotRequired('source_record_id')
-        ->assertFormFieldExists('sales', function ($field) use ($salesUser, $marketingUser, $financeUser) {
+        ->assertFormFieldExists('sales_id', function ($field) use ($salesUser, $marketingUser, $financeUser) {
             $options = $field->getOptions();
 
             return isset($options[$salesUser->id], $options[$marketingUser->id])
@@ -64,7 +64,7 @@ test('selecting an owned lead prefills customer, source details, products, creat
         ->assertFormSet([
             'end_customer_id' => $customer->id,
             'notes' => 'Lead notes',
-            'sales' => [$creator->id, $collaborator->id],
+            'sales_id' => $creator->id,
             'orderItems' => [[
                 'principal_id' => $principal->id,
                 'item_id' => $product->id,
@@ -93,7 +93,7 @@ test('changing the source or clearing its record resets source-populated fields 
             'source_record_id' => null,
             'end_customer_id' => null,
             'notes' => null,
-            'sales' => [],
+            'sales_id' => null,
             'orderItems' => [],
         ]);
 });
@@ -119,7 +119,7 @@ test('selecting an opportunity prefills creator and collaborators in sales selec
         ->assertFormSet([
             'end_customer_id' => $customer->id,
             'notes' => 'Opportunity notes',
-            'sales' => [$creator->id, $collaborator->id],
+            'sales_id' => $creator->id,
         ]);
 });
 
@@ -133,6 +133,6 @@ test('users outside Sales and Marketing default to no sales and only see Sales u
 
     Livewire::actingAs($actor)
         ->test(CreateOrder::class)
-        ->assertFormSet(['sales' => []])
-        ->assertFormFieldExists('sales', fn ($field) => $field->getOptions() === [$salesUser->id => $salesUser->name]);
+        ->assertFormSet(['sales_id' => null])
+        ->assertFormFieldExists('sales_id', fn ($field) => $field->getOptions() === [$salesUser->id => $salesUser->name]);
 });

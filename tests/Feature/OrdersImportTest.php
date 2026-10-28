@@ -59,7 +59,7 @@ test('orders import parses valid data correctly', function () {
     $order = Order::first();
     expect($order->tahun)->toBe(2025);
     expect($order->bulan)->toBe(8);
-    expect($order->department_id)->toBe($dept->id);
+    expect($order->department_id)->toBeNull();
 });
 
 test('orders import fails atomically if master data is missing', function () {

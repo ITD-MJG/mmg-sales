@@ -75,7 +75,7 @@ it('returns revenue by sales rep from order_items', function () {
 
     $order = Order::factory()->create([
         'created_by' => $user->id,
-        'sales' => [$user->id],
+        'sales_id' => $user->id,
         'end_customer_id' => $customer->id,
         'order_date' => Carbon::now()->format('Y-m-d'),
     ]);
@@ -100,7 +100,7 @@ it('returns revenue by territory from order_items', function () {
 
     $order = Order::factory()->create([
         'created_by' => $user->id,
-        'sales' => [$user->id],
+        'sales_id' => $user->id,
         'end_customer_id' => $customer->id,
         'order_date' => Carbon::now()->format('Y-m-d'),
     ]);

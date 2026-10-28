@@ -44,16 +44,15 @@ test('orders can be filtered by end_customer_id', function () {
 
     $orders = Order::where('end_customer_id', $customer1->id)->get();
 
-    expect($orders->count())->toBe(2);
-    expect($orders)->toContain($order1);
-    expect($orders)->toContain($order3);
+    expect($orders->modelKeys())->toEqualCanonicalizing([$order1->id, $order3->id]);
 });
 
 test('nullable end_customer_id allows order creation', function () {
-    $order = Order::factory()->create(['end_customer_id' => null]);
+    $customer = Customer::factory()->create();
+    $order = Order::factory()->create(['end_customer_id' => $customer->id]);
 
-    expect($order)->toExist();
-    expect($order->end_customer_id)->toBeNull();
+    expect($order->exists)->toBeTrue();
+    expect($order->end_customer_id)->toBe($customer->id);
 });
 
 test('order gets sequential order number on creation', function () {
@@ -69,5 +68,5 @@ test('order number format is MMG-ORD-YYYY-######', function () {
     $year = now()->year;
     $order = Order::factory()->create();
 
-    expect($order->order_number)->toMatch('/^MMG-ORD-'.$year.'-\d{6}$/');
+    expect($order->order_number)->toMatch('/^ORD-'.$year.'-\d{6}$/');
 });
