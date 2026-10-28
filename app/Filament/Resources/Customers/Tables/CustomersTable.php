@@ -43,10 +43,12 @@ class CustomersTable
                     ->sortable(),
 
                 TextColumn::make('activities_count')
-                    ->label('Activity Count')
                     ->counts('activities')
                     ->sortable(),
 
+                TextColumn::make('activities_comments_count')
+                    ->counts('activities.comments')
+                    ->sortable(),
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean()
