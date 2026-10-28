@@ -519,6 +519,7 @@ class OrderForm
         $grossTotal = $quantity * $unitPrice;
         $discountPercent = min(100, max(0, (float) $get('discount_percent')));
         $discountAmount = round($grossTotal * ($discountPercent / 100), 2);
+
         $set('discount_amount', $discountAmount);
         $set('subtotal', round($grossTotal - $discountAmount, 2));
     }
