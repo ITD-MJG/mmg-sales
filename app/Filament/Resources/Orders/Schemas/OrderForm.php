@@ -409,7 +409,7 @@ class OrderForm
                                             ->mask(RawJs::make('$money($input, ".", ",", 2)'))
                                             ->prefix('IDR')
                                             ->readOnly()
-                                            ->dehydratedStateUsing(fn ($state): float => self::parseMoney($state))
+                                            ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
                                             ->formatStateUsing(fn ($state): string => self::formatMoney($state))
                                             ->columnSpan(1),
                                     ]),
