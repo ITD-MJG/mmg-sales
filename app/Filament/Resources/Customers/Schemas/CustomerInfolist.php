@@ -62,11 +62,6 @@ class CustomerInfolist
                             ->url(fn ($state) => $state, true),
                     ]),
 
-                Section::make('Assignment')
-                    ->schema([
-                        TextEntry::make('assignedUser.name')
-                            ->label('Account Manager'),
-                    ]),
             ]);
     }
 }

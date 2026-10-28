@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Customers\Pages;
 
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Filament\Widgets\CustomerActivityStatsWidget;
+use App\Filament\Widgets\CustomerCommentHistoryWidget;
 use App\Filament\Widgets\CustomerRecentActivitiesWidget;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -24,6 +25,7 @@ class ViewCustomer extends ViewRecord
         return [
             CustomerActivityStatsWidget::class,
             CustomerRecentActivitiesWidget::class,
+            CustomerCommentHistoryWidget::class,
         ];
     }
 }
