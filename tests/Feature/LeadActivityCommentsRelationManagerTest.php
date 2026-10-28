@@ -19,6 +19,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     seed(RolesAndPermissionsSeeder::class);
+    \App\Models\Role::findOrCreate('Sales Representative');
 });
 
 function leadRelationManager(Lead $lead)

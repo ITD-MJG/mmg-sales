@@ -131,6 +131,26 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(User::class, 'manager_id');
     }
 
+    /** @return list<int> */
+    public function subordinateUserIds(): array
+    {
+        $ids = [];
+        $pending = [$this->id];
+
+        while ($pending !== []) {
+            $managerId = array_pop($pending);
+
+            foreach (User::active()->where('manager_id', $managerId)->pluck('id') as $id) {
+                if (! in_array($id, $ids, true)) {
+                    $ids[] = $id;
+                    $pending[] = $id;
+                }
+            }
+        }
+
+        return $ids;
+    }
+
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);

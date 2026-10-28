@@ -71,7 +71,7 @@ abstract class BasePolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, $model): bool
+    public function view(User $user, mixed $model): bool
     {
         return $user->hasPermissionTo("view_{$this->model}");
     }

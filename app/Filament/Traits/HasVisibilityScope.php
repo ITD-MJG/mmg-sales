@@ -14,8 +14,8 @@ trait HasVisibilityScope
      * - Super Admin: sees everything, writes everything
      * - Management department Director: sees everything, writes nothing
      * - Staff: own records only
-     * - Others: own records + position descendants and direct reports,
-     *   territory-scoped when they have a territory
+     * - Other managers: own records plus their reporting-line subordinates
+     * - Territory managers: own records plus territory users
      */
     public static function applyVisibilityScope(Builder $query, string $userColumn = 'user_id'): Builder
     {
@@ -30,13 +30,13 @@ trait HasVisibilityScope
             return $query;
         }
 
-        // Staff - can only see their own records
+        // Own-record roles can only see their own records
         if ($user->hasAnyRole(Role::names(Role::ownRecordsOnly()))) {
             return $query->where($userColumn, $user->id);
         }
 
-        // Other users: own records plus everything reachable through the
-        // position hierarchy and the reporting line.
+        // Other users: own records plus the reporting-line users
+        // Territory-scoped roles add their assigned-territory users.
         $subordinateIds = self::getSubordinateUserIds($user);
 
         if (! empty($subordinateIds)) {
@@ -80,47 +80,19 @@ trait HasVisibilityScope
     }
 
     /**
-     * Get IDs of all subordinate users: descendants of the user's position,
-     * plus users who report to them via manager_id.
-     *
-     * When the user has a territory, both groups are restricted to it — that
-     * scoping stops a manager seeing another territory's pipeline, and stops
-     * peers in a shared position from seeing each other's records. When the
-     * user has no territory, the position and reporting-line relationships
-     * alone decide visibility.
+     * Resolve users visible by territory or manager reporting line.
      */
-    private static function getSubordinateUserIds($user): array
+    private static function getSubordinateUserIds(User $user): array
     {
-        $userIds = [];
 
-        // Descendant positions. Territory scoping only applies when the manager
-        // actually has a territory: `territory_id` is optional, and requiring it
-        // here silently reduced a territory-less manager to own-records-only.
-        if ($user->position) {
-            $descendantPositionIds = array_diff(
-                $user->position->getAllDescendantIds(),
-                [$user->position_id]
-            );
-
-            $positionUserIds = User::active()
-                ->whereIn('position_id', $descendantPositionIds)
-                ->when($user->territory_id, fn ($query, $territoryId) => $query->where('territory_id', $territoryId))
+        if ($user->hasAnyRole(Role::names(Role::territoryScoped())) && $user->territory_id) {
+            return User::active()
+                ->where('territory_id', $user->territory_id)
                 ->where('id', '!=', $user->id)
                 ->pluck('id')
                 ->toArray();
-
-            $userIds = array_merge($userIds, $positionUserIds);
         }
 
-        // Direct reports, same territory scoping rule as above.
-        $directReportIds = User::active()
-            ->where('manager_id', $user->id)
-            ->when($user->territory_id, fn ($query, $territoryId) => $query->where('territory_id', $territoryId))
-            ->pluck('id')
-            ->toArray();
-
-        $userIds = array_merge($userIds, $directReportIds);
-
-        return array_unique($userIds);
+        return $user->subordinateUserIds();
     }
 }

@@ -25,10 +25,7 @@ class LeadsTable
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                // Role-based visibility: staff sees own, managers see subordinates, etc.
-                if (! auth()->user()?->hasAnyRole(['Marketing Staff', 'Marketing Manager'])) {
-                    self::applyVisibilityScope($query, 'created_by');
-                }
+                self::applyVisibilityScope($query, 'created_by');
                 $query->with(['collaborators:id,name']);
 
                 return $query->orderByDesc('leads.created_at');

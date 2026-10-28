@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\Targets\TargetResource;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\Target;
 use App\Models\Territory;
 use App\Models\User;
@@ -31,6 +32,7 @@ function visibleTargetIds(User $user): array
 }
 
 it('shows own and reporting-line targets but hides unrelated targets', function () {
+    Role::findOrCreate('Sales Representative');
     $territory = Territory::factory()->create();
     $managerPosition = Position::factory()->create(['name' => 'Sales Manager']);
     $repPosition = Position::factory()->create(['name' => 'Sales Representative', 'parent_id' => $managerPosition->id]);

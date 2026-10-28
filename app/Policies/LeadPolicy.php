@@ -1,20 +1,29 @@
 <?php
 
 namespace App\Policies;
-
+use App\Models\Lead;
 use App\Models\User;
-
 class LeadPolicy extends BasePolicy
 {
     protected string $model = 'lead';
 
     protected array $authorizedRoles = ['Super Admin'];
 
-    public function view(User $user, $model): bool
+
+    public function view(User $user, mixed $lead): bool
     {
-        return $user->hasPermissionTo("view_{$this->model}")
-            && ($user->hasAnyRole(['Marketing Staff', 'Marketing Manager']) || $model->created_by === $user->id);
+        if (! $user->hasPermissionTo("view_{$this->model}")) {
+            return false;
+        }
+
+        if ($lead->created_by === $user->id || in_array($lead->created_by, $user->subordinateUserIds(), true)) {
+            return true;
+        }
+
+        return $user->managesTerritoryOf($lead->creator);
     }
+
+
 
     /**
      * Determine whether the user can update the model.

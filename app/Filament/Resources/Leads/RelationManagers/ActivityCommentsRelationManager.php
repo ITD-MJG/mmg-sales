@@ -38,7 +38,7 @@ class ActivityCommentsRelationManager extends RelationManager
 
         $allowed = $user?->hasPermissionTo('create_activity_comment')
             && $lead instanceof Lead
-            && ($user->hasGlobalVisibility() || $lead->created_by === $user->id);
+            && ($user->hasGlobalVisibility() || $lead->created_by === $user->id || in_array($lead->created_by, $user->subordinateUserIds(), true));
 
         return $allowed ? Response::allow() : Response::deny();
     }

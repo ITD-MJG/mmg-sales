@@ -21,41 +21,21 @@ class ActivityScopeService
             return $query;
         }
 
-        // Manager is territory-scoped (under Director)
-        $managerRoles = ['Marketing Manager', 'Sales Manager'];
-        if ($user->hasAnyRole($managerRoles)) {
-            if ($user->territory_id) {
-                $territoryUserIds = User::active()
-                    ->where('territory_id', $user->territory_id)
-                    ->pluck('id');
-                $query->whereIn('user_id', $territoryUserIds);
-            }
-
+        // Super Admin and Management Directors see every activity.
+        if ($user->hasGlobalVisibility()) {
             return $query;
         }
 
-        // Get IDs of all subordinates recursively
-        $subordinateIds = $this->getAllSubordinateIds($user);
-
-        // Include the user's own ID
-        $allowedUserIds = $subordinateIds->push($user->id);
-
-        // Include activities from opportunities where the user is a collaborator
+        $subordinateIds = $user->hasAnyRole(\App\Enums\Role::names(\App\Enums\Role::territoryScoped())) && $user->territory_id
+            ? User::active()->where('territory_id', $user->territory_id)->pluck('id')
+            : $this->getAllSubordinateIds($user);
         $collaboratorOpportunityIds = $this->getCollaboratorOpportunityIds($user);
 
-        return $query->where(function ($q) use ($allowedUserIds, $collaboratorOpportunityIds, $user) {
-            $q->whereIn('user_id', $allowedUserIds);
+        return $query->where(function ($q) use ($subordinateIds, $collaboratorOpportunityIds, $user) {
+            $q->whereIn('user_id', $subordinateIds->push($user->id));
 
             if ($collaboratorOpportunityIds->isNotEmpty()) {
-                $q->orWhere(function ($oq) use ($collaboratorOpportunityIds, $user) {
-                    $oq->whereIn('opportunity_id', $collaboratorOpportunityIds);
-
-                    if ($user->territory_id) {
-                        $oq->whereHas('user', function ($uq) use ($user): void {
-                            $uq->where('territory_id', $user->territory_id);
-                        });
-                    }
-                });
+                $q->orWhereIn('opportunity_id', $collaboratorOpportunityIds);
             }
         });
     }
@@ -81,31 +61,21 @@ class ActivityScopeService
      */
     public function getAllSubordinateIds(User $user): Collection
     {
-        // Super Admin and Management department see all territories
         if ($user->hasGlobalVisibility()) {
             return User::active()->pluck('id');
         }
 
-        // Manager is territory-scoped
-        $managerRoles = ['Marketing Manager', 'Sales Manager'];
-        if ($user->hasAnyRole($managerRoles)) {
-            $query = User::active();
-
-            if ($user->territory_id) {
-                $query->where('territory_id', $user->territory_id);
-            }
-
-            return $query->pluck('id');
-        }
-
         $subordinateIds = collect();
+        $pending = collect([$user->id]);
 
-        foreach ($user->subordinates as $subordinate) {
-            $subordinateIds->push($subordinate->id);
-            $subordinateIds = $subordinateIds->merge($this->getAllSubordinateIds($subordinate));
+        while ($pending->isNotEmpty()) {
+            $managerId = $pending->pop();
+            $reportIds = User::active()->where('manager_id', $managerId)->pluck('id');
+            $subordinateIds = $subordinateIds->merge($reportIds);
+            $pending = $pending->merge($reportIds);
         }
 
-        return $subordinateIds->unique();
+        return $subordinateIds->unique()->values();
     }
 
     /**

@@ -162,7 +162,7 @@ class Activity extends Model
         // Territory managers (RSM/ASM) may comment on their reps' activities
         // even without being creator/attendee/collaborator — mirrors how
         // ActivityScopeService already shows them these records.
-        return $this->lead?->created_by === $user->id
+        return $this->lead?->created_by === $user->id || in_array($this->lead?->created_by, $user->subordinateUserIds(), true)
             || ($this->opportunity?->isAccessibleBy($user) ?? false)
             || $user->managesTerritoryOf($this->user);
     }

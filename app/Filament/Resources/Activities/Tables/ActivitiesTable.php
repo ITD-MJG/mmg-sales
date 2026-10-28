@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Activities\Tables;
 
 use App\Exports\ActivitiesExport;
+use App\Enums\Role;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Activity;
 use App\Models\ActivityComment;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -49,35 +51,14 @@ class ActivitiesTable
 
             $query->orWhereHas('attendees', fn (Builder $attendees): Builder => $attendees->whereKey($user->id));
 
-            // For non-global-viewer users, also include activities on leads the
-            // user created, and activities on opportunities they collaborate on,
-            // but only if the activity's user is in the same territory.
-            // Global viewers already see everything, so a top-level OR here
-            // would collapse into the only condition.
-            if (! $user->hasGlobalVisibility()) {
-                $opportunityIds = DB::table('opportunity_collaborators')
-                    ->where('user_id', $user->id)
-                    ->pluck('opportunity_id');
+            $visibleOwnerIds = array_merge([$user->id], $user->subordinateUserIds());
+            if ($user->hasAnyRole(Role::names(Role::territoryScoped())) && $user->territory_id) {
+                $visibleOwnerIds = User::active()->where('territory_id', $user->territory_id)->pluck('id')->all();
+            }
+            $leadIds = DB::table('leads')->whereIn('created_by', $visibleOwnerIds)->pluck('id');
 
-                $leadIds = DB::table('leads')
-                    ->where('created_by', $user->id)
-                    ->pluck('id');
-
-                if ($leadIds->isNotEmpty() || $opportunityIds->isNotEmpty()) {
-                    $query->orWhere(function ($q) use ($leadIds, $opportunityIds, $user) {
-                        $q->whereIn('lead_id', $leadIds->all());
-
-                        if ($opportunityIds->isNotEmpty()) {
-                            $q->orWhereIn('opportunity_id', $opportunityIds->all());
-                        }
-
-                        if ($user->territory_id) {
-                            $q->whereHas('user', function ($uq) use ($user): void {
-                                $uq->where('territory_id', $user->territory_id);
-                            });
-                        }
-                    });
-                }
+            if ($leadIds->isNotEmpty()) {
+                $query->orWhereIn('lead_id', $leadIds->unique()->all());
             }
         });
     }
