@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Filament\Resources\Customers\CustomerResource;
+use App\Filament\Resources\Users\UserResource;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -20,7 +22,11 @@ class LeadInfolist
                     ->schema([
                         TextEntry::make('customer_name')
                             ->label('Customer')
-                            ->weight('bold'),
+                            ->weight('bold')
+                            ->url(fn ($record): ?string => $record->customer
+                                ? CustomerResource::getUrl('view', ['record' => $record->customer])
+                                : null)
+                            ->openUrlInNewTab(),
                         TextEntry::make('status')
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => ucfirst($state))
@@ -42,7 +48,12 @@ class LeadInfolist
                             ->listWithLineBreaks(false)
                             ->placeholder('Unassigned'),
                         TextEntry::make('creator.name')
-                            ->label('Created By'),
+                            ->label('Created By')
+
+                            ->url(fn ($record): ?string => $record->creator
+                                ? UserResource::getUrl('view', ['record' => $record->creator])
+                                : null)
+                            ->openUrlInNewTab(),
                         TextEntry::make('created_at')
                             ->label('Created')
                             ->dateTime('d M Y H:i'),
@@ -70,6 +81,12 @@ class LeadInfolist
                                     ->money('IDR'),
                             ])
                             ->placeholder('No products yet'),
+                        TextEntry::make('estimated_revenue')
+                            ->label('Expected Revenue')
+                            ->money('IDR'),
+                        TextEntry::make('expected_closing_date')
+                            ->label('Estimated Closing Date')
+                            ->date('d M Y'),
                         TextEntry::make('total_value')
                             ->label('Total Value')
                             ->money('IDR')
