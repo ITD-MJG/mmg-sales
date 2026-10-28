@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Customer;
 use App\Models\Lead;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -32,7 +31,6 @@ class LeadFactory extends Factory
             'priority' => fake()->randomElement(['low', 'medium', 'high', 'urgent']),
             'notes' => fake()->paragraph(),
             'customer_id' => Customer::factory(),
-            'assigned_to' => User::factory(),
         ];
     }
 

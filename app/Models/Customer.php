@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -92,6 +93,16 @@ class Customer extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class, 'customer_id');
+    }
+
+    public function activityComments(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            ActivityComment::class,
+            Activity::class,
+            'customer_id',
+            'activity_id',
+        );
     }
 
     public function segment(): BelongsTo

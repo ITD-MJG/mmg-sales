@@ -46,8 +46,8 @@ class CustomersTable
                     ->counts('activities')
                     ->sortable(),
 
-                TextColumn::make('activities_comments_count')
-                    ->counts('activities.comments')
+                TextColumn::make('activity_comments_count')
+                    ->counts('activityComments')
                     ->sortable(),
                 IconColumn::make('is_active')
                     ->label('Active')
