@@ -115,12 +115,15 @@ class OrderForm
 
                                             return [
                                                 'principal_id' => $principalId,
+                                                'principal_name' => $product->principal?->name,
                                                 'item_id' => $product->id,
                                                 'quantity' => $quantity,
                                                 'price_type' => 'unit_price',
-                                                'unit_price' => $unitPrice,
-                                                'current_price' => $unitPrice,
-                                                'subtotal' => $unitPrice * $quantity,
+                                                'unit_price' => (float) $unitPrice,
+                                                'current_price' => (float) $unitPrice,
+                                                'discount_amount' => 0,
+                                                'discount_percent' => 0,
+                                                'subtotal' => (float) $unitPrice * $quantity,
                                             ];
                                         })->toArray();
 
@@ -318,31 +321,42 @@ class OrderForm
                         Repeater::make('orderItems')
                             ->relationship()
                             ->schema([
-                                Grid::make(5)
+                                Grid::make(7)
                                     ->schema([
-                                        Select::make('principal_id')
-                                            ->label('Principal')
-                                            ->options(fn () => Principal::query()->where('is_active', true)->pluck('name', 'id'))
-                                            ->searchable()
-                                            ->required()
-                                            ->live()
-                                            ->afterStateUpdated(fn ($set) => $set('item_id', null)),
                                         Select::make('item_id')
                                             ->label('Product')
-                                            ->options(fn ($get) => $get('principal_id')
-                                                ? Product::where('principal_id', $get('principal_id'))->pluck('name', 'id')
-                                                : [])
+                                            ->options(fn () => Product::query()
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
                                             ->searchable()
                                             ->required()
                                             ->live()
-                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get)),
+                                            ->afterStateUpdated(function ($state, $set, $get): void {
+                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                $set('principal_id', $product?->principal_id);
+                                                $set('principal_name', $product?->principal?->name);
+                                                self::updateLineTotal($set, $get, true);
+                                                self::calculateOrderTotals($set, $get);
+                                            }),
+                                        TextInput::make('principal_name')
+                                            ->label('Principal')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
+                                                $component->state($product?->principal?->name);
+                                            }),
                                         TextInput::make('quantity')
-                                            ->label('Quantity')
+                                            ->label('Qty')
                                             ->numeric()
                                             ->default(1)
+                                            ->minValue(1)
                                             ->required()
                                             ->live()
-                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get))
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                                self::calculateOrderTotals($set, $get);
+                                            })
                                             ->columnSpan(1),
                                         Select::make('price_type')
                                             ->label('Price Type')
@@ -356,23 +370,48 @@ class OrderForm
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
+                                            ->numeric()
                                             ->mask(RawJs::make('$money($input, ".", ",", 2)'))
-                                            ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
+                                            ->required()
+                                            ->minValue(0)
+                                            ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
+                                            ->formatStateUsing(fn ($state): string => self::formatMoney($state))
                                             ->live()
-                                            ->readOnly(fn ($get) => ! $get('principal_id') || ! $get('item_id'))
-                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get))
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                                self::calculateOrderTotals($set, $get);
+                                            })
                                             ->columnSpan(1),
-                                    ]),
-                                Grid::make(1)
-                                    ->schema([
+                                        TextInput::make('discount_percent')
+                                            ->label('Discount')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->suffix('%')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                $quantity = (int) ($get('quantity') ?? 0);
+                                                $gross = $quantity * self::parseMoney($get('unit_price'));
+                                                $discountAmount = self::parseMoney($get('discount_amount'));
+                                                $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
+                                            })
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                                self::calculateOrderTotals($set, $get);
+                                            })
+                                            ->columnSpan(1),
                                         TextInput::make('subtotal')
                                             ->label('Line Total')
+                                            ->numeric()
                                             ->mask(RawJs::make('$money($input, ".", ",", 2)'))
-                                            ->stripCharacters(['.', ','])
                                             ->prefix('IDR')
                                             ->readOnly()
-                                            ->columnSpanFull(),
+                                            ->dehydratedStateUsing(fn ($state): float => self::parseMoney($state))
+                                            ->formatStateUsing(fn ($state): string => self::formatMoney($state))
+                                            ->columnSpan(1),
                                     ]),
                             ])
                             ->columns(1)
@@ -389,9 +428,10 @@ class OrderForm
                                     ->label('Gross Sales')
                                     ->mask(RawJs::make('$money($input, ".", ",", 0)'))
                                     ->step('1')
-                                    ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
-                                    ->readOnly(),
+                                    ->readOnly()
+                                    ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
+                                    ->formatStateUsing(fn ($state): string => self::formatMoney($state)),
                                 TextInput::make('discount_on')
                                     ->label('Discount (%)')
                                     ->numeric()
@@ -403,9 +443,10 @@ class OrderForm
                                     ->label('Net Sales')
                                     ->step('1')
                                     ->mask(RawJs::make('$money($input, ".", ",", 0)'))
-                                    ->stripCharacters(['.', ','])
                                     ->prefix('IDR')
-                                    ->readOnly(),
+                                    ->readOnly()
+                                    ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
+                                    ->formatStateUsing(fn ($state): string => self::formatMoney($state)),
                             ]),
                     ]),
 
@@ -419,63 +460,85 @@ class OrderForm
 
     private static function parseMoney(mixed $value): float
     {
-        if (! is_string($value)) {
+        if (is_int($value) || is_float($value)) {
             return (float) $value;
         }
 
-        $parts = explode(',', $value, 2);
-        $integerPart = (float) str_replace('.', '', $parts[0]);
-        $fractionalPart = isset($parts[1]) ? (float) ('0.'.preg_replace('/\D/', '', $parts[1])) : 0;
+        $value = trim((string) $value);
+        $value = preg_replace('/[^0-9,.\-]/u', '', $value) ?? '';
 
-        return $integerPart + $fractionalPart;
+        if ($value === '' || $value === '-') {
+            return 0.0;
+        }
+
+        $comma = strrpos($value, ',');
+        $dot = strrpos($value, '.');
+        if ($comma !== false && $dot !== false) {
+            $decimalSeparator = $comma > $dot ? ',' : '.';
+            $thousandsSeparator = $decimalSeparator === ',' ? '.' : ',';
+            $value = str_replace($thousandsSeparator, '', $value);
+            $value = str_replace($decimalSeparator, '.', $value);
+        } elseif ($comma !== false) {
+            $value = str_replace(',', '.', $value);
+        } elseif ($dot !== false && preg_match('/\.\d{3}(?:\D|$)/', $value)) {
+            $value = str_replace('.', '', $value);
+        }
+
+        return is_numeric($value) ? (float) $value : 0.0;
+    }
+
+    private static function formatMoney(mixed $value): string
+    {
+        return number_format(self::parseMoney($value), 2, ',', '.');
     }
 
     protected static function updateLineTotal($set, $get, bool $refreshPrice = false): void
     {
         $itemId = $get('item_id');
-        $quantity = (int) $get('quantity');
+        $quantity = max(0, (int) $get('quantity'));
         $priceType = $get('price_type') ?? 'unit_price';
+        $product = $itemId ? Product::query()->with('principal')->find($itemId) : null;
 
-        if ($refreshPrice && $itemId) {
-            $product = Product::find($itemId);
-            if ($product) {
-                $unitPrice = $priceType === 'ecatalog_price'
-                    ? ($product->ecatalog_price ?? $product->unit_price ?? 0)
-                    : ($product->unit_price ?? 0);
-                $set('unit_price', $unitPrice);
-                $set('current_price', $unitPrice);
-            }
+        if ($product) {
+            $set('principal_id', $product->principal_id);
+            $set('principal_name', $product->principal?->name);
+        } else {
+            $set('principal_id', null);
+            $set('principal_name', null);
+        }
+
+        if ($refreshPrice && $product) {
+            $unitPrice = $priceType === 'ecatalog_price'
+                ? ($product->ecatalog_price ?? $product->unit_price ?? 0)
+                : ($product->unit_price ?? 0);
+            $set('unit_price', $unitPrice);
+            $set('current_price', $unitPrice);
         }
 
         $unitPrice = self::parseMoney($get('unit_price'));
-        $lineTotal = round($quantity * $unitPrice, 2);
-        $set('subtotal', $lineTotal);
+        $grossTotal = $quantity * $unitPrice;
+        $discountPercent = min(100, max(0, (float) $get('discount_percent')));
+        $discountAmount = round($grossTotal * ($discountPercent / 100), 2);
+        $set('discount_amount', $discountAmount);
+        $set('subtotal', round($grossTotal - $discountAmount, 2));
     }
 
     protected static function calculateOrderTotals($set, $get): void
     {
-        $orderItems = $get('orderItems');
-        $grossSales = 0;
+        $orderItems = $get('orderItems') ?? [];
+        $lineTotal = 0.0;
 
-        if ($orderItems && is_array($orderItems)) {
-            foreach ($orderItems as $item) {
-                $quantity = (int) ($item['quantity'] ?? 0);
-                $unitPrice = self::parseMoney($item['unit_price'] ?? 0);
-                $grossSales += $quantity * $unitPrice;
-            }
+        foreach ($orderItems as $item) {
+            $lineTotal += self::parseMoney($item['subtotal'] ?? 0);
         }
 
-        $set('subtotal', round($grossSales));
-
-        $discountPercent = (float) $get('discount_on');
-        $netSales = round($grossSales * (1 - ($discountPercent / 100)));
-        $set('total_amount', $netSales);
-        $set('net_sales_total', $netSales);
+        $set('subtotal', round($lineTotal, 2));
+        self::calculateNetSales($set, $get);
     }
 
     protected static function calculateNetSales($set, $get): void
     {
-        $grossSales = (float) $get('subtotal');
+        $grossSales = self::parseMoney($get('subtotal'));
         $discountPercent = (float) $get('discount_on');
         $netSales = round($grossSales * (1 - ($discountPercent / 100)));
         $set('total_amount', $netSales);
