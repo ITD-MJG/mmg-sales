@@ -71,9 +71,7 @@ class ActivitiesTable
 
                 $query->with('attendees:id,name');
 
-                return $query
-                    ->orderByRaw('CASE WHEN user_id = ? THEN 0 ELSE 1 END', [auth()->id()])
-                    ->orderByDesc('performed_at');
+                return $query;
             })
             ->columns([
                 TextColumn::make('activity_code')

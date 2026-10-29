@@ -38,7 +38,7 @@ class LeadsTable
                 self::listVisibilityQuery($query, auth()->user());
                 $query->with(['collaborators:id,name']);
 
-                return $query->orderByDesc('leads.created_at');
+                return $query;
             })
             ->recordActions([
                 ViewAction::make(),
