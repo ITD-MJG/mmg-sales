@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Leads\Tables;
 
-use App\Filament\Actions\ConvertLeadToOpportunityAction;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use App\Models\User;
@@ -44,7 +43,7 @@ class LeadsTable
                 ViewAction::make(),
                 EditAction::make()
                     ->visible(fn (Lead $record) => self::canModifyRecord($record, 'created_by')),
-                ConvertLeadToOpportunityAction::make(),
+
             ])
             ->columns([
                 TextColumn::make('lead_code')

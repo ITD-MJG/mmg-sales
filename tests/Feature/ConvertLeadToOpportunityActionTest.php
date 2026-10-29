@@ -27,13 +27,13 @@ function superAdmin(): User
     return $user;
 }
 
-it('offers the convert action on the lead list to a super admin', function () {
+it('does not register the convert action on the lead list for now', function () {
     actingAs(superAdmin());
 
     $lead = Lead::factory()->create(['customer_id' => Customer::factory()]);
 
     Livewire::test(ListLeads::class)
-        ->assertTableActionVisible('convertToOpportunity', $lead);
+        ->assertTableActionDoesNotExist('convertToOpportunity', record: $lead);
 });
 
 it('hides the convert action from sales staff', function () {
@@ -102,11 +102,11 @@ it('converts the lead and notifies without redirecting', function () {
         ->and($lead->fresh()->status)->toBe('converted');
 });
 
-it('offers the convert action as a header action on the lead view page', function () {
+it('does not register the convert action on the lead view page for now', function () {
     actingAs(superAdmin());
 
     $lead = Lead::factory()->create(['customer_id' => Customer::factory()]);
 
     Livewire::test(ViewLead::class, ['record' => $lead->getKey()])
-        ->assertActionVisible('convertToOpportunity');
+        ->assertActionDoesNotExist('convertToOpportunity');
 });

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Customers\Tables;
 
-use App\Filament\Actions\ConvertLeadToOpportunityAction;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Lead;
@@ -79,7 +78,7 @@ class CustomerLeadsTable
                 EditAction::make()
                     ->visible(fn (Lead $record): bool => LeadsTable::canModifyRecord($record, 'created_by'))
                     ->url(fn (Lead $record): string => LeadResource::getUrl('edit', ['record' => $record])),
-                ConvertLeadToOpportunityAction::make(),
+
                 DeleteAction::make()
                     ->visible(fn (Lead $record): bool => LeadsTable::canModifyRecord($record, 'created_by')),
             ])
