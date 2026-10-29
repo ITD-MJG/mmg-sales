@@ -22,7 +22,6 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
@@ -375,9 +374,6 @@ class OrderForm
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
-                                            ->mask(RawJs::make(<<<'JS'
-                                                $money($input, '.', ',')
-                                            JS))
                                             ->prefix('IDR')
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
@@ -396,8 +392,8 @@ class OrderForm
                                             ->live()
                                             ->afterStateHydrated(function (TextInput $component, $get): void {
                                                 $quantity = (int) ($get('quantity') ?? 0);
-                                                $gross = $quantity * self::parseMoney($get('unit_price'));
-                                                $discountAmount = self::parseMoney($get('discount_amount'));
+                                                $gross = $quantity * (float) $get('unit_price');
+                                                $discountAmount = (float) $get('discount_amount');
                                                 $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
                                             })
                                             ->afterStateUpdated(function ($set, $get): void {
@@ -408,13 +404,8 @@ class OrderForm
                                         TextInput::make('subtotal')
                                             ->label('Line Total')
                                             ->numeric()
-                                            ->mask(RawJs::make(<<<'JS'
-                                                $money($input, '.', ',')
-                                            JS))
                                             ->prefix('IDR')
                                             ->readOnly()
-                                            ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
-                                            ->formatStateUsing(fn ($state): string => self::formatMoney($state))
                                             ->columnSpan(1),
                                     ]),
                             ])
@@ -430,31 +421,21 @@ class OrderForm
                             ->schema([
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
-                                    ->mask(RawJs::make(<<<'JS'
-                                        $money($input, '.', ',')
-                                    JS))
                                     ->step('1')
                                     ->prefix('IDR')
-                                    ->readOnly()
-                                    ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
-                                    ->formatStateUsing(fn ($state): string => self::formatMoney($state)),
+                                    ->readOnly(),
                                 TextInput::make('discount_on')
                                     ->label('Discount (%)')
                                     ->numeric()
                                     ->default(0)
                                     ->suffix('%')
                                     ->live()
-                                    ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, self::parseMoney($get('subtotal')), (float) $get('discount_on'))),
+                                    ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $get('discount_on'))),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
                                     ->step('1')
-                                    ->mask(RawJs::make(<<<'JS'
-                                        $money($input, '.', ',')
-                                    JS))
                                     ->prefix('IDR')
-                                    ->readOnly()
-                                    ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
-                                    ->formatStateUsing(fn ($state): string => self::formatMoney($state)),
+                                    ->readOnly(),
                             ]),
                     ]),
 
@@ -464,42 +445,6 @@ class OrderForm
                     ->hidden()
                     ->preload(),
             ]);
-    }
-
-    private static function parseMoney(mixed $value): float
-    {
-        if (is_int($value) || is_float($value)) {
-            return (float) $value;
-        }
-
-        $value = trim((string) $value);
-        $value = preg_replace('/[^0-9,.\-]/u', '', $value) ?? '';
-
-        if ($value === '' || $value === '-') {
-            return 0.0;
-        }
-
-        $comma = strrpos($value, ',');
-        $dot = strrpos($value, '.');
-        if ($comma !== false && $dot !== false) {
-            $decimalSeparator = $comma > $dot ? ',' : '.';
-            $thousandsSeparator = $decimalSeparator === ',' ? '.' : ',';
-            $value = str_replace($thousandsSeparator, '', $value);
-            $value = str_replace($decimalSeparator, '.', $value);
-        } elseif ($comma !== false) {
-            $value = preg_match('/,\d{3}$/', $value)
-                ? str_replace(',', '', $value)
-                : str_replace(',', '.', $value);
-        } elseif ($dot !== false && preg_match('/\.\d{3}(?:\D|$)/', $value)) {
-            $value = str_replace('.', '', $value);
-        }
-
-        return is_numeric($value) ? (float) $value : 0.0;
-    }
-
-    private static function formatMoney(mixed $value): string
-    {
-        return number_format(self::parseMoney($value), 2, ',', '.');
     }
 
     protected static function updateLineTotal($set, $get, bool $refreshPrice = false): void
@@ -525,7 +470,7 @@ class OrderForm
             $set('current_price', $unitPrice);
         }
 
-        $unitPrice = self::parseMoney($get('unit_price'));
+        $unitPrice = (float) $get('unit_price');
         $grossTotal = $quantity * $unitPrice;
         $discountPercent = min(100, max(0, (float) $get('discount_percent')));
         $discountAmount = round($grossTotal * ($discountPercent / 100), 2);
@@ -539,7 +484,7 @@ class OrderForm
         $lineTotal = 0.0;
 
         foreach ($orderItems as $item) {
-            $lineTotal += self::parseMoney($item['subtotal'] ?? 0);
+            $lineTotal += (float) ($item['subtotal'] ?? 0);
         }
 
         $set('subtotal', round($lineTotal, 2));

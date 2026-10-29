@@ -9,7 +9,7 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-test('order form renders valid Alpine-safe money mask expression', function () {
+test('order form renders amount fields without money masks', function () {
     $actor = User::factory()->create();
     $this->seed(RolesAndPermissionsSeeder::class);
     $actor->assignRole('Super Admin');
@@ -21,22 +21,8 @@ test('order form renders valid Alpine-safe money mask expression', function () {
     $document = new DOMDocument;
     @$document->loadHTML($html);
     $xpath = new DOMXPath($document);
-    $inputs = $xpath->query('//input[@*[name()="x-mask:dynamic"]]');
-    expect($inputs)->toHaveCount(4);
 
-    foreach ($inputs as $input) {
-        expect($input->getAttribute('x-mask:dynamic'))->toBe("\$money(\$input, '.', ',')");
-    }
-
-});
-
-test('money parser handles Indonesian grouped prices and decimals', function () {
-    $parser = new ReflectionMethod(OrderForm::class, 'parseMoney');
-    expect($parser->invoke(null, '4100000.00'))->toBe(4100000.0)
-        ->and($parser->invoke(null, '500.000'))->toBe(500000.0)
-        ->and($parser->invoke(null, '500.000,00'))->toBe(500000.0)
-        ->and($parser->invoke(null, '500,00'))->toBe(500.0)
-        ->and($parser->invoke(null, '1.234.567,89'))->toBe(1234567.89);
+    expect($xpath->query('//input[@*[name()="x-mask:dynamic"]]'))->toHaveCount(0);
 });
 
 test('line discount is stored as a currency amount and subtotal is net of discount', function () {
@@ -45,7 +31,7 @@ test('line discount is stored as a currency amount and subtotal is net of discou
         'item_id' => null,
         'quantity' => 2,
         'price_type' => 'unit_price',
-        'unit_price' => '125.000,00',
+        'unit_price' => 125000,
         'discount_percent' => 10,
     ];
 
@@ -64,7 +50,7 @@ test('line total updates after product price, quantity, and discount changes', f
     $get = [
         'item_id' => null,
         'quantity' => 2,
-        'unit_price' => '125.000,00',
+        'unit_price' => 125000,
         'discount_percent' => 10,
     ];
     $setState = function (string $key, mixed $value) use (&$set): void {
@@ -79,7 +65,7 @@ test('line total updates after product price, quantity, and discount changes', f
     expect($set['subtotal'])->toBe(225000.0);
 
     $get['quantity'] = 3;
-    $get['unit_price'] = '100.000,00';
+    $get['unit_price'] = 100000;
     $get['discount_percent'] = 0;
     $method->invoke(null, $setState, $getState);
     expect($set['subtotal'])->toBe(300000.0);
@@ -121,15 +107,15 @@ test('recalculates order totals from the complete repeater state for a line-item
         'orderItems' => [
             'first' => [
                 'quantity' => 2,
-                'unit_price' => '125.000,00',
+                'unit_price' => 125000,
                 'discount_percent' => 10,
-                'subtotal' => '225.000,00',
+                'subtotal' => 225000,
             ],
             'second' => [
                 'quantity' => 1,
-                'unit_price' => '50.000,00',
+                'unit_price' => 50000,
                 'discount_percent' => 0,
-                'subtotal' => '50.000,00',
+                'subtotal' => 50000,
             ],
         ],
         'discount_on' => 10,
