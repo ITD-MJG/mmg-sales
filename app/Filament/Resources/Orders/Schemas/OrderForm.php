@@ -195,7 +195,7 @@ class OrderForm
                             ->options(function () use ($user): array {
                                 $isSalesOrMarketing = self::belongsToSalesOrMarketing($user);
 
-                                return User::query()
+                                return User::active()
                                     ->whereHas('department', fn (Builder $query) => $query->whereIn(
                                         'name',
                                         $isSalesOrMarketing

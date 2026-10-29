@@ -31,6 +31,8 @@ it('lists Sales and Marketing users with generated department codes', function (
     $marketing = Department::factory()->create(['name' => Department::MARKETING]);
     $finance = Department::factory()->create(['name' => 'Finance & Accounting']);
 
+    $inactiveSalesUser = User::factory()->create(['department_id' => $sales->id, 'is_active' => false]);
+    $inactiveMarketingUser = User::factory()->create(['department_id' => $marketing->id, 'is_active' => false]);
     $salesUser = User::factory()->create(['department_id' => $sales->id]);
     $marketingUser = User::factory()->create(['department_id' => $marketing->id]);
     $financeUser = User::factory()->create(['department_id' => $finance->id]);
@@ -40,11 +42,12 @@ it('lists Sales and Marketing users with generated department codes', function (
 
     Livewire::actingAs(orderActor($sales->id))
         ->test(CreateOrder::class)
-        ->assertFormFieldExists('sales_id', function ($field) use ($salesUser, $marketingUser, $financeUser): bool {
+        ->assertFormFieldExists('sales_id', function ($field) use ($salesUser, $marketingUser, $financeUser, $inactiveSalesUser, $inactiveMarketingUser): bool {
             $options = $field->getOptions();
 
             return isset($options[$salesUser->id], $options[$marketingUser->id])
-                && ! isset($options[$financeUser->id]);
+                && ! isset($options[$financeUser->id])
+                && ! isset($options[$inactiveSalesUser->id], $options[$inactiveMarketingUser->id]);
         });
 });
 
