@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\ResourceCodeGenerator;
 use App\Traits\HasCode;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -136,5 +137,19 @@ class Lead extends Model
     public function isConverted(): bool
     {
         return $this->status === 'converted';
+    }
+
+    /**
+     * Leads that list at least one product supplied by the given principal.
+     *
+     * The pivot carries a denormalised principal_id for imported rows, so both
+     * it and the product's own principal are checked.
+     */
+    public function scopeForPrincipal(Builder $query, int $principalId): Builder
+    {
+        return $query->whereHas('leadProductItems', function (Builder $item) use ($principalId): void {
+            $item->where('principal_id', $principalId)
+                ->orWhereHas('product', fn (Builder $product): Builder => $product->where('principal_id', $principalId));
+        });
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Observers\OrderObserver;
 use App\Services\ResourceCodeGenerator;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -130,6 +131,22 @@ class Order extends Model
     public function paymentStatuses(): HasMany
     {
         return $this->hasMany(PaymentStatus::class);
+    }
+
+    /**
+     * Orders that contain at least one line item of the given principal.
+     *
+     * Imported orders have no line items, so the header principal is matched too.
+     */
+    public function scopeForPrincipal(Builder $query, int $principalId): Builder
+    {
+        return $query->where(function (Builder $order) use ($principalId): void {
+            $order->where('principal_id', $principalId)
+                ->orWhereHas('orderItems', function (Builder $item) use ($principalId): void {
+                    $item->where('principal_id', $principalId)
+                        ->orWhereHas('product', fn (Builder $product): Builder => $product->where('principal_id', $principalId));
+                });
+        });
     }
 
     /**

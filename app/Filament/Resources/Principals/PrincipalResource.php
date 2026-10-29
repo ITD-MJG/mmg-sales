@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Principals;
 use App\Filament\Resources\Principals\Pages\CreatePrincipal;
 use App\Filament\Resources\Principals\Pages\EditPrincipal;
 use App\Filament\Resources\Principals\Pages\ListPrincipals;
+use App\Filament\Resources\Principals\Pages\ViewPrincipal;
 use App\Filament\Resources\Principals\Schemas\PrincipalForm;
 use App\Filament\Resources\Principals\Tables\PrincipalsTable;
 use App\Models\Principal;
@@ -47,6 +48,7 @@ class PrincipalResource extends Resource
         return [
             'index' => ListPrincipals::route('/'),
             'create' => CreatePrincipal::route('/create'),
+            'view' => ViewPrincipal::route('/{record}'),
             'edit' => EditPrincipal::route('/{record}/edit'),
         ];
     }
