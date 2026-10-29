@@ -10,7 +10,6 @@ use App\Models\Principal;
 use App\Services\PrincipalMetricsService;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -63,8 +62,7 @@ class PrincipalLeadsTable
                 TextColumn::make('estimated_revenue')
                     ->label('Exp. Revenue')
                     ->money('IDR')
-                    ->sortable()
-                    ->summarize(Sum::make()->money('IDR')->label('Total')),
+                    ->sortable(),
 
                 TextColumn::make('expected_closing_date')
                     ->label('Exp. Closing')

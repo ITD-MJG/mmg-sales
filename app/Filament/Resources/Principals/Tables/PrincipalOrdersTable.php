@@ -7,7 +7,6 @@ use App\Models\Order;
 use App\Models\Principal;
 use App\Services\PrincipalMetricsService;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -54,8 +53,8 @@ class PrincipalOrdersTable
                 TextColumn::make('total_amount')
                     ->label('Total')
                     ->money('IDR')
-                    ->sortable()
-                    ->summarize(Sum::make()->money('IDR')->label('Total')),
+                    ->sortable(),
+
             ])
             ->filters([
                 SelectFilter::make('jual_kso')
