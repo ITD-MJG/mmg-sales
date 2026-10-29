@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ActivityLogs\Tables;
 
+
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -14,9 +15,7 @@ class ActivityLogsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->query(
-                Activity::query()->latest()
-            )
+            ->query(Activity::query())
             ->columns([
                 TextColumn::make('id')
                     ->label('#')
@@ -106,7 +105,7 @@ class ActivityLogsTable
                             ->when($data['created_from'], fn (Builder $query, $date) => $query->where('created_at', '>=', $date))
                             ->when($data['created_until'], fn (Builder $query, $date) => $query->where('created_at', '<=', $date));
                     }),
-            ])
-            ->defaultSort('created_at', 'desc');
+            ]);
+
     }
 }

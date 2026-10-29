@@ -13,7 +13,6 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class OrdersTable
 {
@@ -22,10 +21,6 @@ class OrdersTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
-                // ponytail: visibility scope removed, everyone sees all orders
-                return $query->orderBy('created_at', 'desc');
-            })
             ->columns([
                 TextColumn::make('order_number')
                     ->label('Order #')

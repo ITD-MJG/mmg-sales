@@ -14,7 +14,7 @@ class SubSegmentsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->orderBy('created_at', 'desc'))
+
             ->columns([
                 TextColumn::make('sub_segment_code')
                     ->label('Sub-Segment Code')
