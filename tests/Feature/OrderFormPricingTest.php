@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\Orders\Pages\CreateOrder;
 use App\Filament\Resources\Orders\Schemas\OrderForm;
+use App\Models\Product;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -149,4 +150,107 @@ test('recalculates order totals from the complete repeater state for a line-item
     expect($set['subtotal'])->toBe(387500.0)
         ->and($set['total_amount'])->toBe(348750.0)
         ->and($set['net_sales_total'])->toBe(348750.0);
+});
+
+test('line totals stay per item while order totals sum every line total', function () {
+    $actor = User::factory()->create();
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $actor->assignRole('Super Admin');
+
+    $productA = Product::factory()->create(['unit_price' => 100000]);
+    $productB = Product::factory()->create(['unit_price' => 50000]);
+
+    $component = Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->fillForm([
+            'orderItems' => [
+                [
+                    'item_id' => $productA->id,
+                    'quantity' => 2,
+                    'price_type' => 'unit_price',
+                    'unit_price' => 100000,
+                    'discount_percent' => 10,
+                ],
+                [
+                    'item_id' => $productB->id,
+                    'quantity' => 1,
+                    'price_type' => 'unit_price',
+                    'unit_price' => 50000,
+                    'discount_percent' => 0,
+                ],
+            ],
+            'discount_on' => 10,
+        ]);
+
+    $items = array_values($component->get('data.orderItems'));
+
+    expect((float) $items[0]['subtotal'])->toBe(180000.0)
+        ->and((float) $items[1]['subtotal'])->toBe(50000.0);
+
+    $component->assertFormSet([
+        'subtotal' => 230000,
+        'total_amount' => 207000,
+        'net_sales_total' => 207000,
+    ]);
+
+    $component->set('data.orderItems.0.quantity', 3);
+
+    $items = array_values($component->get('data.orderItems'));
+
+    expect((float) $items[0]['subtotal'])->toBe(270000.0)
+        ->and((float) $items[1]['subtotal'])->toBe(50000.0);
+
+    $component->assertFormSet([
+        'subtotal' => 320000,
+        'total_amount' => 288000,
+        'net_sales_total' => 288000,
+    ]);
+
+    $component->set('data.orderItems', [$items[0]]);
+
+    $component->assertFormSet([
+        'subtotal' => 270000,
+        'total_amount' => 243000,
+        'net_sales_total' => 243000,
+    ]);
+});
+
+test('order discount changes net sales without touching any line total', function () {
+    $actor = User::factory()->create();
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $actor->assignRole('Super Admin');
+
+    $product = Product::factory()->create(['unit_price' => 100000]);
+
+    $component = Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->fillForm([
+            'orderItems' => [
+                [
+                    'item_id' => $product->id,
+                    'quantity' => 2,
+                    'price_type' => 'unit_price',
+                    'unit_price' => 100000,
+                    'discount_percent' => 0,
+                ],
+            ],
+            'discount_on' => 0,
+        ]);
+
+    $component->assertFormSet([
+        'subtotal' => 200000,
+        'total_amount' => 200000,
+    ]);
+
+    $component->set('data.discount_on', 25);
+
+    $items = array_values($component->get('data.orderItems'));
+
+    expect((float) $items[0]['subtotal'])->toBe(200000.0);
+
+    $component->assertFormSet([
+        'subtotal' => 200000,
+        'total_amount' => 150000,
+        'net_sales_total' => 150000,
+    ]);
 });

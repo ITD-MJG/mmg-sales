@@ -336,7 +336,6 @@ class OrderForm
                                                 $set('principal_id', $product?->principal_id);
                                                 $set('principal_name', $product?->principal?->name);
                                                 self::updateLineTotal($set, $get, true);
-                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             }),
                                         TextInput::make('principal_name')
                                             ->label('Principal')
@@ -355,7 +354,6 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         Select::make('price_type')
@@ -368,7 +366,6 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get, true);
-                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
@@ -378,7 +375,6 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('discount_percent')
@@ -398,7 +394,6 @@ class OrderForm
                                             })
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('subtotal')
@@ -430,7 +425,7 @@ class OrderForm
                                     ->default(0)
                                     ->suffix('%')
                                     ->live()
-                                    ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $get('discount_on'))),
+                                    ->afterStateUpdated(fn ($set, $get, $state) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $state)),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
                                     ->step('1')
@@ -477,6 +472,27 @@ class OrderForm
 
         $set('discount_amount', $discountAmount);
         $set('subtotal', round($grossTotal - $discountAmount, 2));
+        self::syncOrderTotals($set, $get);
+    }
+
+    /**
+     * Order-level totals live on the form root, two levels above a repeater item field.
+     */
+    protected static function syncOrderTotals($set, $get): void
+    {
+        $grossSales = 0.0;
+
+        foreach ($get('../') ?? [] as $item) {
+            $grossSales += (float) ($item['subtotal'] ?? 0);
+        }
+
+        $grossSales = round($grossSales, 2);
+        $discountPercent = (float) $get('../../discount_on');
+        $netSales = round($grossSales * (1 - ($discountPercent / 100)), 2);
+
+        $set('../../subtotal', $grossSales);
+        $set('../../total_amount', $netSales);
+        $set('../../net_sales_total', $netSales);
     }
 
     protected static function calculateOrderTotals($set, float $discountPercent, array $orderItems): void
