@@ -306,7 +306,7 @@ class OrderForm
                                 Excel::import($import, $path);
 
                                 $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
-                                self::calculateOrderTotals($set, $get);
+                                self::calculateOrderTotals($set, (float) $get('discount_on'), $get('orderItems') ?? []);
 
                                 if ($import->failures() !== []) {
                                     Notification::make()
@@ -337,7 +337,7 @@ class OrderForm
                                                 $set('principal_id', $product?->principal_id);
                                                 $set('principal_name', $product?->principal?->name);
                                                 self::updateLineTotal($set, $get, true);
-                                                self::calculateOrderTotals($set, $get);
+                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             }),
                                         TextInput::make('principal_name')
                                             ->label('Principal')

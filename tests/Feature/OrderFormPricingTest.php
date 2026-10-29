@@ -87,7 +87,33 @@ test('line total updates after product price, quantity, and discount changes', f
     expect($set['subtotal'])->toBe(225000.0);
 });
 
-test('recalculates order totals from the complete repeater state when a line item changes', function () {
+test('product selection callback recalculates order totals from parent repeater state', function () {
+    $get = [
+        'quantity' => 1,
+        'unit_price' => 125000,
+        'discount_percent' => 0,
+        '../' => [
+            'first' => ['subtotal' => 125000],
+            'second' => ['subtotal' => 50000],
+        ],
+        '../../discount_on' => 10,
+    ];
+    $set = [];
+    $setState = function (string $key, mixed $value) use (&$set): void {
+        $set[$key] = $value;
+    };
+    $getState = fn (string $key) => $get[$key] ?? null;
+
+    $updateLineTotal = new ReflectionMethod(OrderForm::class, 'updateLineTotal');
+    $calculateOrderTotals = new ReflectionMethod(OrderForm::class, 'calculateOrderTotals');
+    $updateLineTotal->invoke(null, $setState, $getState);
+    $calculateOrderTotals->invoke(null, $setState, (float) $get['../../discount_on'], $get['../']);
+
+    expect($set['subtotal'])->toBe(175000.0)
+        ->and($set['total_amount'])->toBe(157500.0);
+});
+
+test('recalculates order totals from the complete repeater state for a line-item change', function () {
     $set = [];
     $get = [
         'orderItems' => [
