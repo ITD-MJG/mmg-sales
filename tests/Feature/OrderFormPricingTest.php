@@ -22,7 +22,7 @@ test('order form renders valid Alpine-safe money mask expression', function () {
     @$document->loadHTML($html);
     $xpath = new DOMXPath($document);
     $inputs = $xpath->query('//input[@*[name()="x-mask:dynamic"]]');
-    expect($inputs)->not->toBeEmpty();
+    expect($inputs)->toHaveCount(4);
 
     foreach ($inputs as $input) {
         expect($input->getAttribute('x-mask:dynamic'))->toBe("\$money(\$input, '.', ',')");
@@ -30,10 +30,13 @@ test('order form renders valid Alpine-safe money mask expression', function () {
 
 });
 
-test('order money parser preserves decimal values in localized and stored formats', function () {
+test('money parser handles Indonesian grouped prices and decimals', function () {
     $parser = new ReflectionMethod(OrderForm::class, 'parseMoney');
-
-    expect($parser->invoke(null, '4100000.00'))->toBe(4100000.0);
+    expect($parser->invoke(null, '4100000.00'))->toBe(4100000.0)
+        ->and($parser->invoke(null, '500.000'))->toBe(500000.0)
+        ->and($parser->invoke(null, '500.000,00'))->toBe(500000.0)
+        ->and($parser->invoke(null, '500,00'))->toBe(500.0)
+        ->and($parser->invoke(null, '1.234.567,89'))->toBe(1234567.89);
 });
 
 test('line discount is stored as a currency amount and subtotal is net of discount', function () {
