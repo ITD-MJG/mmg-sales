@@ -1,19 +1,27 @@
 <?php
 
 namespace App\Policies;
+
 use App\Models\Lead;
 use App\Models\User;
+
 class LeadPolicy extends BasePolicy
 {
     protected string $model = 'lead';
 
     protected array $authorizedRoles = ['Super Admin'];
 
-
     public function view(User $user, mixed $lead): bool
     {
         if (! $user->hasPermissionTo("view_{$this->model}")) {
             return false;
+        }
+
+        // A read-only global viewer (Director in Management) may view any lead,
+        // matching the query-level scope in HasVisibilityScope::applyVisibilityScope().
+        // Writes stay denied by BasePolicy::before().
+        if ($user->hasGlobalVisibility()) {
+            return true;
         }
 
         if ($user->isMarketingDepartment()) {
