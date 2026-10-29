@@ -371,7 +371,9 @@ class OrderForm
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
-                                            ->mask(RawJs::make('$money($input, ".", ",", 2)'))
+                                            ->mask(RawJs::make(<<<'JS'
+                                                $money($input, '.', ',')
+                                            JS))
                                             ->prefix('IDR')
                                             ->required()
                                             ->minValue(0)
@@ -406,7 +408,9 @@ class OrderForm
                                         TextInput::make('subtotal')
                                             ->label('Line Total')
                                             ->numeric()
-                                            ->mask(RawJs::make('$money($input, ".", ",", 2)'))
+                                            ->mask(RawJs::make(<<<'JS'
+                                                $money($input, '.', ',')
+                                            JS))
                                             ->prefix('IDR')
                                             ->readOnly()
                                             ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
@@ -426,7 +430,9 @@ class OrderForm
                             ->schema([
                                 TextInput::make('subtotal')
                                     ->label('Gross Sales')
-                                    ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                    ->mask(RawJs::make(<<<'JS'
+                                        $money($input, '.', ',')
+                                    JS))
                                     ->step('1')
                                     ->prefix('IDR')
                                     ->readOnly()
@@ -442,7 +448,9 @@ class OrderForm
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
                                     ->step('1')
-                                    ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                    ->mask(RawJs::make(<<<'JS'
+                                        $money($input, '.', ',')
+                                    JS))
                                     ->prefix('IDR')
                                     ->readOnly()
                                     ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))

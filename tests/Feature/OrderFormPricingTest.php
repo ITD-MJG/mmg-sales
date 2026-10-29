@@ -1,10 +1,34 @@
 <?php
 
+use App\Filament\Resources\Orders\Pages\CreateOrder;
 use App\Filament\Resources\Orders\Schemas\OrderForm;
+use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
+test('order form renders valid Alpine-safe money mask expression', function () {
+    $actor = User::factory()->create();
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $actor->assignRole('Super Admin');
+
+    $html = Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+    $inputs = $xpath->query('//input[@*[name()="x-mask:dynamic"]]');
+    expect($inputs)->not->toBeEmpty();
+
+    foreach ($inputs as $input) {
+        expect($input->getAttribute('x-mask:dynamic'))->toBe("\$money(\$input, '.', ',')");
+    }
+
+});
 
 test('order money parser preserves decimal values in localized and stored formats', function () {
     $parser = new ReflectionMethod(OrderForm::class, 'parseMoney');
