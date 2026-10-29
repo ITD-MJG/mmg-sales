@@ -86,3 +86,53 @@ test('line total updates after product price, quantity, and discount changes', f
     $method->invoke(null, $setState, $getState);
     expect($set['subtotal'])->toBe(225000.0);
 });
+
+test('recalculates order totals from the complete repeater state when a line item changes', function () {
+    $set = [];
+    $get = [
+        'orderItems' => [
+            'first' => [
+                'quantity' => 2,
+                'unit_price' => '125.000,00',
+                'discount_percent' => 10,
+                'subtotal' => '225.000,00',
+            ],
+            'second' => [
+                'quantity' => 1,
+                'unit_price' => '50.000,00',
+                'discount_percent' => 0,
+                'subtotal' => '50.000,00',
+            ],
+        ],
+        'discount_on' => 10,
+        'subtotal' => 0,
+    ];
+
+    $setState = function (string $key, mixed $value) use (&$set): void {
+        $set[$key] = $value;
+    };
+    $calculateOrderTotals = new ReflectionMethod(OrderForm::class, 'calculateOrderTotals');
+    $getState = function (string $key) use (&$get, &$set) {
+        return match ($key) {
+            'orderItems' => $get['orderItems'],
+            'subtotal' => $set['subtotal'] ?? $get[$key] ?? null,
+            default => $get[$key] ?? null,
+        };
+    };
+    $calculateOrderTotals->invoke(null, $setState, $getState, $get['orderItems']);
+
+    $get['orderItems']['first']['quantity'] = 3;
+    $get['orderItems']['first']['subtotal'] = 337500.0;
+    $getState = function (string $key) use (&$get, &$set) {
+        return match ($key) {
+            'orderItems' => $get['orderItems'],
+            'subtotal' => $set['subtotal'] ?? $get[$key] ?? null,
+            default => $get[$key] ?? $set[$key] ?? null,
+        };
+    };
+    $calculateOrderTotals->invoke(null, $setState, $getState, $get['orderItems']);
+
+    expect($set['subtotal'])->toBe(387500.0)
+        ->and($set['total_amount'])->toBe(348750.0)
+        ->and($set['net_sales_total'])->toBe(348750.0);
+});

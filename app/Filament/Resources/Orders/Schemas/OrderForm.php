@@ -7,7 +7,6 @@ use App\Imports\OrderItemsImport;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Opportunity;
-use App\Models\Order;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
@@ -25,6 +24,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrderForm
@@ -283,6 +283,7 @@ class OrderForm
                                         'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
                                     ];
                                 })->all();
+
                                 return Excel::download(
                                     new OrderItemsExport($items),
                                     'order-products.xlsx',
@@ -300,8 +301,8 @@ class OrderForm
                                     ->required(),
                             ])
                             ->action(function (array $data, $get, $set): void {
-                                $path = \Illuminate\Support\Facades\Storage::disk('local')->path($data['file']);
-                                $import = new OrderItemsImport();
+                                $path = Storage::disk('local')->path($data['file']);
+                                $import = new OrderItemsImport;
                                 Excel::import($import, $path);
 
                                 $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
@@ -355,7 +356,7 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get);
+                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
                                             })
                                             ->columnSpan(1),
                                         Select::make('price_type')
@@ -366,7 +367,10 @@ class OrderForm
                                             ])
                                             ->default('unit_price')
                                             ->live()
-                                            ->afterStateUpdated(fn ($set, $get) => self::updateLineTotal($set, $get, true))
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get, true);
+                                                self::calculateOrderTotals($set, $get('..'), $get('../') ?? []);
+                                            })
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
@@ -382,7 +386,7 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get);
+                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('discount_percent')
@@ -402,7 +406,7 @@ class OrderForm
                                             })
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get);
+                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('subtotal')
@@ -420,7 +424,7 @@ class OrderForm
                             ])
                             ->columns(1)
                             ->live()
-                            ->afterStateUpdated(fn ($set, $get) => self::calculateOrderTotals($set, $get)),
+                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, $get, $state ?? [])),
                     ]),
 
                 Section::make('Total')
@@ -532,9 +536,8 @@ class OrderForm
         $set('subtotal', round($grossTotal - $discountAmount, 2));
     }
 
-    protected static function calculateOrderTotals($set, $get): void
+    protected static function calculateOrderTotals($set, $get, array $orderItems): void
     {
-        $orderItems = $get('orderItems') ?? [];
         $lineTotal = 0.0;
 
         foreach ($orderItems as $item) {
