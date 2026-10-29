@@ -375,14 +375,10 @@ class OrderForm
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
                                             ->numeric()
-                                            ->mask(RawJs::make(<<<'JS'
-                                                $money($input, '.', ',')
-                                            JS))
                                             ->prefix('IDR')
                                             ->required()
                                             ->minValue(0)
-                                            ->dehydrateStateUsing(fn ($state): float => self::parseMoney($state))
-                                            ->formatStateUsing(fn ($state): string => self::formatMoney($state))
+                                            ->dehydrateStateUsing(fn ($state): float => (float) $state)
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
