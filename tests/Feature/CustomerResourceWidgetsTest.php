@@ -8,7 +8,9 @@ use App\Filament\Widgets\CustomerRecentActivitiesWidget;
 use App\Models\Activity;
 use App\Models\ActivityComment;
 use App\Models\Customer;
+use App\Models\Lead;
 use App\Models\User;
+use App\Services\ActivityScopeService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -33,7 +35,24 @@ it('customer activity stats widget displays correct data', function () {
     ]);
 
     livewire(CustomerActivityStatsWidget::class, ['record' => $this->customer])
-        ->assertSee('Total Customer Interactions');
+        ->assertSee('Total Customer Interactions')
+        ->assertSee('Estimated Revenue');
+});
+
+it('customer activity stats widget sums estimated revenue of the customer leads', function () {
+    Lead::factory()->create([
+        'customer_id' => $this->customer->id,
+        'estimated_revenue' => 1000,
+    ]);
+    Lead::factory()->create([
+        'customer_id' => $this->customer->id,
+        'estimated_revenue' => 2500.5,
+    ]);
+    Lead::factory()->create(['estimated_revenue' => 9999]);
+
+    $stats = app(ActivityScopeService::class)->getCustomerActivityStats($this->user, $this->customer->id);
+
+    expect($stats['estimated_revenue'])->toBe(3500.5);
 });
 
 it('customer recent activities widget displays only this customer data', function () {

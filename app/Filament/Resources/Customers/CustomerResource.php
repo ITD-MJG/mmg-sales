@@ -48,6 +48,7 @@ class CustomerResource extends Resource
     {
         return [
             RelationManagers\ContactsRelationManager::class,
+            RelationManagers\LeadsRelationManager::class,
             RelationManagers\ActivitiesRelationManager::class,
             RelationManagers\AuditLogRelationManager::class,
         ];

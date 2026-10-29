@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\Role;
 use App\Models\Activity;
+use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -26,7 +28,7 @@ class ActivityScopeService
             return $query;
         }
 
-        $subordinateIds = $user->hasAnyRole(\App\Enums\Role::names(\App\Enums\Role::territoryScoped())) && $user->territory_id
+        $subordinateIds = $user->hasAnyRole(Role::names(Role::territoryScoped())) && $user->territory_id
             ? User::active()->where('territory_id', $user->territory_id)->pluck('id')
             : $this->getAllSubordinateIds($user);
         $collaboratorOpportunityIds = $this->getCollaboratorOpportunityIds($user);
@@ -170,9 +172,14 @@ class ActivityScopeService
         $total = (clone $query)->count();
         $lastActivity = (clone $query)->latest('performed_at')->first();
 
+        $estimatedRevenue = Lead::query()
+            ->where('customer_id', $customerId)
+            ->sum('estimated_revenue');
+
         return [
             'total' => $total,
             'last_activity_date' => $lastActivity?->performed_at,
+            'estimated_revenue' => (float) $estimatedRevenue,
         ];
     }
 }
