@@ -182,6 +182,10 @@ class User extends Authenticatable implements FilamentUser
         return $this->managementDepartment ??= $this->department?->name === Department::MANAGEMENT;
     }
 
+    public function isMarketingDepartment(): bool
+    {
+        return $this->department?->name === 'Marketing';
+    }
     /**
      * Whether the user is a Director within the Management department.
      *

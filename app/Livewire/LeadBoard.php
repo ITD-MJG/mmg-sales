@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Filament\Traits\HasVisibilityScope;
+use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Lead;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Contracts\HasForms;
@@ -27,8 +27,6 @@ use Relaticle\Flowforge\Contracts\HasBoard;
 class LeadBoard extends Component implements HasActions, HasBoard, HasForms
 {
     use BaseBoard;
-    use HasVisibilityScope;
-
     protected string $view = 'livewire.lead-board';
 
     public function board(Board $board): Board
@@ -88,9 +86,7 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
     {
         $query = Lead::query()->with(['latestActivity', 'collaborators:id,name']);
 
-        if (! auth()->user()?->hasAnyRole(['Marketing Staff', 'Marketing Manager'])) {
-            self::applyVisibilityScope($query, 'created_by');
-        }
+        LeadsTable::listVisibilityQuery($query, auth()->user());
 
         return $query;
     }

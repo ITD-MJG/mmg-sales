@@ -22,11 +22,11 @@ beforeEach(function () {
     \App\Models\Role::findOrCreate('Sales Representative');
 });
 
-function visibleLeadIds(User $user, string $column = 'created_by'): array
+function visibleLeadIds(User $user): array
 {
     Auth::login($user);
     $query = Lead::query();
-    LeadsTable::applyVisibilityScope($query, $column);
+    LeadsTable::listVisibilityQuery($query, $user);
     $ids = $query->pluck('id')->all();
     Auth::logout();
 
@@ -109,13 +109,24 @@ it('keeps staff visibility limited to their own leads', function () {
     expect(visibleLeadIds($staff))->toContain($ownLead->id)
         ->and(visibleLeadIds($staff))->not->toContain($peerLead->id);
 });
-
-it('allows Marketing Staff and Marketing Manager to see all leads', function (string $roleName) {
-    $marketingUser = User::factory()->create();
-    $marketingUser->assignRole($roleName);
+it('shows all leads to users in the Marketing department regardless of role', function () {
+    $marketingDepartment = \App\Models\Department::factory()->create(['name' => 'Marketing']);
+    $marketingUser = User::factory()->create(['department_id' => $marketingDepartment->id]);
+    $marketingUser->assignRole('Marketing Staff');
     $otherUser = User::factory()->create();
     $otherLead = Lead::factory()->create(['created_by' => $otherUser->id]);
 
     expect(visibleLeadIds($marketingUser))->toContain($otherLead->id)
         ->and(app(LeadPolicy::class)->view($marketingUser, $otherLead))->toBeTrue();
-})->with(['Marketing Staff', 'Marketing Manager']);
+});
+
+it('keeps leads scoped for users outside the Marketing department', function () {
+    $salesDepartment = \App\Models\Department::factory()->create(['name' => 'Sales']);
+    $user = User::factory()->create(['department_id' => $salesDepartment->id]);
+    $user->assignRole('Sales Representative');
+    $otherUser = User::factory()->create();
+    $otherLead = Lead::factory()->create(['created_by' => $otherUser->id]);
+
+    expect(visibleLeadIds($user))->not->toContain($otherLead->id)
+        ->and(app(LeadPolicy::class)->view($user, $otherLead))->toBeFalse();
+});

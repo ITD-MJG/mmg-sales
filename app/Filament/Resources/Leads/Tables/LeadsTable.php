@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Leads\Tables;
 use App\Filament\Actions\ConvertLeadToOpportunityAction;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -21,13 +22,20 @@ class LeadsTable
 {
     use HasVisibilityScope;
 
+    public static function listVisibilityQuery(Builder $query, ?User $user): Builder
+    {
+        if (! $user?->isMarketingDepartment()) {
+            self::applyVisibilityScope($query, 'created_by');
+        }
+
+        return $query;
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                if (! auth()->user()?->hasAnyRole(['Marketing Staff', 'Marketing Manager'])) {
-                    self::applyVisibilityScope($query, 'created_by');
-                }
+                self::listVisibilityQuery($query, auth()->user());
                 $query->with(['collaborators:id,name']);
 
                 return $query->orderByDesc('leads.created_at');

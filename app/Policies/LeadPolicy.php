@@ -16,16 +16,19 @@ class LeadPolicy extends BasePolicy
             return false;
         }
 
-        if ($user->hasAnyRole(['Marketing Staff', 'Marketing Manager'])
-            || $lead->created_by === $user->id
-            || in_array($lead->created_by, $user->subordinateUserIds(), true)) {
+        if ($user->isMarketingDepartment()) {
+            return true;
+        }
+
+        if (
+            $lead->created_by === $user->id
+            || in_array($lead->created_by, $user->subordinateUserIds(), true)
+        ) {
             return true;
         }
 
         return $user->managesTerritoryOf($lead->creator);
     }
-
-
 
     /**
      * Determine whether the user can update the model.
