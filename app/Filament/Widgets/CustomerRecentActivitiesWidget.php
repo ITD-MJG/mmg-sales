@@ -39,7 +39,8 @@ class CustomerRecentActivitiesWidget extends TableWidget
                     ->sortable(),
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Subject')
-                    ->limit(30),
+                    ->limit(30)
+                    ->searchable(),
             ])
             ->recordActions([
                 Action::make('view')

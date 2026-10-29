@@ -38,11 +38,10 @@ it('renders the customer widgets in the two column layout', function () {
         ->assertSeeLivewire(CustomerLeadsWidget::class);
 });
 
-it('puts recent activities and comment history side by side with leads below comment history', function () {
+it('puts recent activities and comment history side by side with full-width leads below', function () {
     expect((new CustomerRecentActivitiesWidget)->getColumnSpan())->toBe(1)
         ->and((new CustomerCommentHistoryWidget)->getColumnSpan())->toBe(1)
-        ->and((new CustomerLeadsWidget)->getColumnSpan())->toBe(1)
-        ->and((new CustomerLeadsWidget)->getColumnStart())->toBe(2);
+        ->and((new CustomerLeadsWidget)->getColumnSpan())->toBe('full');
 
     $widgets = (fn (): array => $this->getHeaderWidgets())->call(new ViewCustomer);
 
