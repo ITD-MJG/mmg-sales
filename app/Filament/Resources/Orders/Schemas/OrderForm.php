@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Orders\Schemas;
 use App\Exports\OrderItemsExport;
 use App\Imports\OrderItemsImport;
 use App\Models\Customer;
+use App\Models\Department;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\Principal;
@@ -191,11 +192,21 @@ class OrderForm
                     ->schema([
                         Select::make('sales_id')
                             ->label('Sales / Marketing')
-                            ->options(fn () => User::query()
-                                ->when(! in_array($user?->department?->code, ['SAL', 'MKT'], true), fn (Builder $query) => $query->whereHas('department', fn (Builder $departmentQuery) => $departmentQuery->where('code', 'SAL')))
-                                ->whereHas('department', fn (Builder $query) => $query->whereIn('code', ['SAL', 'MKT']))
-                                ->pluck('name', 'id'))
-                            ->default(fn () => in_array($user?->department?->code, ['SAL', 'MKT'], true) ? $user->id : null)
+                            ->options(function () use ($user): array {
+                                $isSalesOrMarketing = self::belongsToSalesOrMarketing($user);
+
+                                return User::query()
+                                    ->whereHas('department', fn (Builder $query) => $query->whereIn(
+                                        'name',
+                                        $isSalesOrMarketing
+                                            ? [Department::SALES, Department::MARKETING]
+                                            : [Department::SALES],
+                                    ))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
+                            ->default(fn () => self::belongsToSalesOrMarketing($user) ? $user->id : null)
                             ->preload()
                             ->searchable(),
                     ]),
@@ -440,6 +451,22 @@ class OrderForm
                     ->hidden()
                     ->preload(),
             ]);
+    }
+
+    /**
+     * Whether the acting user's department may assign across Sales + Marketing.
+     *
+     * Everyone else is limited to picking a Sales person. Compared on the
+     * department name: `code` is a generated identifier (MMG-DEP-000003), so
+     * checking it against 'SAL'/'MKT' silently matched nothing.
+     */
+    protected static function belongsToSalesOrMarketing(?User $user): bool
+    {
+        return in_array(
+            $user?->department?->name,
+            [Department::SALES, Department::MARKETING],
+            true,
+        );
     }
 
     protected static function updateLineTotal($set, $get, bool $refreshPrice = false): void
