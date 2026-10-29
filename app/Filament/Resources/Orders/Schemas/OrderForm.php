@@ -356,7 +356,7 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
+                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         Select::make('price_type')
@@ -369,7 +369,7 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get, true);
-                                                self::calculateOrderTotals($set, $get('..'), $get('../') ?? []);
+                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('unit_price')
@@ -386,7 +386,7 @@ class OrderForm
                                             ->live()
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
+                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('discount_percent')
@@ -406,7 +406,7 @@ class OrderForm
                                             })
                                             ->afterStateUpdated(function ($set, $get): void {
                                                 self::updateLineTotal($set, $get);
-                                                self::calculateOrderTotals($set, $get('../'), $get('../../orderItems') ?? []);
+                                                self::calculateOrderTotals($set, (float) $get('../../discount_on'), $get('../') ?? []);
                                             })
                                             ->columnSpan(1),
                                         TextInput::make('subtotal')
@@ -424,7 +424,7 @@ class OrderForm
                             ])
                             ->columns(1)
                             ->live()
-                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, $get, $state ?? [])),
+                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, (float) $get('discount_on'), $state ?? [])),
                     ]),
 
                 Section::make('Total')
@@ -448,7 +448,7 @@ class OrderForm
                                     ->default(0)
                                     ->suffix('%')
                                     ->live()
-                                    ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, $get)),
+                                    ->afterStateUpdated(fn ($set, $get) => self::calculateNetSales($set, self::parseMoney($get('subtotal')), (float) $get('discount_on'))),
                                 TextInput::make('total_amount')
                                     ->label('Net Sales')
                                     ->step('1')
@@ -536,7 +536,7 @@ class OrderForm
         $set('subtotal', round($grossTotal - $discountAmount, 2));
     }
 
-    protected static function calculateOrderTotals($set, $get, array $orderItems): void
+    protected static function calculateOrderTotals($set, float $discountPercent, array $orderItems): void
     {
         $lineTotal = 0.0;
 
@@ -545,13 +545,11 @@ class OrderForm
         }
 
         $set('subtotal', round($lineTotal, 2));
-        self::calculateNetSales($set, $get);
+        self::calculateNetSales($set, round($lineTotal, 2), $discountPercent);
     }
 
-    protected static function calculateNetSales($set, $get): void
+    protected static function calculateNetSales($set, float $grossSales, float $discountPercent): void
     {
-        $grossSales = self::parseMoney($get('subtotal'));
-        $discountPercent = (float) $get('discount_on');
         $netSales = round($grossSales * (1 - ($discountPercent / 100)));
         $set('total_amount', $netSales);
         $set('net_sales_total', $netSales);

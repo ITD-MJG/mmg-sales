@@ -119,7 +119,7 @@ test('recalculates order totals from the complete repeater state when a line ite
             default => $get[$key] ?? null,
         };
     };
-    $calculateOrderTotals->invoke(null, $setState, $getState, $get['orderItems']);
+    $calculateOrderTotals->invoke(null, $setState, 10.0, $get['orderItems']);
 
     $get['orderItems']['first']['quantity'] = 3;
     $get['orderItems']['first']['subtotal'] = 337500.0;
@@ -130,7 +130,7 @@ test('recalculates order totals from the complete repeater state when a line ite
             default => $get[$key] ?? $set[$key] ?? null,
         };
     };
-    $calculateOrderTotals->invoke(null, $setState, $getState, $get['orderItems']);
+    $calculateOrderTotals->invoke(null, $setState, 10.0, $get['orderItems']);
 
     expect($set['subtotal'])->toBe(387500.0)
         ->and($set['total_amount'])->toBe(348750.0)
