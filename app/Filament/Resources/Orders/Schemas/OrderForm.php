@@ -323,6 +323,14 @@ class OrderForm
                             ->schema([
                                 Grid::make(7)
                                     ->schema([
+                                        TextInput::make('principal_name')
+                                            ->label('Principal')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
+                                                $component->state($product?->principal?->name);
+                                            }),
                                         Select::make('item_id')
                                             ->label('Product')
                                             ->options(fn () => Product::query()
@@ -336,14 +344,6 @@ class OrderForm
                                                 $set('principal_id', $product?->principal_id);
                                                 $set('principal_name', $product?->principal?->name);
                                                 self::updateLineTotal($set, $get, true);
-                                            }),
-                                        TextInput::make('principal_name')
-                                            ->label('Principal')
-                                            ->readOnly()
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(function (TextInput $component, $get): void {
-                                                $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
-                                                $component->state($product?->principal?->name);
                                             }),
                                         TextInput::make('quantity')
                                             ->label('Qty')
