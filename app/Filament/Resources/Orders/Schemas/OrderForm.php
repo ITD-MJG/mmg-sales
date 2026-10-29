@@ -491,7 +491,9 @@ class OrderForm
             $value = str_replace($thousandsSeparator, '', $value);
             $value = str_replace($decimalSeparator, '.', $value);
         } elseif ($comma !== false) {
-            $value = str_replace(',', '.', $value);
+            $value = preg_match('/,\d{3}$/', $value)
+                ? str_replace(',', '', $value)
+                : str_replace(',', '.', $value);
         } elseif ($dot !== false && preg_match('/\.\d{3}(?:\D|$)/', $value)) {
             $value = str_replace('.', '', $value);
         }
