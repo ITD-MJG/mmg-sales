@@ -81,16 +81,19 @@ class LeadInfolist
                                     ->money('IDR'),
                             ])
                             ->placeholder('No products yet'),
-                        TextEntry::make('estimated_revenue')
-                            ->label('Expected Revenue')
-                            ->money('IDR'),
-                        TextEntry::make('expected_closing_date')
-                            ->label('Estimated Closing Date')
-                            ->date('d M Y'),
-                        TextEntry::make('total_value')
-                            ->label('Total Value')
-                            ->money('IDR')
-                            ->state(fn ($record): float => $record->leadProductItems->sum(fn ($item): float => (float) $item->quantity * (float) $item->unit_price)),
+                        Grid::make(3)
+                            ->schema([
+                                TextEntry::make('estimated_revenue')
+                                    ->label('Expected Revenue')
+                                    ->money('IDR'),
+                                TextEntry::make('expected_closing_date')
+                                    ->label('Estimated Closing Date')
+                                    ->date('d M Y'),
+                                TextEntry::make('total_value')
+                                    ->label('Total Value')
+                                    ->money('IDR')
+                                    ->state(fn ($record): float => $record->leadProductItems->sum(fn ($item): float => (float) $item->quantity * (float) $item->unit_price)),
+                            ]),
                     ]),
 
                 Grid::make(2)
