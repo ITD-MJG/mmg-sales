@@ -2,9 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\Customers\Pages\EditCustomer;
-use App\Filament\Resources\Customers\Pages\ViewCustomer;
-use App\Filament\Resources\Customers\RelationManagers\LeadsRelationManager;
+use App\Filament\Widgets\CustomerLeadsWidget;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\User;
@@ -25,12 +23,9 @@ beforeEach(function () {
     $this->customer = Customer::factory()->create();
 });
 
-function customerLeadsRelationManager(Customer $customer, string $pageClass = ViewCustomer::class)
+function customerLeadsWidget(Customer $customer)
 {
-    return livewire(LeadsRelationManager::class, [
-        'ownerRecord' => $customer,
-        'pageClass' => $pageClass,
-    ]);
+    return livewire(CustomerLeadsWidget::class, ['record' => $customer]);
 }
 
 it('lists only the leads that belong to the customer', function () {
@@ -40,9 +35,29 @@ it('lists only the leads that belong to the customer', function () {
     ]);
     $otherLead = Lead::factory()->create(['title' => 'Other customer lead']);
 
-    customerLeadsRelationManager($this->customer)
+    customerLeadsWidget($this->customer)
         ->assertCanSeeTableRecords([$customerLead])
         ->assertCanNotSeeTableRecords([$otherLead]);
+});
+
+it('shows only the lead code, title, status, expected revenue, and closing date', function () {
+    customerLeadsWidget($this->customer)
+        ->assertTableColumnExists('lead_code')
+        ->assertTableColumnExists('title')
+        ->assertTableColumnExists('status')
+        ->assertTableColumnExists('estimated_revenue')
+        ->assertTableColumnExists('expected_closing_date')
+        ->assertTableColumnDoesNotExist('priority')
+        ->assertTableColumnDoesNotExist('creator.name')
+        ->assertTableColumnDoesNotExist('created_at');
+});
+
+it('labels the lead code column as a hash', function () {
+    $lead = Lead::factory()->create(['customer_id' => $this->customer->id]);
+
+    customerLeadsWidget($this->customer)
+        ->assertTableColumnStateSet('lead_code', $lead->lead_code, $lead)
+        ->assertSee('#');
 });
 
 it('filters the customer leads by status', function () {
@@ -55,7 +70,7 @@ it('filters the customer leads by status', function () {
         'status' => 'new',
     ]);
 
-    customerLeadsRelationManager($this->customer)
+    customerLeadsWidget($this->customer)
         ->filterTable('status', 'converted')
         ->assertCanSeeTableRecords([$converted])
         ->assertCanNotSeeTableRecords([$new]);
@@ -64,9 +79,7 @@ it('filters the customer leads by status', function () {
 it('soft deletes a lead of the customer', function () {
     $lead = Lead::factory()->create(['customer_id' => $this->customer->id]);
 
-    // Relation managers are read-only on View pages, so the delete action is
-    // only reachable from the Edit page.
-    customerLeadsRelationManager($this->customer, EditCustomer::class)
+    customerLeadsWidget($this->customer)
         ->callTableAction('delete', $lead)
         ->assertHasNoTableActionErrors();
 
