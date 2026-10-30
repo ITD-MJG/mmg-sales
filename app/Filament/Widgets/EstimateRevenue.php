@@ -2,12 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use App\Models\Target;
 use Filament\Widgets\ChartWidget;
 
 class EstimateRevenue extends ChartWidget
 {
+    use HasVisibilityScope;
+
     protected ?string $heading = 'Expected Revenue by Closing Month';
 
     protected int|string|array $columnSpan = 1;
@@ -25,13 +28,19 @@ class EstimateRevenue extends ChartWidget
 
         $months = collect(range(0, 11))
             ->map(fn (int $offset) => $start->copy()->addMonths($offset));
-        $revenueByMonth = Lead::query()
+        $leadQuery = Lead::query();
+        self::applyVisibilityScope($leadQuery, 'created_by');
+
+        $revenueByMonth = $leadQuery
             ->whereBetween('expected_closing_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw("DATE_FORMAT(expected_closing_date, '%Y-%m') as month, SUM(estimated_revenue) as revenue")
             ->groupBy('month')
             ->pluck('revenue', 'month');
 
-        $targets = Target::query()
+        $targetQuery = Target::query();
+        self::applyVisibilityScope($targetQuery, 'user_id');
+
+        $targets = $targetQuery
             ->whereIn('year', $months->pluck('year')->unique())
             ->get(['year', 'month', 'annual_target', 'monthly_target'])
             ->groupBy('year');

@@ -18,9 +18,9 @@ class MonthlyOrderChart extends ChartWidget
 
     protected static ?int $sort = 10;
 
-    // Aggregated revenue is general info: it names no individual contributor, so
-    // it is no longer gated. Kept commented rather than deleted so the permission
-    // gate can be restored without re-deriving it.
+    // The widget is scoped per viewer in getData(), so the permission gate is no
+    // longer what keeps this data private. Kept commented rather than deleted so
+    // it can be restored without re-deriving it.
     // public static function canView(): bool
     // {
     //     $user = auth()->user();
@@ -36,9 +36,11 @@ class MonthlyOrderChart extends ChartWidget
     {
         $baseQuery = Order::query();
 
-        // Unscoped on purpose: this chart aggregates order value by month and
-        // names no contributor, so every viewer sees the same totals.
-        // self::applyVisibilityScope($baseQuery, 'created_by');
+        // Scoped to the viewer's own and subordinate orders. Orders written
+        // before sales_id existed are unattributed and stay visible to everyone,
+        // so the chart is not blanked for the whole company.
+        self::applyLegacySharedScope($baseQuery, 'sales_id');
+
         // Last 12 months
         $months = collect();
         for ($i = 11; $i >= 0; $i--) {

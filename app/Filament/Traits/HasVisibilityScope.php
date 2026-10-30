@@ -19,35 +19,65 @@ trait HasVisibilityScope
      */
     public static function applyVisibilityScope(Builder $query, string $userColumn = 'user_id'): Builder
     {
-        $user = auth()->user();
+        $ids = self::visibleUserIds();
 
-        if (! $user) {
+        if ($ids === null) {
             return $query;
         }
 
-        // Super Admin and Management Directors see everything.
-        if ($user->hasGlobalVisibility()) {
+        return $query->whereIn($userColumn, $ids);
+    }
+
+    /**
+     * Scope to the user's visible records, but keep rows whose owner is NULL
+     * visible to everyone.
+     *
+     * Orders predate per-user attribution: `sales_id` arrived on 2026-10-28 and
+     * every pre-existing row is NULL, so a strict scope would blank the order
+     * widgets for the whole company. Unattributed rows stay shared until they
+     * are assigned a salesperson; once `sales_id` is filled the scope narrows
+     * on its own.
+     */
+    public static function applyLegacySharedScope(Builder $query, string $userColumn): Builder
+    {
+        $ids = self::visibleUserIds();
+
+        if ($ids === null) {
             return $query;
         }
 
-        // Own-record roles can only see their own records
+        return $query->where(function (Builder $q) use ($userColumn, $ids): void {
+            $q->whereIn($userColumn, $ids)->orWhereNull($userColumn);
+        });
+    }
+
+    /**
+     * The user ids whose records the current user may see, or null when they
+     * see every record.
+     *
+     * - No authenticated user: null, callers leave the query alone
+     * - Super Admin / Management Director: null, everything
+     * - Own-record roles: the user alone, deliberately ignoring subordinates
+     * - Everyone else: the user plus their reporting-line or territory users
+     *
+     * @return list<int>|null
+     */
+    public static function visibleUserIds(?User $user = null): ?array
+    {
+        $user ??= auth()->user();
+
+        if (! $user || $user->hasGlobalVisibility()) {
+            return null;
+        }
+
         if ($user->hasAnyRole(Role::names(Role::ownRecordsOnly()))) {
-            return $query->where($userColumn, $user->id);
+            return [$user->id];
         }
 
-        // Other users: own records plus the reporting-line users
-        // Territory-scoped roles add their assigned-territory users.
-        $subordinateIds = self::getSubordinateUserIds($user);
-
-        if (! empty($subordinateIds)) {
-            return $query->where(function ($q) use ($user, $userColumn, $subordinateIds) {
-                $q->where($userColumn, $user->id) // Own records
-                    ->orWhereIn($userColumn, $subordinateIds); // Subordinate records
-            });
-        }
-
-        // Default: own records only
-        return $query->where($userColumn, $user->id);
+        return array_values(array_unique([
+            $user->id,
+            ...self::getSubordinateUserIds($user),
+        ]));
     }
 
     /**

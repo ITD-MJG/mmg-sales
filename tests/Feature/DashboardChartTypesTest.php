@@ -239,13 +239,11 @@ it('renders every redesigned widget without error', function () {
 });
 
 /**
- * The three revenue charts are general info: they aggregate products, principals
- * and monthly totals without naming a contributor, so a viewer with no orders of
- * their own must still see the org-wide totals. Regression cover for empty
- * dashboards on hierarchy-scoped users (e.g. a territory RSM whose team created
- * no orders, and finance-imported orders carrying created_by = null).
+ * The revenue charts are scoped to the viewer's own and subordinate orders. An
+ * order with no salesperson (sales_id null) is unattributed legacy data and
+ * stays visible to everyone, so a finance-imported order is never lost.
  */
-it('shows org-wide revenue aggregates to a user who owns no orders', function () {
+it('scopes revenue aggregates to the viewer and keeps unattributed orders shared', function () {
     $principal = Principal::factory()->create();
     $product = Product::factory()->create([
         'name' => 'Centrifuge Tube 50mL',
@@ -258,6 +256,7 @@ it('shows org-wide revenue aggregates to a user who owns no orders', function ()
     foreach ([1, 2] as $offset) {
         $order = Order::factory()->create([
             'created_by' => $owner->id,
+            'sales_id' => $owner->id,
             'order_date' => now()->subMonths($offset),
             'total_amount' => 5_000_000,
         ]);
@@ -274,6 +273,7 @@ it('shows org-wide revenue aggregates to a user who owns no orders', function ()
     // An order with no creator at all — the finance-import case.
     $orphan = Order::factory()->create([
         'created_by' => null,
+        'sales_id' => null,
         'order_date' => now()->subMonth(),
         'total_amount' => 5_000_000,
     ]);
@@ -301,12 +301,13 @@ it('shows org-wide revenue aggregates to a user who owns no orders', function ()
         return $this->getData();
     })->call(app(TopSellingProductsChart::class));
 
-    // 15,000,000 rupiah == 15 million rupiah on the axis.
-    expect(array_sum($monthly['datasets'][0]['data']))->toBe(15.0);
+    // Only the unattributed order survives the scope: 5,000,000 rupiah, shown
+    // as 5 million on the axis.
+    expect(array_sum($monthly['datasets'][0]['data']))->toBe(5.0);
 
     expect($byPrincipal['labels'])->toContain($principal->name)
-        ->and((float) $byPrincipal['datasets'][0]['data'][0])->toBe(7_500_000.0);
+        ->and((float) $byPrincipal['datasets'][0]['data'][0])->toBe(2_500_000.0);
 
     expect($topSelling['labels'])->toContain('Centrifuge Tube 5...')
-        ->and($topSelling['datasets'][0]['data'][0])->toBe(12);
+        ->and($topSelling['datasets'][0]['data'][0])->toBe(4);
 });

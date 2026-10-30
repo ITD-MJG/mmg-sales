@@ -19,9 +19,9 @@ class TopSellingProductsChart extends ChartWidget
 
     protected static ?int $sort = 30;
 
-    // Aggregated sales are general info: they name no individual contributor, so
-    // they are no longer gated. Kept commented rather than deleted so the
-    // permission gate can be restored without re-deriving it.
+    // The widget is scoped per viewer in getData(), so the permission gate is no
+    // longer what keeps this data private. Kept commented rather than deleted so
+    // it can be restored without re-deriving it.
     // public static function canView(): bool
     // {
     //     $user = auth()->user();
@@ -37,11 +37,12 @@ class TopSellingProductsChart extends ChartWidget
     {
         $baseQuery = OrderItem::query();
 
-        // Unscoped on purpose: the ranking names products, not contributors, so
-        // every viewer sees the same totals. The orders join is still needed to
-        // filter on order_date and to reach the quantity column.
-        // self::applyVisibilityScope($baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id'), 'orders.created_by');
+        // The orders join comes first because the scope filters on orders.sales_id.
+        // Orders written before sales_id existed are unattributed and stay visible
+        // to everyone, so the ranking is not blanked for the whole company.
         $baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id');
+        self::applyLegacySharedScope($baseQuery, 'orders.sales_id');
+
         $data = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())
             ->join('products', 'order_items.item_id', '=', 'products.id')
