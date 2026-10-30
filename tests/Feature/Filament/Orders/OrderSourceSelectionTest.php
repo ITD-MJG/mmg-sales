@@ -12,9 +12,8 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Tests\TestCase;
 
-uses(TestCase::class, RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('manual source permits manual selection from Sales and Marketing departments', function () {
     $sales = Department::factory()->create(['name' => 'Sales', 'code' => 'SAL']);
