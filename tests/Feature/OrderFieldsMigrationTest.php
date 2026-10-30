@@ -6,6 +6,15 @@ use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
+test('orders store an optional PO number before subtotal', function () {
+    expect(Schema::hasColumn('orders', 'order_source'))->toBeTrue()
+        ->and(Schema::hasColumn('orders', 'po_number'))->toBeTrue();
+
+    $order = Order::factory()->create(['po_number' => 'PO-123']);
+
+    expect($order->fresh()->po_number)->toBe('PO-123');
+});
+
 test('orders allow a null department and one optional sales user', function () {
     expect(Schema::hasColumn('orders', 'sales_id'))->toBeTrue()
         ->and(Schema::hasColumn('orders', 'sales'))->toBeFalse()
