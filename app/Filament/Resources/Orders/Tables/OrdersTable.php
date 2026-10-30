@@ -46,6 +46,12 @@ class OrdersTable
                     ->money('IDR')
                     ->sortable(),
 
+                TextColumn::make('sales.name')
+                    ->label('Sales')
+                    ->searchable()
+                    ->sortable()
+                    ->default('-'),
+
                 TextColumn::make('latestDeliveryStatus.carrier')
                     ->label('Delivery Status')
                     ->badge()
