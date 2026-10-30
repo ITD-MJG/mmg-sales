@@ -22,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -39,7 +40,7 @@ class OrderForm
                 Section::make('Order Details')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(3)
+                        Grid::make(3)->columns(fn (Get $get): int => $get('order_source') === 'manual' ? 2 : 3)
                             ->schema([
                                 Select::make('order_source')
                                     ->label('Order Source')
