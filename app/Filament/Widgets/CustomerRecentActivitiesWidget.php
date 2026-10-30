@@ -42,6 +42,8 @@ class CustomerRecentActivitiesWidget extends TableWidget
                     ->limit(30)
                     ->searchable(),
             ])
+            ->emptyStateHeading('No recent activities')
+            ->emptyStateDescription('Activities for this customer will appear here.')
             ->recordActions([
                 Action::make('view')
                     ->label('View')
