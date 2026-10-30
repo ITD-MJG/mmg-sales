@@ -10,9 +10,10 @@ test('orders store an optional PO number before subtotal', function () {
     expect(Schema::hasColumn('orders', 'order_source'))->toBeTrue()
         ->and(Schema::hasColumn('orders', 'po_number'))->toBeTrue();
 
-    $order = Order::factory()->create(['po_number' => 'PO-123']);
+    $order = Order::factory()->create(['order_source' => 'manual', 'po_number' => 'PO-123']);
 
-    expect($order->fresh()->po_number)->toBe('PO-123');
+    expect($order->fresh()->order_source)->toBe('manual')
+        ->and($order->fresh()->po_number)->toBe('PO-123');
 });
 
 test('orders allow a null department and one optional sales user', function () {

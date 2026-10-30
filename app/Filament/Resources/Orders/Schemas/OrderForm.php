@@ -63,8 +63,7 @@ class OrderForm
                                         $set('total_amount', 0);
                                         $set('net_sales_total', 0);
                                     })
-                                    ->default('manual')
-                                    ->dehydrated(false),
+                                    ->default('manual'),
                                 Select::make('source_record_id')
                                     ->label('Lead / Opportunity')
                                     ->options(fn ($get) => match ($get('order_source')) {
