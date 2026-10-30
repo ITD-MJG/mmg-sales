@@ -26,7 +26,6 @@ class OrderFactory extends Factory
         return [
             'tahun' => now()->year,
             'bulan' => now()->month,
-            'department_id' => null,
             'sales_id' => User::factory(),
             'end_customer_id' => Customer::factory(),
             'principal_id' => Principal::factory(),

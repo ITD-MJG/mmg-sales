@@ -22,7 +22,6 @@ class Order extends Model
     protected $fillable = [
         'tahun',
         'bulan',
-        'department_id',
         'sales_id',
         'end_customer_id',
         'principal_id',
@@ -83,11 +82,6 @@ class Order extends Model
                 $model->created_by = auth()->id();
             }
         });
-    }
-
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
     }
 
     public function sales(): BelongsTo

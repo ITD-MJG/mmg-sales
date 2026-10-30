@@ -13,7 +13,6 @@ use App\Filament\Widgets\Reports\TopSalesRepresentativesWidget;
 use App\Filament\Widgets\Reports\TopTerritoriesWidget;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Department;
 use App\Models\Distributor;
 use App\Models\Principal;
 use App\Models\Segment;
@@ -98,11 +97,6 @@ class SalesReportPage extends Page
                                 Select::make('territory_id')
                                     ->label('Territory')
                                     ->options(Territory::pluck('name', 'id'))
-                                    ->searchable()
-                                    ->preload(),
-                                Select::make('department_id')
-                                    ->label('Department')
-                                    ->options(Department::pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('principal_id')

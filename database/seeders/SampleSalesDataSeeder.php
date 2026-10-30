@@ -106,7 +106,6 @@ class SampleSalesDataSeeder extends Seeder
             Order::create([
                 'tahun' => 2025,
                 'bulan' => rand(1, 3),
-                'department_id' => null,
                 'sales_id' => $user?->id ?? User::factory()->create()->id,
                 'end_customer_id' => $customerIds[array_rand($customerIds)],
                 'principal_id' => $selectedProduct->principal_id,

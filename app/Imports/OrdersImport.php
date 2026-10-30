@@ -57,7 +57,6 @@ class OrdersImport implements ToCollection
                 Order::create([
                     'tahun' => (int) $row[1],
                     'bulan' => (int) $row[2],
-                    'department_id' => null,
                     'sales_id' => User::whereHas('position', fn ($query) => $query->where('name', $row[8]))->value('id'),
                     'end_customer_id' => $endCustomer->id,
                     'principal_id' => $principal->id,

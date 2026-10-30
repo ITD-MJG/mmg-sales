@@ -154,7 +154,6 @@ class TargetReportService
                 ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
                 ->when($filters->userId, fn (Builder $q) => $q->where('created_by', $filters->userId))
                 ->when(! empty($filters->userIds), fn (Builder $q) => $q->whereIn('created_by', $filters->userIds))
-                ->when($filters->departmentId, fn (Builder $q) => $q->where('department_id', $filters->departmentId))
                 ->when($filters->principalId, fn (Builder $q) => $q->where('principal_id', $filters->principalId))
                 ->when($filters->distributorId, fn (Builder $q) => $q->where('distributor_id', $filters->distributorId))
                 ->when($filters->customerId, fn (Builder $q) => $q->where('end_customer_id', $filters->customerId))

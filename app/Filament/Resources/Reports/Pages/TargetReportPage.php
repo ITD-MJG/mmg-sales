@@ -7,7 +7,6 @@ use App\Filament\Widgets\Reports\TargetReportStatsWidget;
 use App\Filament\Widgets\Reports\TargetVsLeadWidget;
 use App\Filament\Widgets\Reports\TargetVsOrderWidget;
 use App\Models\Customer;
-use App\Models\Department;
 use App\Models\Distributor;
 use App\Models\Principal;
 use App\Models\Territory;
@@ -86,11 +85,6 @@ class TargetReportPage extends Page
                                 Select::make('territory_id')
                                     ->label('Territory')
                                     ->options(Territory::pluck('name', 'id'))
-                                    ->searchable()
-                                    ->preload(),
-                                Select::make('department_id')
-                                    ->label('Department')
-                                    ->options(Department::pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('principal_id')

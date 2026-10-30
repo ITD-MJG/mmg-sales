@@ -16,19 +16,16 @@ test('orders store an optional PO number before subtotal', function () {
         ->and($order->fresh()->po_number)->toBe('PO-123');
 });
 
-test('orders allow a null department and one optional sales user', function () {
+test('orders have no department column and allow one optional sales user', function () {
     expect(Schema::hasColumn('orders', 'sales_id'))->toBeTrue()
         ->and(Schema::hasColumn('orders', 'sales'))->toBeFalse()
         ->and(Schema::hasColumn('orders', 'head_position_id'))->toBeFalse()
         ->and(Schema::hasColumn('orders', 'pm_jpm_pe_position_id'))->toBeFalse()
         ->and(Schema::hasColumn('orders', 'rsm_asm_position_id'))->toBeFalse()
-        ->and(Schema::hasColumn('orders', 'spv_position_id'))->toBeFalse();
+        ->and(Schema::hasColumn('orders', 'spv_position_id'))->toBeFalse()
+        ->and(Schema::hasColumn('orders', 'department_id'))->toBeFalse();
 
-    $order = Order::factory()->create([
-        'department_id' => null,
-        'sales_id' => null,
-    ]);
+    $order = Order::factory()->create(['sales_id' => null]);
 
-    expect($order->fresh()->department_id)->toBeNull()
-        ->and($order->sales_id)->toBeNull();
+    expect($order->sales_id)->toBeNull();
 });

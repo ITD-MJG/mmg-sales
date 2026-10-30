@@ -60,8 +60,6 @@ class OrderInfolist
                     ->schema([
                         Grid::make(6)
                             ->schema([
-                                TextEntry::make('department.name')
-                                    ->label('Department'),
                                 TextEntry::make('srPosition.name')
                                     ->label('Sales Rep'),
                                 TextEntry::make('spvPosition.name')

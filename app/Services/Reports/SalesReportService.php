@@ -81,10 +81,6 @@ class SalesReportService
                 ->where('users.territory_id', $filters->territoryId);
         }
 
-        if ($filters->departmentId) {
-            $query->where('department_id', $filters->departmentId);
-        }
-
         if ($filters->principalId) {
             $query->where('principal_id', $filters->principalId);
         }

@@ -127,7 +127,6 @@ class SampleDataSeeder extends Seeder
                 'principal_id' => $product->principal_id,
                 'sales_type_id' => $salesTypes[array_rand($salesTypes)],
                 'distributor_id' => $distributors->random()->id,
-                'department_id' => null,
                 'sales_id' => $srUser->id,
                 'created_by' => $srUser->id,
                 'order_date' => $lead->converted_at ?? Carbon::now(),

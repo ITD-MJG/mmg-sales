@@ -89,10 +89,6 @@ class OrdersTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('department.name')
-                    ->label('Department')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('principal.name')
                     ->label('Principal')
                     ->toggleable(isToggledHiddenByDefault: true),
