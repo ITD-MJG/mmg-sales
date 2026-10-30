@@ -50,7 +50,10 @@ class OrderForm
                                     ])
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(function ($set): void {
+                                    ->afterStateUpdated(function ($set, ?string $state): void {
+                                        if ($state === 'manual') {
+                                            return;
+                                        }
                                         $set('source_record_id', null);
                                         $set('end_customer_id', null);
                                         $set('notes', null);
