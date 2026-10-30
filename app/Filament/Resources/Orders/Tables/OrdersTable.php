@@ -137,6 +137,7 @@ class OrdersTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('order_date', 'desc')
             ->filters([])
             ->recordActions([
                 ViewAction::make(),
