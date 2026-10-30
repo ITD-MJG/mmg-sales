@@ -196,5 +196,59 @@ class RolesAndPermissionsSeeder extends Seeder
         // ── 8. Finance & Accounting Staff ───────────────────────────────
         Role::findOrCreate('Finance & Accounting Staff')
             ->givePermissionTo('update_payment_order');
+
+        // ── 9. Product ladder ───────────────────────────────────────────
+        // Product Manager, Jr Product Manager and Product Executive are created
+        // by the Roles admin screen, so they exist long before anyone seeds.
+        // Without this block a re-seed leaves them empty and every user on them
+        // renders an empty navigation. The bundle is the one the product ladder
+        // already runs on in production; keep it in step with migration
+        // 2026_10_30_000001_grant_product_role_permissions.
+        $productPermissions = array_merge([
+            // Lead
+            'view_any_lead', 'view_lead', 'create_lead', 'update_lead', 'delete_lead',
+            // Opportunity
+            'view_any_opportunity', 'view_opportunity', 'create_opportunity', 'update_opportunity', 'delete_opportunity',
+            // Activity
+            'view_any_activity', 'view_activity', 'create_activity', 'update_activity', 'delete_activity',
+            // Activity comment
+            'view_any_activity_comment', 'view_activity_comment', 'create_activity_comment', 'update_activity_comment', 'delete_activity_comment',
+            'restore_activity_comment', 'force_delete_activity_comment',
+            // Order
+            'view_any_order', 'view_order', 'create_order', 'update_order', 'delete_order',
+            // Target
+            'view_any_target', 'view_target', 'create_target', 'update_target', 'delete_target',
+            // Reference data
+            'view_any_item', 'view_item',
+            'view_any_position', 'view_position',
+            'view_any_sales_type', 'view_sales_type',
+            'view_any_segment', 'view_segment',
+            'view_any_sub_segment', 'view_sub_segment',
+            'view_any_territory', 'view_territory',
+        ], $reportPermissions, [
+            'view_monthly_revenue_widget',
+            'view_principal_revenue_widget',
+            'view_top_selling_products_widget',
+        ]);
+
+        $productRoles = [
+            'Product Executive',
+            'Jr Product Manager',
+            'Product Manager',
+            // Dotted spellings predate the canonical names in App\Enums\Role
+            // and are still held by live users.
+            'Jr. Product Manager',
+            'Sr. Product Manager',
+        ];
+
+        foreach ($productRoles as $roleName) {
+            // Only fill roles that exist and are empty; never clobber a bundle
+            // an operator has customised by hand.
+            $role = Role::where('name', $roleName)->first();
+
+            if ($role && ! $role->permissions()->exists()) {
+                $role->syncPermissions($productPermissions);
+            }
+        }
     }
 }
