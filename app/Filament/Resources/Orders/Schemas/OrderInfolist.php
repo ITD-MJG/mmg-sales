@@ -18,21 +18,11 @@ class OrderInfolist
                 Section::make('Order Details')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(5)
+                        Grid::make(7)
                             ->schema([
                                 TextEntry::make('order_number')
                                     ->label('Order #')
                                     ->weight('bold'),
-                                TextEntry::make('order_date')
-                                    ->label('Date')
-                                    ->date('d M Y')
-                                    ->formatStateUsing(fn ($state) => strtoupper(Carbon::parse($state)->translatedFormat('d M Y'))),
-                                TextEntry::make('payment_method')
-                                    ->label('Payment Method'),
-                            ]),
-
-                        Grid::make(4)
-                            ->schema([
                                 TextEntry::make('reg_inst')
                                     ->label('Type')
                                     ->badge()
@@ -42,17 +32,23 @@ class OrderInfolist
                                         'Consumable' => 'success',
                                         default => 'gray',
                                     }),
-                            ]),
-
-                        Grid::make(3)
-                            ->schema([
                                 TextEntry::make('sales_type_id')
                                     ->label('Sales Type'),
                                 TextEntry::make('jual_kso')
                                     ->label('Jual/KSO'),
                                 TextEntry::make('distributor.name')
                                     ->label('Distributor'),
+                                TextEntry::make('order_date')
+                                    ->label('Date')
+                                    ->date('d M Y')
+                                    ->formatStateUsing(fn ($state) => strtoupper(Carbon::parse($state)->translatedFormat('d M Y'))),
+                                TextEntry::make('po_number')
+                                    ->label('PO Number')
+                                    ->placeholder('-'),
+                                TextEntry::make('payment_method')
+                                    ->label('Payment Method'),
                             ]),
+
                     ]),
 
                 Section::make('Sales Details')
