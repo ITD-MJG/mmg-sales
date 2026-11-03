@@ -38,6 +38,12 @@ class ActivitiesTable
             return $query;
         }
 
+        // Global viewers are never narrowed, not even by the Marketing rule
+        // below: their tab set opens on an unfiltered "All Activities".
+        if ($user->hasGlobalVisibility()) {
+            return $query;
+        }
+
         if ($user->department?->name === 'Marketing') {
             return $query->whereHas('lead');
         }

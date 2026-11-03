@@ -113,3 +113,32 @@ test('outcome remains a filter that can be combined with ownership tabs', functi
         ->assertCanSeeTableRecords([$teamInterested])
         ->assertCanNotSeeTableRecords([$ownInterested, $ownNoAnswer]);
 });
+
+test('a global viewer lands on an unfiltered All Activities tab', function (): void {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('Super Admin');
+
+    $rep = User::factory()->create();
+    $rep->assignRole('Sales Representative');
+
+    $repActivity = Activity::factory()->create([
+        'user_id' => $rep->id,
+        'subject' => 'Rep visit',
+    ]);
+    $ownActivity = Activity::factory()->create([
+        'user_id' => $superAdmin->id,
+        'subject' => 'Admin activity',
+    ]);
+
+    $component = Livewire::actingAs($superAdmin)->test(ListActivities::class);
+
+    // Without an All tab a Super Admin has no subordinates, so only an empty
+    // "My Activities" tab renders and the list looks broken.
+    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my']);
+
+    $component->assertSet('activeTab', 'all')
+        ->assertCanSeeTableRecords([$repActivity, $ownActivity])
+        ->set('activeTab', 'my')
+        ->assertCanSeeTableRecords([$ownActivity])
+        ->assertCanNotSeeTableRecords([$repActivity]);
+});
