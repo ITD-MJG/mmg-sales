@@ -10,18 +10,17 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, WithTitle, ShouldAutoSize
+class ProductsDataExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
 {
     public function collection(): Collection
     {
         return Product::query()
             ->select([
                 'products.name',
-                'products.category',
-                'products.description',
                 'products.internal_code',
+                'products.product_acc_code',
                 'products.unit_of_measure',
-                'products.is_active',
+                'products.category',
                 'principals.name as principal_name',
             ])
             ->leftJoin('principals', 'principals.id', '=', 'products.principal_id')
@@ -31,15 +30,7 @@ class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, W
 
     public function headings(): array
     {
-        return [
-            'Principal Name',
-            'Internal Code',
-            'Product Name',
-            'Category',
-            'Description',
-            'Unit of Measure',
-            'Is Active',
-        ];
+        return ProductsTemplateExport::HEADINGS;
     }
 
     public function map($row): array
@@ -47,11 +38,10 @@ class ProductsDataExport implements FromCollection, WithHeadings, WithMapping, W
         return [
             $row->principal_name,
             $row->internal_code,
+            $row->product_acc_code,
             $row->name,
-            $row->category,
-            $row->description,
             $row->unit_of_measure,
-            $row->is_active,
+            $row->category,
         ];
     }
 

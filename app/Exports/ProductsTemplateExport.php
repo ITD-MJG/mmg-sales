@@ -4,41 +4,36 @@ namespace App\Exports;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class ProductsTemplateExport implements FromCollection, WithHeadings
+class ProductsTemplateExport implements FromCollection, ShouldAutoSize, WithHeadings
 {
+    public const HEADINGS = [
+        'Principle',
+        'Internal Code',
+        'Principal Code',
+        'Name',
+        'UOM',
+        'Categories',
+    ];
+
     public function collection(): Collection
     {
         return collect([
             [
-                'name' => 'Example Product',
-                'category' => 'medical_equipment',
-                'description' => 'Product description',
-                'internal_code' => '',
-                'unit_price' => 100000,
-                'ecatalog_price' => 95000,
-                'principal_id' => 1,
-                'principal_name' => 'Example Principal',
-                'unit_of_measure' => 'pcs',
-                'is_active' => 1,
+                'PT Example Principal',
+                'MSS-TD-00001',
+                'P706406P',
+                'Petrifilm AC Plate',
+                'BOX',
+                'Consumables',
             ],
         ]);
     }
 
     public function headings(): array
     {
-        return [
-            'name',
-            'category',
-            'description',
-            'internal_code',
-            'unit_price',
-            'ecatalog_price',
-            'principal_id',
-            'principal_name',
-            'unit_of_measure',
-            'is_active',
-        ];
+        return self::HEADINGS;
     }
 }
