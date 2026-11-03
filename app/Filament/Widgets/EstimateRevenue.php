@@ -29,7 +29,7 @@ class EstimateRevenue extends ChartWidget
         $months = collect(range(0, 11))
             ->map(fn (int $offset) => $start->copy()->addMonths($offset));
         $leadQuery = Lead::query();
-        self::applyVisibilityScope($leadQuery, 'created_by');
+        self::applyLeadVisibilityScope($leadQuery);
 
         $revenueByMonth = $leadQuery
             ->whereBetween('expected_closing_date', [$start->toDateString(), $end->toDateString()])

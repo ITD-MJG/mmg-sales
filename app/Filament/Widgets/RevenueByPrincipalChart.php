@@ -36,10 +36,10 @@ class RevenueByPrincipalChart extends ChartWidget
     {
         $baseQuery = Order::query();
 
-        // Scoped to the viewer's own and subordinate orders. Orders written
-        // before sales_id existed are unattributed and stay visible to everyone,
-        // so the chart is not blanked for the whole company.
-        self::applyLegacySharedScope($baseQuery, 'orders.sales_id');
+        // Scoped to the viewer's own and subordinate orders. Unattributed
+        // orders (sales_id NULL) belong to nobody and are hidden from sales
+        // users; global viewers still see them through visibleUserIds().
+        self::applyVisibilityScope($baseQuery, 'orders.sales_id');
 
         $data = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())

@@ -29,16 +29,15 @@ trait HasVisibilityScope
     }
 
     /**
-     * Scope to the user's visible records, but keep rows whose owner is NULL
-     * visible to everyone.
+     * Apply the record-visibility contract to leads.
      *
-     * Orders predate per-user attribution: `sales_id` arrived on 2026-10-28 and
-     * every pre-existing row is NULL, so a strict scope would blank the order
-     * widgets for the whole company. Unattributed rows stay shared until they
-     * are assigned a salesperson; once `sales_id` is filled the scope narrows
-     * on its own.
+     * A lead is "owned" by its creator or by any of its collaborators: the
+     * `assigned_to` column was retired into `lead_collaborators`, so matching
+     * `created_by` alone would hide a rep's leads from the rep they were handed
+     * to. Everyone else still resolves through `visibleUserIds()`, so managers
+     * keep seeing their team's leads and global viewers see everything.
      */
-    public static function applyLegacySharedScope(Builder $query, string $userColumn): Builder
+    public static function applyLeadVisibilityScope(Builder $query, string $creatorColumn = 'created_by'): Builder
     {
         $ids = self::visibleUserIds();
 
@@ -46,8 +45,9 @@ trait HasVisibilityScope
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($userColumn, $ids): void {
-            $q->whereIn($userColumn, $ids)->orWhereNull($userColumn);
+        return $query->where(function (Builder $q) use ($creatorColumn, $ids): void {
+            $q->whereIn($creatorColumn, $ids)
+                ->orWhereHas('collaborators', fn (Builder $collaborators): Builder => $collaborators->whereIn('users.id', $ids));
         });
     }
 

@@ -22,22 +22,24 @@ class ActivityScopeService
         if ($user->hasGlobalVisibility()) {
             return $query;
         }
-
-        // Super Admin and Management Directors see every activity.
-        if ($user->hasGlobalVisibility()) {
-            return $query;
-        }
-
         $subordinateIds = $user->hasAnyRole(Role::names(Role::territoryScoped())) && $user->territory_id
             ? User::active()->where('territory_id', $user->territory_id)->pluck('id')
             : $this->getAllSubordinateIds($user);
         $collaboratorOpportunityIds = $this->getCollaboratorOpportunityIds($user);
+        $collaboratorLeadIds = $this->getCollaboratorLeadIds($user);
 
-        return $query->where(function ($q) use ($subordinateIds, $collaboratorOpportunityIds, $user) {
+        return $query->where(function ($q) use ($subordinateIds, $collaboratorOpportunityIds, $collaboratorLeadIds, $user) {
             $q->whereIn('user_id', $subordinateIds->push($user->id));
 
+            // An activity belongs to exactly one of a lead or an opportunity,
+            // and both carry a collaborator pivot. Matching only the opportunity
+            // side hid a lead's visits from the reps the lead was assigned to.
             if ($collaboratorOpportunityIds->isNotEmpty()) {
                 $q->orWhereIn('opportunity_id', $collaboratorOpportunityIds);
+            }
+
+            if ($collaboratorLeadIds->isNotEmpty()) {
+                $q->orWhereIn('lead_id', $collaboratorLeadIds);
             }
         });
     }
@@ -52,6 +54,26 @@ class ActivityScopeService
             ->pluck('opportunity_id');
 
         $creatorIds = \DB::table('opportunities')
+            ->where('created_by', $user->id)
+            ->pluck('id');
+
+        return $collaboratorIds->merge($creatorIds)->unique();
+    }
+
+    /**
+     * Get lead IDs where the user is a collaborator or creator.
+     *
+     * Mirrors getCollaboratorOpportunityIds(). `assigned_to` was retired into
+     * `lead_collaborators`, so the pivot is the only record of who a lead was
+     * handed to.
+     */
+    public function getCollaboratorLeadIds(User $user): Collection
+    {
+        $collaboratorIds = \DB::table('lead_collaborators')
+            ->where('user_id', $user->id)
+            ->pluck('lead_id');
+
+        $creatorIds = \DB::table('leads')
             ->where('created_by', $user->id)
             ->pluck('id');
 

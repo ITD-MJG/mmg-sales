@@ -243,7 +243,7 @@ it('renders every redesigned widget without error', function () {
  * order with no salesperson (sales_id null) is unattributed legacy data and
  * stays visible to everyone, so a finance-imported order is never lost.
  */
-it('scopes revenue aggregates to the viewer and keeps unattributed orders shared', function () {
+it('scopes revenue aggregates to the viewer and hides unattributed orders', function () {
     $principal = Principal::factory()->create();
     $product = Product::factory()->create([
         'name' => 'Centrifuge Tube 50mL',
@@ -301,13 +301,9 @@ it('scopes revenue aggregates to the viewer and keeps unattributed orders shared
         return $this->getData();
     })->call(app(TopSellingProductsChart::class));
 
-    // Only the unattributed order survives the scope: 5,000,000 rupiah, shown
-    // as 5 million on the axis.
-    expect(array_sum($monthly['datasets'][0]['data']))->toBe(5.0);
-
-    expect($byPrincipal['labels'])->toContain($principal->name)
-        ->and((float) $byPrincipal['datasets'][0]['data'][0])->toBe(2_500_000.0);
-
-    expect($topSelling['labels'])->toContain('Centrifuge Tube 5...')
-        ->and($topSelling['datasets'][0]['data'][0])->toBe(4);
+    // Nothing is attributed to this viewer, and the orphan order has no
+    // sales_id, so it belongs to nobody: every aggregate is empty.
+    expect(array_sum($monthly['datasets'][0]['data']))->toBe(0.0)
+        ->and($byPrincipal['labels'])->toBe([])
+        ->and($topSelling['labels'])->toBe([]);
 });

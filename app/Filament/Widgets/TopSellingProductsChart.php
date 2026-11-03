@@ -38,10 +38,10 @@ class TopSellingProductsChart extends ChartWidget
         $baseQuery = OrderItem::query();
 
         // The orders join comes first because the scope filters on orders.sales_id.
-        // Orders written before sales_id existed are unattributed and stay visible
-        // to everyone, so the ranking is not blanked for the whole company.
+        // Unattributed orders (sales_id NULL) belong to nobody and are hidden from
+        // sales users; global viewers still see them through visibleUserIds().
         $baseQuery->join('orders', 'order_items.order_id', '=', 'orders.id');
-        self::applyLegacySharedScope($baseQuery, 'orders.sales_id');
+        self::applyVisibilityScope($baseQuery, 'orders.sales_id');
 
         $data = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())

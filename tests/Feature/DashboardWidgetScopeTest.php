@@ -123,37 +123,37 @@ function datasetSum(array $data, int $dataset = 0): float
     return array_sum($data['datasets'][$dataset]['data']);
 }
 
-it('scopes monthly order value to the manager plus subordinates, keeping legacy rows', function () {
+it('scopes monthly order value to the manager plus subordinates', function () {
     actingAs($this->manager);
-    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(1.25);
+    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(1.2);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(0.25);
+    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(0.2);
 
     actingAs($this->outsider);
-    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(4.05);
+    expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(4.0);
 
     actingAs($this->superAdmin);
     expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(5.25);
 });
 
-it('scopes revenue by principal to the manager plus subordinates, keeping legacy rows', function () {
+it('scopes revenue by principal to the manager plus subordinates', function () {
     actingAs($this->manager);
-    expect(datasetSum(widgetData(RevenueByPrincipalChart::class)))->toBe(750.0);
+    expect(datasetSum(widgetData(RevenueByPrincipalChart::class)))->toBe(700.0);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(RevenueByPrincipalChart::class)))->toBe(250.0);
+    expect(datasetSum(widgetData(RevenueByPrincipalChart::class)))->toBe(200.0);
 
     actingAs($this->superAdmin);
     expect(datasetSum(widgetData(RevenueByPrincipalChart::class)))->toBe(4750.0);
 });
 
-it('scopes top selling products to the manager plus subordinates, keeping legacy rows', function () {
+it('scopes top selling products to the manager plus subordinates', function () {
     actingAs($this->manager);
-    expect(datasetSum(widgetData(TopSellingProductsChart::class)))->toBe(8.0);
+    expect(datasetSum(widgetData(TopSellingProductsChart::class)))->toBe(7.0);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(TopSellingProductsChart::class)))->toBe(3.0);
+    expect(datasetSum(widgetData(TopSellingProductsChart::class)))->toBe(2.0);
 
     actingAs($this->superAdmin);
     expect(datasetSum(widgetData(TopSellingProductsChart::class)))->toBe(48.0);
