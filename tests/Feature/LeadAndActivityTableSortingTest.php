@@ -60,3 +60,19 @@ it('sorts the activities table by date ascending and descending', function () {
         ->sortTable('performed_at', 'desc')
         ->assertCanSeeTableRecords([$newer, $older], inOrder: true);
 });
+
+it('lists activities newest first by default', function () {
+    $olderLead = Lead::factory()->create(['created_by' => $this->user->id]);
+    $newerLead = Lead::factory()->create(['created_by' => $this->user->id]);
+    $older = Activity::factory()->forLead($olderLead)->create([
+        'user_id' => $this->user->id,
+        'performed_at' => now()->subDay(),
+    ]);
+    $newer = Activity::factory()->forLead($newerLead)->create([
+        'user_id' => $this->user->id,
+        'performed_at' => now(),
+    ]);
+
+    Livewire::test(ListActivities::class)
+        ->assertCanSeeTableRecords([$newer, $older], inOrder: true);
+});

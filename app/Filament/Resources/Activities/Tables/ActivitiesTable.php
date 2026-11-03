@@ -79,6 +79,7 @@ class ActivitiesTable
 
                 return $query;
             })
+            ->defaultSort('performed_at', 'desc')
             ->columns([
                 TextColumn::make('activity_code')
                     ->label('Activity Code')
