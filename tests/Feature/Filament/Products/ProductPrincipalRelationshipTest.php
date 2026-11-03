@@ -53,6 +53,27 @@ it('can create a product with a principal', function () {
     expect($product->principal->id)->toBe($principal->id);
 });
 
+it('persists internal code and principal code from the product form', function () {
+    $principal = Principal::factory()->create();
+
+    livewire(CreateProduct::class)
+        ->fillForm([
+            'name' => 'Coded Product',
+            'internal_code' => 'INT-9001',
+            'product_acc_code' => 'PRN-9001',
+            'category' => 'medical_equipment',
+            'unit_price' => 250000,
+            'principal_id' => $principal->id,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $product = Product::where('internal_code', 'INT-9001')->first();
+
+    expect($product->product_acc_code)->toBe('PRN-9001')
+        ->and($product->principal_id)->toBe($principal->id);
+});
+
 it('can display product with associated principal in infolist', function () {
     $principal = Principal::factory()->create();
     $product = Product::factory()->create(['principal_id' => $principal->id]);

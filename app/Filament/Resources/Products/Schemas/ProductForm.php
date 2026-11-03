@@ -20,6 +20,12 @@ class ProductForm
                     ->schema([
                         TextInput::make('name')
                             ->required(),
+                        TextInput::make('internal_code')
+                            ->label('Internal Code')
+                            ->maxLength(50),
+                        TextInput::make('product_acc_code')
+                            ->label('Principal Code')
+                            ->maxLength(50),
                         Select::make('category')
                             ->options([
                                 'medical_equipment' => 'Medical equipment',
