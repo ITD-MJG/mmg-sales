@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Activities\Schemas;
 
+use App\Filament\Resources\Customers\CustomerResource;
+use App\Filament\Resources\Leads\LeadResource;
+use App\Filament\Resources\Users\UserResource;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -21,9 +24,17 @@ class ActivityInfolist
                             ->columns(4)
                             ->schema([
                                 TextEntry::make('lead.lead_code')
+                                    ->url(fn ($record): ?string => $record->lead
+                                        ? LeadResource::getUrl('view', ['record' => $record->lead])
+                                        : null)
+                                    ->openUrlInNewTab()
                                     ->label('Lead Code')
                                     ->placeholder('Unlinked'),
                                 TextEntry::make('customer.name')
+                                    ->url(fn ($record): ?string => $record->customer
+                                        ? CustomerResource::getUrl('view', ['record' => $record->customer])
+                                        : null)
+                                    ->openUrlInNewTab()
                                     ->label('Customer'),
                                 TextEntry::make('contact.name')
                                     ->label('Contact Person'),
@@ -32,6 +43,10 @@ class ActivityInfolist
                                     ->formatStateUsing(fn (string $state): string => ucfirst($state)),
                                 TextEntry::make('subject'),
                                 TextEntry::make('user.name')
+                                    ->url(fn ($record): ?string => $record->user
+                                        ? UserResource::getUrl('view', ['record' => $record->user])
+                                        : null)
+                                    ->openUrlInNewTab()
                                     ->label('Sales Rep'),
                                 TextEntry::make('performed_at')
                                     ->label('Date & Time')
