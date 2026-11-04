@@ -23,11 +23,25 @@ class CRMOverview extends BaseWidget
         $totalCompanies = Customer::count();
         $totalLeads = Lead::count();
 
-        // Pipeline Value: Sum of estimated revenue for open leads
-        $pipelineValue = Lead::whereNotIn('status', ['won', 'lost'])->sum('estimated_revenue');
+        // A lead is open until it is converted or disqualified; the 'won'/'lost'
+        // stages belong to opportunities, so filtering on them never matched.
+        $openLeads = Lead::query()->whereNotIn('status', ['converted', 'disqualified']);
+
+        $pipelineValue = (clone $openLeads)->sum('estimated_revenue');
+
+        // Weighted forecast: revenue discounted by the lead's confidence band.
+        // Leads nobody has assessed contribute nothing and are counted instead
+        // of being silently treated as a coin flip.
+        $weightedValue = (clone $openLeads)
+            ->whereNotNull('confidence_level')
+            ->whereNotNull('estimated_revenue')
+            ->get(['estimated_revenue', 'confidence_level'])
+            ->sum(fn (Lead $lead): float => $lead->weighted_revenue ?? 0.0);
+
+        $unassessedLeads = (clone $openLeads)->whereNull('confidence_level')->count();
 
         // Stale Leads: No contact for > 30 days
-        $staleLeadsCount = Lead::whereNotIn('status', ['won', 'lost'])
+        $staleLeadsCount = Lead::whereNotIn('status', ['converted', 'disqualified'])
             ->where(function ($query) {
                 $query->where('last_contacted_at', '<', Carbon::now()->subDays(30))
                     ->orWhereNull('last_contacted_at');
@@ -48,6 +62,14 @@ class CRMOverview extends BaseWidget
                 ->description('Potential revenue from open leads')
                 ->descriptionIcon('heroicon-m-presentation-chart-line')
                 ->color('success')
+                ->url(route('filament.admin.resources.leads.index')),
+
+            Stat::make('Weighted Forecast', $formatter->formatCurrency($weightedValue, 'IDR'))
+                ->description($unassessedLeads > 0
+                    ? "{$unassessedLeads} open leads not assessed"
+                    : 'All open leads assessed')
+                ->descriptionIcon('heroicon-m-scale')
+                ->color($unassessedLeads > 0 ? 'warning' : 'success')
                 ->url(route('filament.admin.resources.leads.index')),
 
             Stat::make('Stale Leads', $staleLeadsCount)

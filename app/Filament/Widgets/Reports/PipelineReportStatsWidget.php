@@ -46,6 +46,9 @@ class PipelineReportStatsWidget extends StatsOverviewWidget
             Stat::make('Total Pipeline Value', $formatter->formatCurrency($data->totalPipelineValue, 'IDR'))
                 ->description('Total estimated value'),
 
+            Stat::make('Weighted Forecast', $formatter->formatCurrency($data->weightedPipelineValue, 'IDR'))
+                ->description('Pipeline value discounted by confidence'),
+
             Stat::make('Win Rate', number_format($data->winRate, 1).'%')
                 ->description('Leads converted to Sales'),
             Stat::make('Total Leads', number_format($data->totalProjects))

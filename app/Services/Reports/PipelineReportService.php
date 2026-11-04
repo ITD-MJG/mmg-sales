@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class PipelineReportService
 {
@@ -30,6 +31,12 @@ class PipelineReportService
         $lostProjects = (clone $primaryQuery)->where('stage', 'lost')->count();
 
         $totalPipelineValue = (clone $primaryQuery)->sum('estimated_revenue');
+
+        // Confidence lives on the opportunity as a 0-100 integer, carried over
+        // from the lead's band on conversion.
+        $weightedPipelineValue = (clone $primaryQuery)
+            ->whereNotNull('confidence_level')
+            ->sum(DB::raw('estimated_revenue * confidence_level / 100'));
         $wonValue = (clone $primaryQuery)->where('stage', 'won')->sum('estimated_revenue');
         $lostValue = (clone $primaryQuery)->where('stage', 'lost')->sum('estimated_revenue');
 
@@ -44,6 +51,7 @@ class PipelineReportService
 
         return new PipelineReportData(
             totalPipelineValue: $totalPipelineValue,
+            weightedPipelineValue: (float) $weightedPipelineValue,
             wonValue: $wonValue,
             lostValue: $lostValue,
             totalProjects: $totalProjects,

@@ -13,6 +13,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -137,6 +138,30 @@ class LeadsTable
                     ->sortable()
                     ->toggleable(),
 
+                TextColumn::make('confidence_level')
+                    ->label('Confidence')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): ?string => $state === null ? null : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
+                    ->color(fn (?string $state): string => match ($state) {
+                        'low' => 'gray',
+                        'medium' => 'info',
+                        'high' => 'warning',
+                        'very_high' => 'success',
+                        'committed' => 'primary',
+                        default => 'gray',
+                    })
+                    ->placeholder('Not assessed')
+                    // Bands sort by their weight, not alphabetically: "committed"
+                    // is the strongest band but sorts before "low" as a string.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByRaw(
+                        'CASE leads.confidence_level '
+                        .collect(Lead::CONFIDENCE_WEIGHTS)
+                            ->map(fn (int $weight, string $band): string => "WHEN '{$band}' THEN {$weight}")
+                            ->implode(' ')
+                        .' ELSE 0 END '.($direction === 'desc' ? 'desc' : 'asc')
+                    ))
+                    ->toggleable(),
+
                 TextColumn::make('source')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => str_replace('_', ' ', ucfirst($state)))
@@ -201,6 +226,18 @@ class LeadsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('confidence_level')
+                    ->label('Confidence')
+                    ->options([
+                        ...Lead::CONFIDENCE_LABELS,
+                        'none' => 'Not assessed',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        filled($data['value']),
+                        fn (Builder $query): Builder => $data['value'] === 'none'
+                            ? $query->whereNull('confidence_level')
+                            : $query->where('confidence_level', $data['value']),
+                    )),
                 TrashedFilter::make(),
             ])
             ->toolbarActions([

@@ -63,6 +63,10 @@ class ConvertLeadToOpportunity
                 'stage' => 'qualified',
                 'source' => $locked->source,
                 'priority' => $locked->priority,
+                // The lead owns confidence as a band; the opportunity keeps the
+                // legacy 0-100 integer, so the band's weight is what crosses over.
+                'confidence_level' => $locked->confidence_weight ?? 0,
+                'estimated_revenue' => $locked->estimated_revenue,
                 'notes' => $locked->notes,
                 'assigned_to' => null,
                 'created_by' => $locked->created_by,
