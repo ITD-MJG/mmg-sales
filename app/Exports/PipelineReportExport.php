@@ -27,33 +27,39 @@ class PipelineReportExport implements FromCollection, WithHeadings, WithMapping,
     public function headings(): array
     {
         return [
-            'Name',
+            'Code',
+            'Title',
             'Customer',
             'Sales Rep',
             'Status',
-            'Estimated Value',
-            'Confidence Level',
+            'Confidence',
+            'Estimated Revenue',
+            'Expected Closing',
             'Created Date',
-            'Closed Date',
+            'Converted Date',
+            'Disqualified Date',
         ];
     }
 
     public function map($row): array
     {
         return [
-            $row['Name'],
+            $row['Code'],
+            $row['Title'],
             $row['Customer'],
             $row['Sales Rep'],
             $row['Status'],
-            $row['Estimated Value'],
-            $row['Confidence Level'],
+            $row['Confidence'],
+            $row['Estimated Revenue'],
+            $row['Expected Closing'],
             $row['Created Date'],
-            $row['Closed Date'],
+            $row['Converted Date'],
+            $row['Disqualified Date'],
         ];
     }
 
     public function title(): string
     {
-        return 'Pipeline Report';
+        return 'Lead Report';
     }
 }

@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Reports\Pages;
 use App\DTOs\ReportFilterData;
 use App\Exports\PipelineReportExport;
 use App\Filament\Resources\Reports\PipelineReportResource;
+use App\Filament\Widgets\Reports\LeadsByConfidenceWidget;
 use App\Filament\Widgets\Reports\MonthlyPipelineTrendWidget;
 use App\Filament\Widgets\Reports\PipelineBySalesRepresentativeWidget;
 use App\Filament\Widgets\Reports\PipelineByStatusWidget;
 use App\Filament\Widgets\Reports\PipelineReportStatsWidget;
 use App\Models\Customer;
+use App\Models\Lead;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -43,6 +45,7 @@ class PipelineReportPage extends Page
         return [
             PipelineReportStatsWidget::class,
             PipelineByStatusWidget::class,
+            LeadsByConfidenceWidget::class,
             MonthlyPipelineTrendWidget::class,
             PipelineBySalesRepresentativeWidget::class,
         ];
@@ -72,11 +75,14 @@ class PipelineReportPage extends Page
                 Section::make('Filters')
                     ->columnSpan(3)
                     ->schema([
-                        Grid::make(5)
+                        Grid::make(3)
                             ->schema([
                                 Select::make('user_id')
                                     ->label('Sales Representative')
-                                    ->options(fn () => User::whereIn('id', fn ($q) => $q->from('opportunity_collaborators')->select('user_id'))->pluck('name', 'id'))
+                                    ->options(fn () => User::query()
+                                        ->whereIn('id', fn ($q) => $q->from('lead_collaborators')->select('user_id'))
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('customer_id')
@@ -86,15 +92,7 @@ class PipelineReportPage extends Page
                                     ->preload(),
                                 Select::make('lead_status')
                                     ->label('Lead Status')
-                                    ->options([
-                                        'new' => 'New',
-                                        'contacted' => 'Contacted',
-                                        'qualified' => 'Qualified',
-                                        'proposal' => 'Proposal',
-                                        'negotiation' => 'Negotiation',
-                                        'won' => 'Won',
-                                        'lost' => 'Lost',
-                                    ]),
+                                    ->options(Lead::STATUS_LABELS),
                                 Select::make('lead_source')
                                     ->label('Source')
                                     ->options([
@@ -113,6 +111,12 @@ class PipelineReportPage extends Page
                                         'high' => 'High',
                                         'urgent' => 'Urgent',
                                     ]),
+                                Select::make('lead_confidence')
+                                    ->label('Confidence')
+                                    ->options([
+                                        ...Lead::CONFIDENCE_LABELS,
+                                        'none' => 'Not assessed',
+                                    ]),
                             ]),
                     ])
                     ->collapsible(),
@@ -130,7 +134,7 @@ class PipelineReportPage extends Page
 
                     return Excel::download(
                         new PipelineReportExport($filterData),
-                        'pipeline_report_'.now()->format('Y-m-d').'.xlsx'
+                        'lead_report_'.now()->format('Y-m-d').'.xlsx'
                     );
                 }),
             Action::make('reset_filters')

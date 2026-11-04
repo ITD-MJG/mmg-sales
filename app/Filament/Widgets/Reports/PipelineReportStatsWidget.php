@@ -28,42 +28,35 @@ class PipelineReportStatsWidget extends StatsOverviewWidget
         $formatter = new NumberFormatter('id_ID', NumberFormatter::CURRENCY);
         $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, 0);
 
-        $statusLabels = [
-            'New' => 'New',
-            'Contacted' => 'Contacted',
-            'Qualified' => 'Qualified',
-            'Proposal' => 'Proposal',
-            'Negotiation' => 'Negotiation',
-            'Won' => 'Converted',
-            'Lost' => 'Not Converted',
-        ];
-
-        $statusSummary = $data->pipelineByStatus
-            ->map(fn ($row) => ($statusLabels[$row['status']] ?? $row['status']).': '.$row['count'])
+        $statusSummary = $data->leadsByStatus
+            ->map(fn (array $row): string => $row['label'].': '.$row['count'])
             ->implode(' | ');
 
         return [
-            Stat::make('Total Pipeline Value', $formatter->formatCurrency($data->totalPipelineValue, 'IDR'))
-                ->description('Total estimated value'),
+            Stat::make('Pipeline Value', $formatter->formatCurrency($data->pipelineValue, 'IDR'))
+                ->description("{$data->openLeads} leads still in intake")
+                ->descriptionIcon('heroicon-m-presentation-chart-line')
+                ->color('primary'),
 
-            Stat::make('Weighted Forecast', $formatter->formatCurrency($data->weightedPipelineValue, 'IDR'))
-                ->description('Pipeline value discounted by confidence'),
-
-            Stat::make('Win Rate', number_format($data->winRate, 1).'%')
-                ->description('Leads converted to Sales'),
-            Stat::make('Total Leads', number_format($data->totalProjects))
+            Stat::make('Total Leads', number_format($data->totalLeads))
                 ->description($statusSummary ?: '-'),
 
-            Stat::make('Converted', $formatter->formatCurrency($data->wonValue, 'IDR'))
-                ->description("{$data->wonProjects} partnerships established")
+            Stat::make('Win Rate', number_format($data->winRate, 1).'%')
+                ->description("{$data->convertedLeads} converted of ".($data->convertedLeads + $data->disqualifiedLeads).' judged')
+                ->color($data->winRate >= 50 ? 'success' : 'warning'),
+
+            Stat::make('Converted Value', $formatter->formatCurrency($data->convertedValue, 'IDR'))
+                ->description("{$data->convertedLeads} leads converted")
+                ->descriptionIcon('heroicon-m-check-badge')
                 ->color('success'),
 
-            Stat::make('Not Converted', $formatter->formatCurrency($data->lostValue, 'IDR'))
-                ->description("{$data->lostProjects} opportunities not converted")
-                ->color('danger'),
-
             Stat::make('Average Deal Size', $formatter->formatCurrency($data->averageDealSize, 'IDR'))
-                ->description('Converted deals only'),
+                ->description('Converted leads only'),
+
+            Stat::make('Not Assessed', number_format($data->unassessedLeads))
+                ->description('Leads with no confidence level')
+                ->descriptionIcon('heroicon-m-question-mark-circle')
+                ->color($data->unassessedLeads > 0 ? 'warning' : 'success'),
         ];
     }
 }

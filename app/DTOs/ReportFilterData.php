@@ -22,6 +22,7 @@ readonly class ReportFilterData
         public ?string $leadStatus = null,
         public ?string $leadSource = null,
         public ?string $leadPriority = null,
+        public ?string $leadConfidence = null,
         public ?string $cdNcdType = null,
         public array $userIds = [],
     ) {}
@@ -57,6 +58,7 @@ readonly class ReportFilterData
             leadStatus: $data['lead_status'] ?? null,
             leadSource: $data['lead_source'] ?? null,
             leadPriority: $data['lead_priority'] ?? null,
+            leadConfidence: $data['lead_confidence'] ?? null,
             cdNcdType: $data['cd_ncd_type'] ?? null,
             userIds: $data['user_ids'] ?? [],
         );

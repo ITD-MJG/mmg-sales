@@ -4,19 +4,32 @@ namespace App\Services\Reports;
 
 use App\DTOs\PipelineReportData;
 use App\DTOs\ReportFilterData;
-use App\Models\Opportunity;
+use App\Models\Lead;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Lead Report.
+ *
+ * Reports on the thin `leads` table — raw intake and its qualification — not
+ * on opportunities. Leads carry no pipeline stages (won/lost belong to
+ * opportunities); their enum stops at new/contacted/converted/disqualified.
+ *
+ * Money here is `estimated_revenue`, the lead's own expectation. Actual
+ * revenue is not a lead concept: it only exists once an order is raised.
+ */
 class PipelineReportService
 {
+    private const OPEN_STATUSES = ['new', 'contacted'];
+
+    private const CLOSED_STATUSES = ['converted', 'disqualified'];
+
     public function generate(ReportFilterData $filters): PipelineReportData
     {
         return Cache::remember(
-            "pipeline_report_{$filters->toCacheKey()}",
+            "lead_report_{$filters->toCacheKey()}",
             now()->addMinutes(5),
             fn () => $this->calculateReport($filters)
         );
@@ -26,218 +39,187 @@ class PipelineReportService
     {
         $primaryQuery = $this->buildBaseQuery($filters);
 
-        $totalProjects = (clone $primaryQuery)->count();
-        $wonProjects = (clone $primaryQuery)->where('stage', 'won')->count();
-        $lostProjects = (clone $primaryQuery)->where('stage', 'lost')->count();
+        $totalLeads = (clone $primaryQuery)->count();
+        $openLeads = (clone $primaryQuery)->whereIn('status', self::OPEN_STATUSES)->count();
+        $convertedLeads = (clone $primaryQuery)->where('status', 'converted')->count();
+        $disqualifiedLeads = (clone $primaryQuery)->where('status', 'disqualified')->count();
 
-        $totalPipelineValue = (clone $primaryQuery)->sum('estimated_revenue');
+        $pipelineValue = (float) (clone $primaryQuery)
+            ->whereIn('status', self::OPEN_STATUSES)
+            ->sum('estimated_revenue');
 
-        // Confidence lives on the opportunity as a 0-100 integer, carried over
-        // from the lead's band on conversion.
-        $weightedPipelineValue = (clone $primaryQuery)
-            ->whereNotNull('confidence_level')
-            ->sum(DB::raw('estimated_revenue * confidence_level / 100'));
-        $wonValue = (clone $primaryQuery)->where('stage', 'won')->sum('estimated_revenue');
-        $lostValue = (clone $primaryQuery)->where('stage', 'lost')->sum('estimated_revenue');
+        $convertedValue = (float) (clone $primaryQuery)
+            ->where('status', 'converted')
+            ->sum('estimated_revenue');
 
-        $nonWonProjects = (clone $primaryQuery)->where('stage', '!=', 'won')->count();
+        // Win rate over judged leads only: a lead still in intake is neither a
+        // win nor a loss, so counting it in the denominator understates the rate.
+        $judgedLeads = $convertedLeads + $disqualifiedLeads;
+        $winRate = $judgedLeads > 0 ? ($convertedLeads / $judgedLeads) * 100 : 0.0;
 
-        $winRate = $nonWonProjects > 0
-            ? ($wonProjects / $nonWonProjects) * 100
-            : 0;
+        $averageDealSize = $convertedLeads > 0 ? $convertedValue / $convertedLeads : 0.0;
 
-        $averageDealSize = $wonProjects > 0 ? $wonValue / $wonProjects : 0;
-        $averageSalesCycle = $this->calculateAverageSalesCycle($filters);
+        $unassessedLeads = (clone $primaryQuery)->whereNull('confidence_level')->count();
 
         return new PipelineReportData(
-            totalPipelineValue: $totalPipelineValue,
-            weightedPipelineValue: (float) $weightedPipelineValue,
-            wonValue: $wonValue,
-            lostValue: $lostValue,
-            totalProjects: $totalProjects,
-            wonProjects: $wonProjects,
-            lostProjects: $lostProjects,
+            totalLeads: $totalLeads,
+            openLeads: $openLeads,
+            convertedLeads: $convertedLeads,
+            disqualifiedLeads: $disqualifiedLeads,
+            pipelineValue: $pipelineValue,
+            convertedValue: $convertedValue,
             winRate: $winRate,
             averageDealSize: $averageDealSize,
-            averageSalesCycle: $averageSalesCycle,
-            pipelineByStatus: $this->getPipelineByStatus($filters),
-            pipelineBySalesRep: $this->getPipelineBySalesRep($filters),
+            unassessedLeads: $unassessedLeads,
+            leadsByStatus: $this->getLeadsByStatus($filters),
+            leadsByConfidence: $this->getLeadsByConfidence($filters),
+            leadsBySalesRep: $this->getLeadsBySalesRep($filters),
             monthlyTrend: $this->getMonthlyTrend($filters),
-            recentWins: $this->getRecentWins($filters),
-            recentLosses: $this->getRecentLosses($filters),
         );
     }
 
     private function buildBaseQuery(ReportFilterData $filters): Builder
     {
-        $query = Opportunity::query()
-            ->whereBetween('opportunities.created_at', [$filters->startDate, $filters->endDate]);
-
-        if ($filters->userId) {
-            $query->whereHas('collaborators', fn ($q) => $q->where('user_id', $filters->userId));
-        }
-
-        if (! empty($filters->userIds)) {
-            $query->whereHas('collaborators', fn ($q) => $q->whereIn('user_id', $filters->userIds));
-        }
-
-        if ($filters->customerId) {
-            $query->where('customer_id', $filters->customerId);
-        }
-
-        if ($filters->leadStatus) {
-            $query->where('stage', $filters->leadStatus);
-        }
-
-        if ($filters->leadSource) {
-            $query->where('source', $filters->leadSource);
-        }
-
-        if ($filters->leadPriority) {
-            $query->where('priority', $filters->leadPriority);
-        }
-
-        return $query;
+        return Lead::query()
+            ->whereBetween('leads.created_at', [$filters->startDate, $filters->endDate])
+            ->when($filters->userId, fn (Builder $query, int $userId): Builder => $query->whereHas(
+                'collaborators',
+                fn (Builder $collaborators): Builder => $collaborators->where('users.id', $userId),
+            ))
+            ->when(! empty($filters->userIds), fn (Builder $query): Builder => $query->whereHas(
+                'collaborators',
+                fn (Builder $collaborators): Builder => $collaborators->whereIn('users.id', $filters->userIds),
+            ))
+            ->when($filters->customerId, fn (Builder $query, int $customerId): Builder => $query->where('leads.customer_id', $customerId))
+            ->when($filters->leadStatus, fn (Builder $query, string $status): Builder => $query->where('leads.status', $status))
+            ->when($filters->leadSource, fn (Builder $query, string $source): Builder => $query->where('leads.source', $source))
+            ->when($filters->leadPriority, fn (Builder $query, string $priority): Builder => $query->where('leads.priority', $priority))
+            ->when(
+                $filters->leadConfidence === 'none',
+                fn (Builder $query): Builder => $query->whereNull('leads.confidence_level'),
+            )
+            ->when(
+                filled($filters->leadConfidence) && $filters->leadConfidence !== 'none',
+                fn (Builder $query): Builder => $query->where('leads.confidence_level', $filters->leadConfidence),
+            );
     }
 
-    private function calculateAverageSalesCycle(ReportFilterData $filters): int
+    private function getLeadsByStatus(ReportFilterData $filters): Collection
     {
-        $wonProjects = $this->buildBaseQuery($filters)
-            ->where('stage', 'won')
-            ->whereNotNull('closed_at')
-            ->get();
-
-        if ($wonProjects->isEmpty()) {
-            return 0;
-        }
-
-        $totalDays = $wonProjects->sum(fn ($project) => $project->created_at->diffInDays($project->closed_at));
-
-        return (int) ($totalDays / $wonProjects->count());
-    }
-
-    private function getPipelineByStatus(ReportFilterData $filters): Collection
-    {
-        return $this->buildBaseQuery($filters)
-            ->selectRaw('stage, COUNT(*) as count, SUM(estimated_revenue) as value')
-            ->groupBy('stage')
+        $counts = $this->buildBaseQuery($filters)
+            ->selectRaw('leads.status as status, COUNT(*) as count, COALESCE(SUM(leads.estimated_revenue), 0) as value')
+            ->groupBy('leads.status')
             ->get()
-            ->map(fn ($row) => [
-                'status' => ucfirst($row->stage),
-                'count' => $row->count,
-                'value' => (float) $row->value,
-            ]);
+            ->keyBy('status');
+
+        // Emit every status in enum order so a status with no rows still shows
+        // as an explicit zero rather than vanishing from the chart.
+        return collect(['new', 'contacted', 'converted', 'disqualified'])
+            ->map(function (string $status) use ($counts): array {
+                $row = $counts->get($status);
+
+                return [
+                    'status' => $status,
+                    'label' => Lead::STATUS_LABELS[$status] ?? ucfirst($status),
+                    'count' => (int) ($row->count ?? 0),
+                    'value' => (float) ($row->value ?? 0),
+                ];
+            });
     }
 
-    private function getPipelineBySalesRep(ReportFilterData $filters): Collection
+    private function getLeadsByConfidence(ReportFilterData $filters): Collection
+    {
+        $counts = $this->buildBaseQuery($filters)
+            ->selectRaw('leads.confidence_level as band, COUNT(*) as count, COALESCE(SUM(leads.estimated_revenue), 0) as value')
+            ->groupBy('leads.confidence_level')
+            ->get()
+            ->keyBy(fn ($row): string => $row->band ?? 'none');
+
+        $bands = collect(Lead::CONFIDENCE_LABELS)
+            ->map(fn (string $label, string $band): array => [
+                'band' => $band,
+                'label' => $label,
+                'count' => (int) ($counts->get($band)->count ?? 0),
+                'value' => (float) ($counts->get($band)->value ?? 0),
+            ]);
+
+        return $bands->push([
+            'band' => 'none',
+            'label' => 'Not assessed',
+            'count' => (int) ($counts->get('none')->count ?? 0),
+            'value' => (float) ($counts->get('none')->value ?? 0),
+        ]);
+    }
+
+    private function getLeadsBySalesRep(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->join('opportunity_collaborators', 'opportunities.id', '=', 'opportunity_collaborators.opportunity_id')
-            ->join('users as collaborators', 'opportunity_collaborators.user_id', '=', 'collaborators.id')
-            ->join('positions', 'collaborators.position_id', '=', 'positions.id')
-            ->join('departments', 'collaborators.department_id', '=', 'departments.id')
-            ->where('positions.name', 'not like', '%Director%')
-            ->where('departments.name', '!=', 'Marketing')
-            ->leftJoin('users as adders', 'opportunity_collaborators.added_by', '=', 'adders.id')
+            ->join('lead_collaborators', 'leads.id', '=', 'lead_collaborators.lead_id')
+            ->join('users as collaborators', 'lead_collaborators.user_id', '=', 'collaborators.id')
+            ->leftJoin('positions', 'collaborators.position_id', '=', 'positions.id')
+            ->leftJoin('departments', 'collaborators.department_id', '=', 'departments.id')
+            ->where(fn ($query) => $query
+                ->whereNull('positions.name')
+                ->orWhere('positions.name', 'not like', '%Director%'))
+            ->where(fn ($query) => $query
+                ->whereNull('departments.name')
+                ->orWhere('departments.name', '!=', 'Marketing'))
             ->selectRaw('
                 collaborators.id as user_id,
-                collaborators.name,
-                COUNT(DISTINCT opportunities.id) as count,
-                COALESCE(SUM(opportunities.estimated_revenue), 0) as value,
-                GROUP_CONCAT(DISTINCT adders.name SEPARATOR ", ") as creator_names
+                collaborators.name as name,
+                COUNT(DISTINCT leads.id) as count,
+                COALESCE(SUM(leads.estimated_revenue), 0) as value,
+                SUM(CASE WHEN leads.confidence_level IS NULL THEN 1 ELSE 0 END) as unassessed
             ')
             ->groupBy('collaborators.id', 'collaborators.name')
             ->orderByDesc('value')
             ->limit(10)
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn ($row): array => [
                 'user_id' => $row->user_id,
                 'name' => $row->name,
                 'count' => (int) $row->count,
                 'value' => (float) $row->value,
-                'creator_name' => $row->creator_names,
+                'unassessed' => (int) $row->unassessed,
+                'creator_name' => null,
             ]);
     }
 
     private function getMonthlyTrend(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->selectRaw('YEAR(opportunities.created_at) as year, MONTH(opportunities.created_at) as month, COUNT(*) as count, SUM(opportunities.estimated_revenue) as value')
+            ->selectRaw('YEAR(leads.created_at) as year, MONTH(leads.created_at) as month, COUNT(*) as count, COALESCE(SUM(leads.estimated_revenue), 0) as value')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn ($row): array => [
                 'period' => Carbon::create($row->year, $row->month)->format('M Y'),
-                'count' => $row->count,
+                'count' => (int) $row->count,
                 'value' => (float) $row->value,
-            ]);
-    }
-
-    private function getRecentWins(ReportFilterData $filters): Collection
-    {
-        return Opportunity::query()
-            ->where('stage', 'won')
-            ->whereNotNull('closed_at')
-            ->when($filters->userId, fn ($q) => $q->where('assigned_to', $filters->userId))
-            ->when(! empty($filters->userIds), fn ($q) => $q->whereIn('assigned_to', $filters->userIds))
-            ->when($filters->leadSource, fn ($q) => $q->where('source', $filters->leadSource))
-            ->when($filters->leadPriority, fn ($q) => $q->where('priority', $filters->leadPriority))
-            ->with(['customer:id,name', 'assignedUser:id,name'])
-            ->orderByDesc('closed_at')
-            ->limit(10)
-            ->get()
-            ->map(fn ($project) => [
-                'id' => $project->id,
-                'code' => $project->opportunity_code,
-                'name' => $project->title,
-                'customer' => $project->customer?->name,
-                'value' => (float) $project->estimated_revenue,
-                'sales_rep' => $project->assignedUser?->name,
-                'closed_at' => $project->closed_at?->format('d M Y'),
-            ]);
-    }
-
-    private function getRecentLosses(ReportFilterData $filters): Collection
-    {
-        return Opportunity::query()
-            ->where('stage', 'lost')
-            ->whereNotNull('closed_at')
-            ->when($filters->userId, fn ($q) => $q->where('assigned_to', $filters->userId))
-            ->when(! empty($filters->userIds), fn ($q) => $q->whereIn('assigned_to', $filters->userIds))
-            ->when($filters->leadSource, fn ($q) => $q->where('source', $filters->leadSource))
-            ->when($filters->leadPriority, fn ($q) => $q->where('priority', $filters->leadPriority))
-            ->with(['customer:id,name', 'assignedUser:id,name'])
-            ->orderByDesc('closed_at')
-            ->limit(10)
-            ->get()
-            ->map(fn ($project) => [
-                'id' => $project->id,
-                'code' => $project->opportunity_code,
-                'name' => $project->title,
-                'customer' => $project->customer?->name,
-                'value' => (float) $project->estimated_revenue,
-                'sales_rep' => $project->assignedUser?->name,
-                'closed_at' => $project->closed_at?->format('d M Y'),
             ]);
     }
 
     public function getExportData(ReportFilterData $filters): Collection
     {
         return $this->buildBaseQuery($filters)
-            ->with(['customer:id,name', 'assignedUser:id,name'])
-            ->orderBy('created_at', 'desc')
+            ->with(['customer:id,name', 'creator:id,name'])
+            ->orderByDesc('leads.created_at')
             ->get()
-            ->map(fn ($project) => [
-                'Code' => $project->opportunity_code,
-                'Name' => $project->title,
-                'Customer' => $project->customer?->name,
-                'Sales Rep' => $project->assignedUser?->name,
-                'Status' => ucfirst($project->stage),
-                'Estimated Value' => $project->estimated_revenue,
-                'Confidence Level' => $project->confidence_level,
-                'Created Date' => $project->created_at?->format('d M Y'),
-                'Closed Date' => $project->closed_at?->format('d M Y'),
+            ->map(fn (Lead $lead): array => [
+                'Code' => $lead->lead_code,
+                'Title' => $lead->title,
+                'Customer' => $lead->customer?->name ?? $lead->customer_name,
+                'Sales Rep' => $lead->collaborators->first()?->name,
+                'Status' => Lead::STATUS_LABELS[$lead->status] ?? ucfirst((string) $lead->status),
+                'Confidence' => $lead->confidence_level === null
+                    ? 'Not assessed'
+                    : (Lead::CONFIDENCE_LABELS[$lead->confidence_level] ?? $lead->confidence_level),
+                'Estimated Revenue' => (float) $lead->estimated_revenue,
+                'Expected Closing' => $lead->expected_closing_date?->format('d M Y'),
+                'Created Date' => $lead->created_at?->format('d M Y'),
+                'Converted Date' => $lead->converted_at?->format('d M Y'),
+                'Disqualified Date' => $lead->disqualified_at?->format('d M Y'),
             ]);
     }
 }

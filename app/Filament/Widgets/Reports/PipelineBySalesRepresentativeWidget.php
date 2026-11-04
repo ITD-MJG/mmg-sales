@@ -22,12 +22,13 @@ class PipelineBySalesRepresentativeWidget extends TableWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('Sales Rep'),
-                TextColumn::make('creator_name')
-                    ->label('Added By')
-                    ->state(fn ($record): string => $record['creator_name'] ?? '-'),
                 TextColumn::make('count')
                     ->label('Leads')
                     ->alignRight(),
+                TextColumn::make('unassessed')
+                    ->label('Not Assessed')
+                    ->alignRight()
+                    ->color(fn (int $state): string => $state > 0 ? 'warning' : 'gray'),
                 TextColumn::make('value')
                     ->label('Pipeline Value')
                     ->money('IDR')
@@ -43,6 +44,6 @@ class PipelineBySalesRepresentativeWidget extends TableWidget
         $service = app(PipelineReportService::class);
         $data = $service->generate($filterData);
 
-        return $data->pipelineBySalesRep;
+        return $data->leadsBySalesRep;
     }
 }

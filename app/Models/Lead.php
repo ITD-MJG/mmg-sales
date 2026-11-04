@@ -60,11 +60,13 @@ class Lead extends Model
     ];
 
     /**
-     * Fixed weight per confidence band, used for weighted forecasting.
+     * Numeric weight per confidence band.
      *
-     * The bands are deliberately coarse. Free 0-100 entry drifts to 50/75/100
-     * across reps and the forecast stops meaning anything; a band plus a
-     * published weight is reviewable and stable between reps.
+     * Confidence is a judgement, not a forecast input: pipeline value is the
+     * raw estimated revenue, and actual revenue only arrives when the lead
+     * converts and an order is raised. The weights exist solely so the band
+     * can be stored as an integer on activities (which cannot hold the band
+     * string) and ordered meaningfully in queries.
      *
      * @var array<string, int>
      */
@@ -74,6 +76,19 @@ class Lead extends Model
         'high' => 60,
         'very_high' => 80,
         'committed' => 95,
+    ];
+
+    /**
+     * The lead enum stops at raw intake. Pipeline stages (won/lost, proposal…)
+     * live on opportunities, so they must never appear here.
+     *
+     * @var array<string, string>
+     */
+    public const STATUS_LABELS = [
+        'new' => 'New',
+        'contacted' => 'Contacted',
+        'converted' => 'Converted',
+        'disqualified' => 'Disqualified',
     ];
 
     public const CONFIDENCE_LABELS = [
@@ -112,22 +127,6 @@ class Lead extends Model
     public function getConfidenceWeightAttribute(): ?int
     {
         return self::CONFIDENCE_WEIGHTS[$this->confidence_level] ?? null;
-    }
-
-    /**
-     * Revenue discounted by confidence. Null rather than zero when either
-     * input is missing, so an unassessed lead never counts as "worth nothing"
-     * and never inflates a forecast as if it were a sure thing.
-     */
-    public function getWeightedRevenueAttribute(): ?float
-    {
-        $weight = $this->confidence_weight;
-
-        if ($weight === null || $this->estimated_revenue === null) {
-            return null;
-        }
-
-        return (float) $this->estimated_revenue * $weight / 100;
     }
 
     public function isConfidenceAssessed(): bool
