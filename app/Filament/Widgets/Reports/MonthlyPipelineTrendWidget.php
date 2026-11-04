@@ -11,7 +11,7 @@ class MonthlyPipelineTrendWidget extends ChartWidget
 {
     use InteractsWithPageFilters;
 
-    protected ?string $heading = 'Monthly Pipeline Trend';
+    protected ?string $heading = 'Monthly Lead Intake';
 
     public function getData(): array
     {
@@ -21,13 +21,13 @@ class MonthlyPipelineTrendWidget extends ChartWidget
         $data = $service->generate($filterData);
 
         $periods = $data->monthlyTrend->pluck('period')->toArray();
-        $values = $data->monthlyTrend->pluck('value')->toArray();
+        $counts = $data->monthlyTrend->pluck('count')->toArray();
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Pipeline Value',
-                    'data' => $values,
+                    'label' => 'Leads created',
+                    'data' => $counts,
                     'borderColor' => 'rgb(59, 130, 246)',
                     'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
                     'fill' => true,

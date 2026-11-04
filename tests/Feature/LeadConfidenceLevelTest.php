@@ -38,34 +38,28 @@ it('maps every confidence band to a published weight', function () {
         ->and(array_keys(Lead::CONFIDENCE_LABELS))->toBe(array_keys(Lead::CONFIDENCE_WEIGHTS));
 });
 
-it('exposes the weight and weighted revenue of a banded lead', function () {
-    $lead = Lead::factory()->create([
-        'confidence_level' => 'high',
-        'estimated_revenue' => 100_000_000,
-    ]);
+it('exposes the weight of a banded lead', function () {
+    $lead = Lead::factory()->create(['confidence_level' => 'high']);
 
-    expect($lead->confidence_weight)->toBe(60)
-        ->and($lead->weighted_revenue)->toBe(60_000_000.0);
+    expect($lead->confidence_weight)->toBe(60);
 });
 
 it('treats an unassessed lead as unknown rather than worthless', function () {
-    $unassessed = Lead::factory()->create([
-        'confidence_level' => null,
-        'estimated_revenue' => 50_000_000,
-    ]);
+    $unassessed = Lead::factory()->create(['confidence_level' => null]);
 
     expect($unassessed->confidence_weight)->toBeNull()
-        ->and($unassessed->weighted_revenue)->toBeNull()
         ->and($unassessed->isConfidenceAssessed())->toBeFalse();
 });
 
-it('leaves weighted revenue unknown when the lead has no estimated revenue', function () {
+it('leaves estimated revenue untouched by confidence', function () {
+    // Confidence is a judgement, not a multiplier: pipeline value stays the
+    // raw estimated revenue until an order turns it into actual revenue.
     $lead = Lead::factory()->create([
-        'confidence_level' => 'committed',
-        'estimated_revenue' => null,
+        'confidence_level' => 'low',
+        'estimated_revenue' => 100_000_000,
     ]);
 
-    expect($lead->weighted_revenue)->toBeNull();
+    expect((float) $lead->estimated_revenue)->toBe(100_000_000.0);
 });
 
 it('round-trips a band from its weight', function () {

@@ -69,3 +69,18 @@ it('shows schedule and meeting note columns instead of the customer column', fun
         ->assertTableColumnExists('expectations')
         ->assertTableColumnExists('targets');
 });
+
+it('shows only the time on the start and end columns', function () {
+    $lead = Lead::factory()->create();
+    $activity = Activity::factory()->forLead($lead)->create([
+        'visit_started_at' => '2026-11-04 09:15:00',
+        'visit_ended_at' => '2026-11-04 11:45:00',
+    ]);
+
+    // The date lives on the Date column; Start/End are a time-of-day pair, so
+    // repeating the date on both would be noise.
+    leadActivitiesRelationManager($lead)
+        ->assertCanSeeTableRecords([$activity])
+        ->assertTableColumnFormattedStateSet('visit_started_at', '09:15', $activity)
+        ->assertTableColumnFormattedStateSet('visit_ended_at', '11:45', $activity);
+});

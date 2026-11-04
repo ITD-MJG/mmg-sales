@@ -7,20 +7,18 @@ use Illuminate\Support\Collection;
 readonly class PipelineReportData
 {
     public function __construct(
-        public float $totalPipelineValue,
-        public float $weightedPipelineValue,
-        public float $wonValue,
-        public float $lostValue,
-        public int $totalProjects,
-        public int $wonProjects,
-        public int $lostProjects,
+        public int $totalLeads,
+        public int $openLeads,
+        public int $convertedLeads,
+        public int $disqualifiedLeads,
+        public float $pipelineValue,
+        public float $convertedValue,
         public float $winRate,
         public float $averageDealSize,
-        public int $averageSalesCycle,
-        public Collection $pipelineByStatus,
-        public Collection $pipelineBySalesRep,
+        public int $unassessedLeads,
+        public Collection $leadsByStatus,
+        public Collection $leadsByConfidence,
+        public Collection $leadsBySalesRep,
         public Collection $monthlyTrend,
-        public Collection $recentWins,
-        public Collection $recentLosses,
     ) {}
 }

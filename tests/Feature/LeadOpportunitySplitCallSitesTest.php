@@ -23,9 +23,12 @@ uses(RefreshDatabase::class);
  * `opportunity_collaborators` and moved the deal columns onto `opportunities`.
  * These tests pin the call sites that were left pointing at the old shape.
  */
-it('does not query the dropped lead_collaborators table', function () {
+it('keeps a collaborators table for each side of the split', function () {
+    // The split renamed lead_collaborators to opportunity_collaborators, then
+    // 2026_10_21_000001 re-created lead_collaborators because leads staff
+    // their own people again. Both tables are current; neither is stale.
     expect(Schema::hasTable('opportunity_collaborators'))->toBeTrue()
-        ->and(Schema::hasTable('lead_collaborators'))->toBeFalse();
+        ->and(Schema::hasTable('lead_collaborators'))->toBeTrue();
 });
 
 it('scopes activities by opportunity collaboration without erroring', function () {
@@ -63,7 +66,7 @@ it('still scopes activities by lead ownership', function () {
         ->and($query->pluck('id')->all())->not->toContain($hidden->id);
 });
 
-it('builds the pipeline report from opportunities', function () {
+it('builds the lead report from leads, not opportunities', function () {
     $department = Department::factory()->create(['name' => 'Sales', 'code' => 'SAL']);
     $position = Position::factory()->create([
         'name' => 'Sales Representative',
@@ -74,10 +77,15 @@ it('builds the pipeline report from opportunities', function () {
         'position_id' => $position->id,
     ]);
 
-    $opportunity = Opportunity::factory()->stage('won')->create([
+    $lead = Lead::factory()->create([
+        'status' => 'contacted',
         'estimated_revenue' => 5_000_000,
     ]);
-    $opportunity->collaborators()->attach($rep->id, ['added_by' => $rep->id]);
+    $lead->collaborators()->attach($rep->id, ['added_by' => $rep->id]);
+
+    // An opportunity matching the same filters must not leak into the report:
+    // the Lead Report reports on leads only.
+    Opportunity::factory()->stage('won')->create(['estimated_revenue' => 9_000_000]);
 
     $filters = ReportFilterData::fromArray([
         'start_date' => now()->subYear()->toDateString(),
@@ -86,10 +94,11 @@ it('builds the pipeline report from opportunities', function () {
 
     $data = app(PipelineReportService::class)->generate($filters);
 
-    expect($data->totalProjects)->toBe(1)
-        ->and($data->wonProjects)->toBe(1)
-        ->and($data->totalPipelineValue)->toBe(5_000_000.0)
-        ->and($data->pipelineByStatus->first()['status'])->toBe('Won')
-        ->and($data->pipelineBySalesRep)->toHaveCount(1)
-        ->and($data->pipelineBySalesRep->first()['name'])->toBe($rep->name);
+    expect($data->totalLeads)->toBe(1)
+        ->and($data->openLeads)->toBe(1)
+        ->and($data->pipelineValue)->toBe(5_000_000.0)
+        ->and($data->leadsByStatus->firstWhere('status', 'contacted')['count'])->toBe(1)
+        ->and($data->leadsBySalesRep)->toHaveCount(1)
+        ->and($data->leadsBySalesRep->first()['name'])->toBe($rep->name)
+        ->and($data->leadsBySalesRep->first()['value'])->toBe(5_000_000.0);
 });

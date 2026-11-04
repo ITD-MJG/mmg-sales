@@ -11,7 +11,7 @@ class PipelineByStatusWidget extends ChartWidget
 {
     use InteractsWithPageFilters;
 
-    protected ?string $heading = 'Pipeline by Status';
+    protected ?string $heading = 'Leads by Status';
 
     public function getData(): array
     {
@@ -20,27 +20,26 @@ class PipelineByStatusWidget extends ChartWidget
         $service = app(PipelineReportService::class);
         $data = $service->generate($filterData);
 
-        $labels = $data->pipelineByStatus->pluck('status')->toArray();
-        $values = $data->pipelineByStatus->pluck('value')->toArray();
+        $rows = $data->leadsByStatus;
+
         $colors = [
-            'New' => 'rgb(107, 114, 128)',
-            'Contacted' => 'rgb(59, 130, 246)',
-            'Qualified' => 'rgb(16, 185, 129)',
-            'Proposal' => 'rgb(245, 158, 11)',
-            'Negotiation' => 'rgb(236, 72, 153)',
-            'Won' => 'rgb(16, 185, 129)',
-            'Lost' => 'rgb(239, 68, 68)',
+            'new' => 'rgb(107, 114, 128)',
+            'contacted' => 'rgb(59, 130, 246)',
+            'converted' => 'rgb(16, 185, 129)',
+            'disqualified' => 'rgb(239, 68, 68)',
         ];
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Pipeline Value',
-                    'data' => $values,
-                    'backgroundColor' => array_map(fn ($status) => $colors[$status] ?? 'rgb(107, 114, 128)', $labels),
+                    'label' => 'Leads',
+                    'data' => $rows->pluck('count')->toArray(),
+                    'backgroundColor' => $rows
+                        ->map(fn (array $row): string => $colors[$row['status']] ?? 'rgb(107, 114, 128)')
+                        ->toArray(),
                 ],
             ],
-            'labels' => $labels,
+            'labels' => $rows->pluck('label')->toArray(),
         ];
     }
 
