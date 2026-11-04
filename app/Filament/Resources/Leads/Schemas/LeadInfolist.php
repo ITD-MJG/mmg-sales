@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Leads\Schemas;
 
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\Lead;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -39,6 +40,20 @@ class LeadInfolist
                         TextEntry::make('priority')
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+                        TextEntry::make('confidence_level')
+                            ->label('Confidence')
+                            ->badge()
+                            ->formatStateUsing(fn (?string $state): string => $state === null
+                                ? 'Not assessed'
+                                : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
+                            ->color(fn (?string $state): string => match ($state) {
+                                'low' => 'gray',
+                                'medium' => 'info',
+                                'high' => 'warning',
+                                'very_high' => 'success',
+                                'committed' => 'primary',
+                                default => 'gray',
+                            }),
                         TextEntry::make('email')
                             ->copyable(),
                         TextEntry::make('phone')

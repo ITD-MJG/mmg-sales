@@ -8,6 +8,7 @@ readonly class PipelineReportData
 {
     public function __construct(
         public float $totalPipelineValue,
+        public float $weightedPipelineValue,
         public float $wonValue,
         public float $lostValue,
         public int $totalProjects,

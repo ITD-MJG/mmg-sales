@@ -53,6 +53,11 @@ class ActivityForm
 
                                         $set('customer_id', $lead->customer_id);
 
+                                        // The lead owns confidence. Snapshotting it onto the
+                                        // visit keeps the per-visit history without asking the
+                                        // rep to answer the same question twice.
+                                        $set('confidence_level', $lead->confidence_weight);
+
                                         if (filled($lead->estimated_revenue) && filled($lead->expected_closing_date)) {
                                             return;
                                         }
@@ -269,6 +274,16 @@ class ActivityForm
                                 Toggle::make('is_worth_keeping')
                                     ->label('Is this lead/project worth keeping?')
                                     ->default(true),
+
+                                Select::make('confidence_level')
+                                    ->label('Confidence after this activity')
+                                    ->options(Lead::confidenceWeightOptions())
+                                    ->helperText('Prefilled from the lead. Changing it here updates the lead.')
+                                    ->placeholder('Not assessed')
+                                    // The column is NOT NULL and uses 0 as its "not
+                                    // assessed" sentinel, so an empty select must
+                                    // dehydrate to 0 rather than null.
+                                    ->dehydrateStateUsing(fn ($state): int => (int) ($state ?? 0)),
 
                                 DatePicker::make('next_contact_date')
                                     ->label('Next Contact Date'),

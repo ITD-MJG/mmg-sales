@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Activity;
+use App\Models\Lead;
 use App\Models\Opportunity;
 
 class ActivityObserver
@@ -96,6 +97,52 @@ class ActivityObserver
 
         return $activity->outcome === 'Not Interested'
             || in_array($outcome, ['tidak tertarik', 'batal', 'gagal'], true);
+    }
+
+    /**
+     * Handle the Activity "saved" event.
+     *
+     * Confidence is owned by the lead as a band; the visit only carries a
+     * snapshot of it. When a rep raises or lowers confidence after a
+     * conversation, that judgement has to land back on the lead, otherwise the
+     * snapshot is the only place it ever lives.
+     */
+    public function saved(Activity $activity): void
+    {
+        if (blank($activity->lead_id) || blank($activity->confidence_level)) {
+            return;
+        }
+
+        if (! $activity->wasRecentlyCreated && ! $activity->wasChanged('confidence_level')) {
+            return;
+        }
+
+        $lead = $activity->lead;
+
+        if (! $lead) {
+            return;
+        }
+
+        // Only the most recent activity speaks for the lead: a backdated visit
+        // must not overwrite confidence set from a newer conversation.
+        $hasNewerActivity = Activity::query()
+            ->where('lead_id', $lead->getKey())
+            ->whereKeyNot($activity->getKey())
+            ->where('performed_at', '>', $activity->performed_at)
+            ->exists();
+
+        if ($hasNewerActivity) {
+            return;
+        }
+
+        $band = Lead::confidenceBandForWeight($activity->confidence_level);
+
+        if ($band === null || $lead->confidence_level === $band) {
+            return;
+        }
+
+        $lead->confidence_level = $band;
+        $lead->save();
     }
 
     /**

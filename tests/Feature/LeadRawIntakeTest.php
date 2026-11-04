@@ -17,12 +17,14 @@ it('exposes only the four raw intake statuses', function () {
     }
 });
 
-it('has no deal fields on the model', function () {
+it('keeps opportunity-only deal fields off the lead', function () {
     $lead = Lead::factory()->create();
 
-    expect($lead->getFillable())->not->toContain('estimated_revenue')
-        ->and($lead->getFillable())->not->toContain('estimated_value')
-        ->and($lead->getFillable())->not->toContain('confidence_level');
+    // estimated_revenue and confidence_level moved onto the lead deliberately
+    // (see 2026_10_21_000001 and 2026_11_06_000001); the opportunity keeps its
+    // own copies, and these two stay opportunity-only.
+    expect($lead->getFillable())->not->toContain('estimated_value')
+        ->and($lead->getFillable())->not->toContain('stage');
 });
 
 it('relates the opportunities it produced', function () {

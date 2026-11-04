@@ -39,6 +39,7 @@ class Lead extends Model
         'status',
         'source',
         'priority',
+        'confidence_level',
         'notes',
         'estimated_revenue',
         'expected_closing_date',
@@ -57,6 +58,82 @@ class Lead extends Model
         'estimated_revenue' => 'decimal:2',
         'expected_closing_date' => 'date',
     ];
+
+    /**
+     * Fixed weight per confidence band, used for weighted forecasting.
+     *
+     * The bands are deliberately coarse. Free 0-100 entry drifts to 50/75/100
+     * across reps and the forecast stops meaning anything; a band plus a
+     * published weight is reviewable and stable between reps.
+     *
+     * @var array<string, int>
+     */
+    public const CONFIDENCE_WEIGHTS = [
+        'low' => 10,
+        'medium' => 30,
+        'high' => 60,
+        'very_high' => 80,
+        'committed' => 95,
+    ];
+
+    public const CONFIDENCE_LABELS = [
+        'low' => 'Low',
+        'medium' => 'Medium',
+        'high' => 'High',
+        'very_high' => 'Very High',
+        'committed' => 'Committed',
+    ];
+
+    /**
+     * Weight => label, for the activity form's confidence select: activities
+     * keep the legacy 0-100 integer, so they store the band's weight.
+     *
+     * @return array<int, string>
+     */
+    public static function confidenceWeightOptions(): array
+    {
+        return array_combine(
+            array_values(self::CONFIDENCE_WEIGHTS),
+            array_values(self::CONFIDENCE_LABELS),
+        );
+    }
+
+    public static function confidenceBandForWeight(?int $weight): ?string
+    {
+        if (blank($weight)) {
+            return null;
+        }
+
+        $band = array_search((int) $weight, self::CONFIDENCE_WEIGHTS, true);
+
+        return $band === false ? null : $band;
+    }
+
+    public function getConfidenceWeightAttribute(): ?int
+    {
+        return self::CONFIDENCE_WEIGHTS[$this->confidence_level] ?? null;
+    }
+
+    /**
+     * Revenue discounted by confidence. Null rather than zero when either
+     * input is missing, so an unassessed lead never counts as "worth nothing"
+     * and never inflates a forecast as if it were a sure thing.
+     */
+    public function getWeightedRevenueAttribute(): ?float
+    {
+        $weight = $this->confidence_weight;
+
+        if ($weight === null || $this->estimated_revenue === null) {
+            return null;
+        }
+
+        return (float) $this->estimated_revenue * $weight / 100;
+    }
+
+    public function isConfidenceAssessed(): bool
+    {
+        return filled($this->confidence_level);
+    }
 
     public function generateCode(): string
     {

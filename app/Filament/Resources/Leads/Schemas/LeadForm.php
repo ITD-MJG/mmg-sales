@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Models\Lead;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
@@ -192,7 +193,7 @@ class LeadForm
                             ]),
                         Section::make('Pipeline & Status')
                             ->columnSpanFull()
-                            ->columns(3)
+                            ->columns(2)
                             ->schema([
                                 Select::make('source')
                                     ->options([
@@ -225,6 +226,12 @@ class LeadForm
                                     ])
                                     ->default('new')
                                     ->required()
+                                    ->searchable(),
+                                Select::make('confidence_level')
+                                    ->label('Confidence Level')
+                                    ->options(Lead::CONFIDENCE_LABELS)
+                                    ->helperText('How likely this lead is to close. Drives the weighted forecast; leave empty until you have actually judged it.')
+                                    ->placeholder('Not assessed')
                                     ->searchable(),
                             ]),
                         Section::make('Notes')
