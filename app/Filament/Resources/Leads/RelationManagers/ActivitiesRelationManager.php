@@ -31,12 +31,12 @@ class ActivitiesRelationManager extends RelationManager
 
                 TextColumn::make('visit_started_at')
                     ->label('Start')
-                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y H:i')) : '-')
+                    ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('H:i') : '-')
                     ->sortable(),
 
                 TextColumn::make('visit_ended_at')
                     ->label('End')
-                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y H:i')) : '-')
+                    ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('H:i') : '-')
                     ->sortable(),
 
                 TextColumn::make('subject')
