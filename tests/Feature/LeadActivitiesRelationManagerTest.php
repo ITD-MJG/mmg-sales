@@ -55,3 +55,17 @@ it('shows the activity detail infolist in the view modal', function () {
         ->assertSchemaComponentStateSet('location', 'Jakarta Head Office')
         ->assertSchemaComponentStateSet('stakeholder_feedback', 'Wants a follow-up demo next month');
 });
+
+it('shows schedule and meeting note columns instead of the customer column', function () {
+    $lead = Lead::factory()->create();
+    $activity = Activity::factory()->forLead($lead)->create();
+
+    leadActivitiesRelationManager($lead)
+        ->assertCanSeeTableRecords([$activity])
+        ->assertTableColumnDoesNotExist('customer.name')
+        ->assertTableColumnExists('visit_started_at')
+        ->assertTableColumnExists('visit_ended_at')
+        ->assertTableColumnExists('purpose')
+        ->assertTableColumnExists('expectations')
+        ->assertTableColumnExists('targets');
+});

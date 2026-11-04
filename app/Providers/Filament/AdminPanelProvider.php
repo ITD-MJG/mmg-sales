@@ -54,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('assets/logo/MMG-logo.png'))
             ->maxContentWidth(Width::Full)
             ->databaseNotifications()
+            ->globalSearch(false)
             ->plugins([
                 FilamentApexChartsPlugin::make(),
             ])

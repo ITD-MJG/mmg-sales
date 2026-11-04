@@ -29,9 +29,15 @@ class ActivitiesRelationManager extends RelationManager
                     ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y')) : '-')
                     ->sortable(),
 
-                TextColumn::make('customer.name')
-                    ->label('Customer')
-                    ->searchable(),
+                TextColumn::make('visit_started_at')
+                    ->label('Start')
+                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y H:i')) : '-')
+                    ->sortable(),
+
+                TextColumn::make('visit_ended_at')
+                    ->label('End')
+                    ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y H:i')) : '-')
+                    ->sortable(),
 
                 TextColumn::make('subject')
                     ->label('Subject')
@@ -61,6 +67,24 @@ class ActivitiesRelationManager extends RelationManager
                         'Need more info' => 'info',
                         default => 'gray',
                     }),
+
+                TextColumn::make('purpose')
+                    ->label('Purpose')
+                    ->limit(40)
+                    ->wrap()
+                    ->searchable(),
+
+                TextColumn::make('expectations')
+                    ->label('Expectations')
+                    ->limit(40)
+                    ->wrap()
+                    ->searchable(),
+
+                TextColumn::make('targets')
+                    ->label('Targets')
+                    ->limit(40)
+                    ->wrap()
+                    ->searchable(),
             ])
             ->recordActions([
                 ViewAction::make()
