@@ -14,6 +14,7 @@ class LeadProduct extends Pivot
     protected $fillable = [
         'lead_id',
         'product_id',
+        'principal_id',
         'quantity',
         'unit_price',
     ];
@@ -34,5 +35,10 @@ class LeadProduct extends Pivot
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function principal(): BelongsTo
+    {
+        return $this->belongsTo(Principal::class);
     }
 }
