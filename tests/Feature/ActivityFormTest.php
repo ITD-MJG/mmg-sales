@@ -244,3 +244,39 @@ it('can create activity then link to existing lead', function () {
         'lead_id' => $lead->id,
     ]);
 });
+
+it('shows a modal warning when the selected lead has no estimated revenue', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
+    $lead = Lead::factory()->create([
+        'customer_id' => $customer->id,
+        'estimated_revenue' => null,
+        'expected_closing_date' => null,
+    ]);
+
+    livewire(CreateActivity::class)
+        ->set('data.lead_id', $lead->id)
+        ->assertDispatched('open-modal')
+        ->assertSee('incomplete-lead-warning');
+});
+
+it('does not warn when the selected lead has estimated revenue and closing date', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $customer = Customer::factory()->create(['type' => 'hospital_clinic']);
+    $lead = Lead::factory()->create([
+        'customer_id' => $customer->id,
+        'estimated_revenue' => 15000000,
+        'expected_closing_date' => now()->addMonth(),
+    ]);
+
+    livewire(CreateActivity::class)
+        ->set('data.lead_id', $lead->id)
+        ->assertNotDispatched('open-modal')
+        ->assertDontSee('incomplete-lead-warning');
+});

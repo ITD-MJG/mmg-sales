@@ -17,7 +17,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -45,7 +44,7 @@ class ActivityForm
                                     ->searchable(['lead_code', 'title', 'customer_name'])
                                     ->preload()
                                     ->live()
-                                    ->afterStateUpdated(function ($state, callable $set): void {
+                                    ->afterStateUpdated(function ($state, callable $set, $livewire): void {
                                         $set('customer_id', null);
 
                                         if (! $lead = Lead::find($state)) {
@@ -58,21 +57,20 @@ class ActivityForm
                                             return;
                                         }
 
-                                        $notification = Notification::make()
-                                            ->warning()
-                                            ->title('Lead details are incomplete')
-                                            ->body('Expected Revenue and Closing Date are required for this lead.');
+                                        $livewire->dispatch('open-modal', id: 'incomplete-lead-warning');
+                                    })
+                                    ->belowContent(function ($get) {
+                                        $lead = filled($get('lead_id')) ? Lead::find($get('lead_id')) : null;
 
-                                        if ((int) $lead->created_by === (int) auth()->id()) {
-                                            $notification->actions([
-                                                Action::make('editLead')
-                                                    ->label('Update Lead')
-                                                    ->url(LeadResource::getUrl('edit', ['record' => $lead]))
-                                                    ->openUrlInNewTab(),
-                                            ]);
+                                        if (! $lead || (filled($lead->estimated_revenue) && filled($lead->expected_closing_date))) {
+                                            return null;
                                         }
 
-                                        $notification->send();
+                                        return view('filament.forms.incomplete-lead-warning', [
+                                            'editUrl' => auth()->user()?->can('update', $lead)
+                                                ? LeadResource::getUrl('edit', ['record' => $lead])
+                                                : null,
+                                        ]);
                                     }),
 
                                 Select::make('customer_id')
