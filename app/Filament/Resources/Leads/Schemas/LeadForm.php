@@ -230,7 +230,7 @@ class LeadForm
                                 Select::make('confidence_level')
                                     ->label('Confidence Level')
                                     ->options(Lead::CONFIDENCE_LABELS)
-                                    ->helperText('How likely this lead is to close. Drives the weighted forecast; leave empty until you have actually judged it.')
+                                    ->helperText('How likely this lead is to close. Leave empty until you have actually judged it.')
                                     ->placeholder('Not assessed')
                                     ->searchable(),
                             ]),
