@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
@@ -14,6 +15,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
+use Illuminate\Validation\Rule;
 
 class LeadForm
 {
@@ -83,30 +85,57 @@ class LeadForm
                                     ->label('Products list')
                                     ->relationship()
                                     ->schema([
-                                        Select::make('product_id')
-                                            ->label('Product')
-                                            ->options(fn () => Product::query()
+                                        Select::make('principal_id')
+                                            ->label('Principal')
+                                            ->options(fn () => Principal::query()
                                                 ->where('is_active', true)
                                                 ->orderBy('name')
                                                 ->pluck('name', 'id'))
                                             ->live()
                                             ->afterStateUpdated(function ($state, Get $get, $set): void {
-                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                $productId = $get('product_id');
+
+                                                if (! $productId) {
+                                                    return;
+                                                }
+
+                                                $productPrincipalId = Product::query()->whereKey($productId)->value('principal_id');
+
+                                                if ((int) $productPrincipalId === (int) $state) {
+                                                    return;
+                                                }
+
+                                                $set('product_id', null);
+                                                $set('unit_price', null);
+                                                self::updateLineTotal($get, $set);
+                                            })
+                                            ->searchable()
+                                            ->preload(),
+                                        Select::make('product_id')
+                                            ->label('Product')
+                                            ->options(fn (Get $get) => Product::query()
+                                                ->where('is_active', true)
+                                                ->when($get('principal_id'), fn ($query, $principalId) => $query->where('principal_id', $principalId))
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Get $get, $set): void {
+                                                $product = $state ? Product::query()->find($state) : null;
+
+                                                $set('principal_id', $product?->principal_id);
                                                 $set('unit_price', $product?->unit_price);
                                                 self::updateLineTotal($get, $set);
-                                                $set('principal_name', $product?->principal?->name);
+                                            })
+                                            ->rule(function (Get $get) {
+                                                $principalId = $get('principal_id');
+
+                                                return $principalId
+                                                    ? Rule::exists('products', 'id')->where('principal_id', $principalId)
+                                                    : 'exists:products,id';
                                             })
                                             ->searchable()
                                             ->preload()
                                             ->required(),
-                                        TextInput::make('principal_name')
-                                            ->label('Principal')
-                                            ->readOnly()
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(function (TextInput $component, Get $get): void {
-                                                $productId = $get('product_id');
-                                                $component->state($productId ? Product::query()->with('principal')->find($productId)?->principal?->name : null);
-                                            }),
                                         TextInput::make('quantity')
                                             ->label('Qty')
                                             ->numeric()
