@@ -4,6 +4,8 @@ use App\DTOs\CustomerReportData;
 use App\DTOs\PipelineReportData;
 use App\DTOs\ProductReportData;
 use App\DTOs\SalesReportData;
+use App\DTOs\SalesStatisticsData;
+use App\DTOs\TargetAchievementData;
 use App\DTOs\TargetReportData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -137,6 +139,8 @@ return [
         CustomerReportData::class,
         ProductReportData::class,
         TargetReportData::class,
+        TargetAchievementData::class,
+        SalesStatisticsData::class,
         Collection::class,
         Illuminate\Database\Eloquent\Collection::class,
     ],

@@ -1,11 +1,14 @@
 <?php
 
 use App\DTOs\ReportFilterData;
+use App\DTOs\SalesStatisticsData;
+use App\DTOs\TargetAchievementData;
 use App\Filament\Resources\Reports\Pages\SalesStatisticsPage;
 use App\Filament\Resources\Reports\SalesStatisticsResource;
 use App\Models\Activity;
 use App\Models\Department;
 use App\Models\Lead;
+use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Reports\SalesStatisticsService;
@@ -133,16 +136,15 @@ it('ignores records outside the selected date range', function (): void {
 });
 
 it('counts activities performed by the selected rep', function (): void {
-    // Status is left off 'new' on purpose: ActivityObserver advances a new lead
-    // to in_process, which the leads.status enum does not accept here yet.
-    $lead = Lead::factory()->create([
-        'created_by' => $this->rep->id,
-        'status' => 'contacted',
-    ]);
+    // Attached to an opportunity rather than a lead: an activity on a lead is
+    // advanced by ActivityObserver, so tying this test to a lead would couple it
+    // to the lead status vocabulary. Only the attribution is under test.
+    $opportunity = Opportunity::factory()->create(['created_by' => $this->rep->id]);
 
     Activity::factory()->create([
         'user_id' => $this->rep->id,
-        'lead_id' => $lead->id,
+        'lead_id' => null,
+        'opportunity_id' => $opportunity->id,
         'performed_at' => now(),
     ]);
 
@@ -195,4 +197,23 @@ it('hides the page from users without the statistics permission', function (): v
     actingAs($user);
 
     expect(SalesStatisticsResource::canAccess())->toBeFalse();
+});
+
+it('round-trips its DTO through the cache store', function (): void {
+    // The cache store only unserializes allow-listed classes (config/cache.php
+    // `serializable_classes`). A DTO missing from that list comes back as
+    // __PHP_Incomplete_Class and blows up the widget with a TypeError.
+    $data = statisticsFor($this->rep->id);
+
+    Cache::put('sales_statistics_round_trip', $data, now()->addMinutes(5));
+
+    expect(Cache::get('sales_statistics_round_trip'))
+        ->toBeInstanceOf(SalesStatisticsData::class);
+});
+
+it('allow-lists every DTO the reports cache', function (): void {
+    $allowed = config('cache.serializable_classes');
+
+    expect($allowed)->toContain(SalesStatisticsData::class)
+        ->and($allowed)->toContain(TargetAchievementData::class);
 });
