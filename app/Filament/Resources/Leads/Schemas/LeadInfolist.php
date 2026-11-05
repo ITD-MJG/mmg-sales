@@ -118,36 +118,6 @@ class LeadInfolist
                             ]),
                     ]),
 
-                Grid::make(2)
-                    ->columnSpanFull()
-                    ->schema([
-                        Section::make('Opportunities')
-                            ->schema([
-                                RepeatableEntry::make('opportunities')
-                                    ->label('')
-                                    ->schema([
-                                        TextEntry::make('opportunity_code')
-                                            ->label('Code')
-                                            ->weight('bold'),
-                                        TextEntry::make('title')
-                                            ->label('Title'),
-                                        TextEntry::make('stage')
-                                            ->label('Stage')
-                                            ->badge(),
-                                    ])
-                                    ->columns(3)
-                                    ->placeholder('No opportunities yet'),
-                            ]),
-
-                        Section::make('Notes')
-                            ->schema([
-                                TextEntry::make('notes')
-                                    ->hiddenLabel()
-                                    ->placeholder('-')
-                                    ->markdown(),
-                            ]),
-                    ]),
-
             ]);
     }
 }
