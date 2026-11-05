@@ -60,9 +60,14 @@ class LeadInfolist
                                     ->copyable(),
                                 TextEntry::make('phone')
                                     ->copyable(),
-                                TextEntry::make('collaborators.name')
+                                TextEntry::make('collaborators')
                                     ->label('Assigned To')
-                                    ->listWithLineBreaks(false)
+                                    ->state(function ($record): ?string {
+                                        $names = $record->collaborators->pluck('name')->filter()->values();
+                                        $others = $names->count() - 1;
+
+                                        return $names->first().($others > 0 ? ' +'.$others : '');
+                                    })
                                     ->placeholder('Unassigned'),
                                 TextEntry::make('creator.name')
                                     ->label('Created By')
