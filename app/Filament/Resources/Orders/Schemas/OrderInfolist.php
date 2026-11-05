@@ -15,13 +15,13 @@ class OrderInfolist
     {
         return $schema
             ->components([
-                Grid::make(2)
+                Grid::make(4)
                     ->columnSpanFull()
                     ->schema([
                         Section::make('Order Details')
-                            ->columnSpan(1)
+                            ->columnSpan(3)
                             ->schema([
-                                Grid::make(2)
+                                Grid::make(3)
                                     ->schema([
                                         TextEntry::make('order_number')
                                             ->label('Order #')

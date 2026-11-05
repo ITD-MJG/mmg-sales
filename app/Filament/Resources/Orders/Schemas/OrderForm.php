@@ -36,11 +36,11 @@ class OrderForm
 
         return $schema
             ->components([
-                Grid::make(2)
+                Grid::make(4)
                     ->columnSpanFull()
                     ->schema([
                         Section::make('Order Details')
-                            ->columnSpan(1)
+                            ->columnSpan(3)
                             ->schema([
                                 Grid::make(3)->columns(fn (Get $get): int => $get('order_source') === 'manual' ? 2 : 3)
                                     ->schema([
@@ -52,10 +52,11 @@ class OrderForm
                                             ])
                                             ->required()
                                             ->live()
-                                            ->afterStateUpdated(function ($set, ?string $state): void {
-                                                if ($state === 'manual') {
-                                                    return;
-                                                }
+                                            ->afterStateUpdated(function ($set): void {
+                                                // Every switch clears the previous source's
+                                                // prefill, manual included: otherwise the
+                                                // lead's customer, notes and items bleed
+                                                // into a manually entered order.
                                                 $set('source_record_id', null);
                                                 $set('end_customer_id', null);
                                                 $set('notes', null);
