@@ -68,6 +68,11 @@ class LeadInfolist
 
                                         return $names->first().($others > 0 ? ' +'.$others : '');
                                     })
+                                    ->tooltip(function ($record): ?string {
+                                        $names = $record->collaborators->pluck('name')->filter()->values();
+
+                                        return $names->isEmpty() ? null : $names->implode(', ');
+                                    })
                                     ->placeholder('Unassigned'),
                                 TextEntry::make('creator.name')
                                     ->label('Created By')
