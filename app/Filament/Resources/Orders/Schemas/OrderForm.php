@@ -7,7 +7,6 @@ use App\Imports\OrderItemsImport;
 use App\Models\Customer;
 use App\Models\Department;
 use App\Models\Lead;
-use App\Models\Opportunity;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
@@ -37,414 +36,413 @@ class OrderForm
 
         return $schema
             ->components([
-                Section::make('Order Details')
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(3)->columns(fn (Get $get): int => $get('order_source') === 'manual' ? 2 : 3)
+                        Section::make('Order Details')
+                            ->columnSpan(1)
                             ->schema([
-                                Select::make('order_source')
-                                    ->label('Order Source')
-                                    ->options([
-                                        'leads' => 'Leads',
-                                        'opportunities' => 'Opportunities',
-                                        'manual' => 'Input Manually',
-                                    ])
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function ($set, ?string $state): void {
-                                        if ($state === 'manual') {
-                                            return;
-                                        }
-                                        $set('source_record_id', null);
-                                        $set('end_customer_id', null);
-                                        $set('notes', null);
-                                        $set('sales_id', null);
-                                        $set('orderItems', []);
-                                        $set('subtotal', 0);
-                                        $set('total_amount', 0);
-                                        $set('net_sales_total', 0);
-                                    })
-                                    ->default('manual'),
-                                Select::make('source_record_id')
-                                    ->label('Lead / Opportunity')
-                                    ->options(fn ($get) => match ($get('order_source')) {
-                                        'leads' => Lead::query()
-                                            ->where('created_by', auth()->id())
-                                            ->pluck('title', 'id'),
-                                        'opportunities' => Opportunity::query()
-                                            ->where('created_by', auth()->id())
-                                            ->pluck('title', 'id'),
-                                        default => [],
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->placeholder('Select a lead or opportunity')
-                                    ->live()
-                                    ->dehydrated(false)
-                                    ->visible(fn ($get) => in_array($get('order_source'), ['leads', 'opportunities'], true))
-                                    ->required(false)
-                                    ->columnSpan(1)
-                                    ->afterStateUpdated(function ($set, $get, ?string $state): void {
-                                        $sourceType = $get('order_source');
-                                        $source = match ($sourceType) {
-                                            'leads' => $state ? Lead::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
-                                            'opportunities' => $state ? Opportunity::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
-                                            default => null,
-                                        };
-
-                                        if (! $source) {
-                                            $set('end_customer_id', null);
-                                            $set('notes', null);
-                                            $set('sales_id', null);
-                                            $set('orderItems', []);
-                                            $set('subtotal', 0);
-                                            $set('total_amount', 0);
-                                            $set('net_sales_total', 0);
-
-                                            return;
-                                        }
-
-                                        $set('end_customer_id', $source->customer_id);
-                                        $set('notes', $source->notes);
-                                        $salesId = $source->creator?->id ?? $source->collaborators->first()?->id;
-                                        $set('sales_id', $salesId);
-
-                                        $items = $source->products->map(function ($product) use ($sourceType): array {
-                                            $quantity = $sourceType === 'leads' ? ($product->pivot->quantity ?? 1) : 1;
-                                            $unitPrice = $sourceType === 'leads'
-                                                ? ($product->pivot->unit_price ?? $product->unit_price ?? 0)
-                                                : ($product->unit_price ?? 0);
-                                            $principalId = $product->pivot->principal_id ?? $product->principal_id;
-
-                                            return [
-                                                'principal_id' => $principalId,
-                                                'principal_name' => $product->principal?->name,
-                                                'item_id' => $product->id,
-                                                'quantity' => $quantity,
-                                                'price_type' => 'unit_price',
-                                                'unit_price' => (float) $unitPrice,
-                                                'current_price' => (float) $unitPrice,
-                                                'discount_amount' => 0,
-                                                'discount_percent' => 0,
-                                                'subtotal' => (float) $unitPrice * $quantity,
-                                            ];
-                                        })->toArray();
-
-                                        $set('orderItems', $items);
-                                    }),
-                                DatePicker::make('order_date')
-                                    ->label('Order Date')
-                                    ->default(now())
-                                    ->required(),
-                            ]),
-
-                        Grid::make(4)
-                            ->schema([
-                                TextInput::make('po_number')
-                                    ->label('PO Number')
-                                    ->placeholder('Enter PO number'),
-                                TextInput::make('payment_method')
-                                    ->label('Payment Method')
-                                    ->placeholder('e.g. Bank Transfer, Credit Card'),
-                                Select::make('reg_inst')
-                                    ->label('Type')
-                                    ->multiple()
-                                    ->options([
-                                        'REG' => 'Reagent',
-                                        'INST' => 'Instrument',
-                                        'Consumable' => 'Consumable',
-                                    ])
-                                    ->searchable(),
-                                Select::make('sales_type_id')
-                                    ->label('Purchase Type')
-                                    ->options([
-                                        'INAPROC' => 'INAPROC',
-                                        'non-INAPROC' => 'non-INAPROC',
-                                    ])
-                                    ->searchable(),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                Select::make('jual_kso')
-                                    ->label('Jual / KSO')
-                                    ->options([
-                                        'Jual' => 'Jual',
-                                        'KSO' => 'KSO',
-                                        'Sample' => 'Sample',
-                                    ])
-                                    ->required()
-                                    ->searchable(),
-                                Select::make('distributor_id')
-                                    ->label('Distributor')
-                                    ->relationship('distributor', 'name')
-                                    ->required()
-                                    ->preload()
-                                    ->searchable(),
-                            ]),
-
-                        TextInput::make('tahun')
-                            ->default(now()->year)
-                            ->hidden(),
-                        TextInput::make('bulan')
-                            ->default(now()->month)
-                            ->hidden(),
-                    ]),
-
-                Section::make('Sales Details')
-                    ->schema([
-                        Select::make('sales_id')
-                            ->label('Sales / Marketing')
-                            ->options(function () use ($user): array {
-                                $isSalesOrMarketing = self::belongsToSalesOrMarketing($user);
-
-                                return User::active()
-                                    ->whereHas('department', fn (Builder $query) => $query->whereIn(
-                                        'name',
-                                        $isSalesOrMarketing
-                                            ? [Department::SALES, Department::MARKETING]
-                                            : [Department::SALES],
-                                    ))
-                                    ->orderBy('name')
-                                    ->pluck('name', 'id')
-                                    ->all();
-                            })
-                            ->default(fn () => self::belongsToSalesOrMarketing($user) ? $user->id : null)
-                            ->preload()
-                            ->searchable(),
-                    ]),
-
-                Section::make('Customer Details')
-                    ->columnSpanFull()
-                    ->schema([
-                        Select::make('end_customer_id')
-                            ->label('End Customer')
-                            ->relationship(
-                                name: 'customer',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active'),
-                            )
-                            ->searchable()
-                            ->required()
-                            ->preload()
-                            ->live()
-                            ->columnSpanFull()
-                            ->afterStateUpdated(function ($set, $state) {
-                                if (! $state) {
-                                    $set('billing_address', null);
-
-                                    return;
-                                }
-
-                                $customer = Customer::find($state);
-                                if (! $customer) {
-                                    return;
-                                }
-
-                                $set('billing_address', $customer->address);
-                            }),
-
-                        Grid::make(2)
-                            ->schema([
-                                Grid::make(1)
+                                Grid::make(3)->columns(fn (Get $get): int => $get('order_source') === 'manual' ? 2 : 3)
                                     ->schema([
-                                        Textarea::make('billing_address')
-                                            ->label('Billing Address')
-                                            ->rows(3)
-                                            ->live()
-                                            ->afterStateUpdated(function ($get, $set, $state) {
-                                                if ($get('shipping_same_as_billing')) {
-                                                    $set('shipping_address', $state);
-                                                }
-                                            }),
-                                        Checkbox::make('shipping_same_as_billing')
-                                            ->label('Shipping address same as billing')
-                                            ->default(true)
-                                            ->live()
-                                            ->afterStateUpdated(function ($get, $set, $state) {
-                                                if ($state) {
-                                                    $set('shipping_address', $get('billing_address'));
-                                                }
-                                            }),
-                                    ])->columnSpan(1),
-
-                                Textarea::make('shipping_address')
-                                    ->label('Shipping Address')
-                                    ->rows(3)
-                                    ->disabled(fn ($get) => $get('shipping_same_as_billing'))
-                                    ->dehydrated()
-                                    ->columnSpan(1),
-                            ]),
-
-                        Textarea::make('notes')
-                            ->label('Notes')
-                            ->columnSpanFull(),
-                    ]),
-
-                Section::make('Product Details')
-                    ->headerActions([
-                        Action::make('exportOrderItems')
-                            ->label('Export to Excel')
-                            ->icon('heroicon-o-arrow-down-tray')
-                            ->action(function ($livewire, $get) {
-                                $items = collect($get('orderItems') ?? []);
-                                $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
-                                $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
-                                $items = $items->map(function (array $item) use ($products, $principals): array {
-                                    return [...$item,
-                                        'item_name' => $products[$item['item_id'] ?? null] ?? null,
-                                        'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
-                                    ];
-                                })->all();
-
-                                return Excel::download(
-                                    new OrderItemsExport($items),
-                                    'order-products.xlsx',
-                                );
-                            }),
-                        Action::make('importOrderItems')
-                            ->label('Import Products')
-                            ->icon('heroicon-o-arrow-up-tray')
-                            ->form([
-                                FileUpload::make('file')
-                                    ->label('Excel File')
-                                    ->disk('local')
-                                    ->directory('imports')
-                                    ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
-                                    ->required(),
-                            ])
-                            ->action(function (array $data, $get, $set): void {
-                                $path = Storage::disk('local')->path($data['file']);
-                                $import = new OrderItemsImport;
-                                Excel::import($import, $path);
-
-                                $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
-                                self::calculateOrderTotals($set, (float) $get('discount_on'), $get('orderItems') ?? []);
-
-                                if ($import->failures() !== []) {
-                                    Notification::make()
-                                        ->warning()
-                                        ->title('Some rows were not imported')
-                                        ->body(collect($import->failures())->map(fn ($failure) => 'Row '.$failure['row'].': '.$failure['reason'])->implode(' '))
-                                        ->send();
-                                }
-                            }),
-                    ])
-                    ->columnSpanFull()
-                    ->schema([
-                        Repeater::make('orderItems')
-                            ->relationship()
-                            ->schema([
-                                Grid::make(7)
-                                    ->schema([
-                                        TextInput::make('principal_name')
-                                            ->label('Principal')
-                                            ->readOnly()
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(function (TextInput $component, $get): void {
-                                                $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
-                                                $component->state($product?->principal?->name);
-                                            }),
-                                        Select::make('item_id')
-                                            ->label('Product')
-                                            ->options(fn () => Product::query()
-                                                ->orderBy('name')
-                                                ->pluck('name', 'id'))
-                                            ->searchable()
-                                            ->required()
-                                            ->live()
-                                            ->afterStateUpdated(function ($state, $set, $get): void {
-                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
-                                                $set('principal_id', $product?->principal_id);
-                                                $set('principal_name', $product?->principal?->name);
-                                                self::updateLineTotal($set, $get, true);
-                                            }),
-                                        TextInput::make('quantity')
-                                            ->label('Qty')
-                                            ->numeric()
-                                            ->default(1)
-                                            ->minValue(1)
-                                            ->required()
-                                            ->live()
-                                            ->afterStateUpdated(function ($set, $get): void {
-                                                self::updateLineTotal($set, $get);
-                                            })
-                                            ->columnSpan(1),
-                                        Select::make('price_type')
-                                            ->label('Price Type')
+                                        Select::make('order_source')
+                                            ->label('Order Source')
                                             ->options([
-                                                'unit_price' => 'Unit Price',
-                                                'ecatalog_price' => 'E-Catalog Price',
+                                                'leads' => 'Leads',
+                                                'manual' => 'Input Manually',
                                             ])
-                                            ->default('unit_price')
+                                            ->required()
                                             ->live()
-                                            ->afterStateUpdated(function ($set, $get): void {
-                                                self::updateLineTotal($set, $get, true);
+                                            ->afterStateUpdated(function ($set, ?string $state): void {
+                                                if ($state === 'manual') {
+                                                    return;
+                                                }
+                                                $set('source_record_id', null);
+                                                $set('end_customer_id', null);
+                                                $set('notes', null);
+                                                $set('sales_id', null);
+                                                $set('orderItems', []);
+                                                $set('subtotal', 0);
+                                                $set('total_amount', 0);
+                                                $set('net_sales_total', 0);
                                             })
-                                            ->columnSpan(1),
-                                        TextInput::make('unit_price')
-                                            ->label('Unit Price')
-                                            ->numeric()
-                                            ->prefix('IDR')
+                                            ->default('manual'),
+                                        Select::make('source_record_id')
+                                            ->label('Lead')
+                                            ->options(fn ($get) => match ($get('order_source')) {
+                                                'leads' => Lead::query()
+                                                    ->where('created_by', auth()->id())
+                                                    ->pluck('title', 'id'),
+                                                default => [],
+                                            })
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder('Select a lead')
                                             ->live()
-                                            ->afterStateUpdated(function ($set, $get): void {
-                                                self::updateLineTotal($set, $get);
-                                            })
-                                            ->columnSpan(1),
-                                        TextInput::make('discount_percent')
-                                            ->label('Discount')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->minValue(0)
-                                            ->maxValue(100)
-                                            ->suffix('%')
                                             ->dehydrated(false)
-                                            ->live()
-                                            ->afterStateHydrated(function (TextInput $component, $get): void {
-                                                $quantity = (int) ($get('quantity') ?? 0);
-                                                $gross = $quantity * (float) $get('unit_price');
-                                                $discountAmount = (float) $get('discount_amount');
-                                                $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
-                                            })
-                                            ->afterStateUpdated(function ($set, $get): void {
-                                                self::updateLineTotal($set, $get);
-                                            })
-                                            ->columnSpan(1),
-                                        TextInput::make('subtotal')
-                                            ->label('Line Total')
-                                            ->numeric()
-                                            ->prefix('IDR')
-                                            ->readOnly()
+                                            ->visible(fn ($get) => $get('order_source') === 'leads')
+                                            ->required(false)
+                                            ->columnSpan(1)
+                                            ->afterStateUpdated(function ($set, $get, ?string $state): void {
+                                                $sourceType = $get('order_source');
+                                                $source = match ($sourceType) {
+                                                    'leads' => $state ? Lead::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                                    default => null,
+                                                };
+
+                                                if (! $source) {
+                                                    $set('end_customer_id', null);
+                                                    $set('notes', null);
+                                                    $set('sales_id', null);
+                                                    $set('orderItems', []);
+                                                    $set('subtotal', 0);
+                                                    $set('total_amount', 0);
+                                                    $set('net_sales_total', 0);
+
+                                                    return;
+                                                }
+
+                                                $set('end_customer_id', $source->customer_id);
+                                                $set('notes', $source->notes);
+                                                $salesId = $source->creator?->id ?? $source->collaborators->first()?->id;
+                                                $set('sales_id', $salesId);
+
+                                                $items = $source->products->map(function ($product) use ($sourceType): array {
+                                                    $quantity = $sourceType === 'leads' ? ($product->pivot->quantity ?? 1) : 1;
+                                                    $unitPrice = $sourceType === 'leads'
+                                                        ? ($product->pivot->unit_price ?? $product->unit_price ?? 0)
+                                                        : ($product->unit_price ?? 0);
+                                                    $principalId = $product->pivot->principal_id ?? $product->principal_id;
+
+                                                    return [
+                                                        'principal_id' => $principalId,
+                                                        'principal_name' => $product->principal?->name,
+                                                        'item_id' => $product->id,
+                                                        'quantity' => $quantity,
+                                                        'price_type' => 'unit_price',
+                                                        'unit_price' => (float) $unitPrice,
+                                                        'current_price' => (float) $unitPrice,
+                                                        'discount_amount' => 0,
+                                                        'discount_percent' => 0,
+                                                        'subtotal' => (float) $unitPrice * $quantity,
+                                                    ];
+                                                })->toArray();
+
+                                                $set('orderItems', $items);
+                                            }),
+                                        DatePicker::make('order_date')
+                                            ->label('Order Date')
+                                            ->default(now())
+                                            ->required(),
+                                    ]),
+
+                                Grid::make(4)
+                                    ->schema([
+                                        TextInput::make('po_number')
+                                            ->label('PO Number')
+                                            ->placeholder('Enter PO number'),
+                                        TextInput::make('payment_method')
+                                            ->label('Payment Method')
+                                            ->placeholder('e.g. Bank Transfer, Credit Card'),
+                                        Select::make('reg_inst')
+                                            ->label('Type')
+                                            ->multiple()
+                                            ->options([
+                                                'REG' => 'Reagent',
+                                                'INST' => 'Instrument',
+                                                'Consumable' => 'Consumable',
+                                            ])
+                                            ->searchable(),
+                                        Select::make('sales_type_id')
+                                            ->label('Purchase Type')
+                                            ->options([
+                                                'INAPROC' => 'INAPROC',
+                                                'non-INAPROC' => 'non-INAPROC',
+                                            ])
+                                            ->searchable(),
+                                    ]),
+
+                                Grid::make(2)
+                                    ->schema([
+                                        Select::make('jual_kso')
+                                            ->label('Jual / KSO')
+                                            ->options([
+                                                'Jual' => 'Jual',
+                                                'KSO' => 'KSO',
+                                                'Sample' => 'Sample',
+                                            ])
+                                            ->required()
+                                            ->searchable(),
+                                        Select::make('distributor_id')
+                                            ->label('Distributor')
+                                            ->relationship('distributor', 'name')
+                                            ->required()
+                                            ->preload()
+                                            ->searchable(),
+                                    ]),
+
+                                Select::make('sales_id')
+                                    ->label('Sales / Marketing')
+                                    ->options(function () use ($user): array {
+                                        $isSalesOrMarketing = self::belongsToSalesOrMarketing($user);
+
+                                        return User::active()
+                                            ->whereHas('department', fn (Builder $query) => $query->whereIn(
+                                                'name',
+                                                $isSalesOrMarketing
+                                                    ? [Department::SALES, Department::MARKETING]
+                                                    : [Department::SALES],
+                                            ))
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id')
+                                            ->all();
+                                    })
+                                    ->default(fn () => self::belongsToSalesOrMarketing($user) ? $user->id : null)
+                                    ->preload()
+                                    ->searchable(),
+                                TextInput::make('tahun')
+                                    ->default(now()->year)
+                                    ->hidden(),
+                                TextInput::make('bulan')
+                                    ->default(now()->month)
+                                    ->hidden(),
+                            ]),
+
+                        Section::make('Customer Details')
+                            ->columnSpan(1)
+                            ->schema([
+                                Select::make('end_customer_id')
+                                    ->label('End Customer')
+                                    ->relationship(
+                                        name: 'customer',
+                                        titleAttribute: 'name',
+                                        modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active'),
+                                    )
+                                    ->searchable()
+                                    ->required()
+                                    ->preload()
+                                    ->live()
+                                    ->columnSpanFull()
+                                    ->afterStateUpdated(function ($set, $state) {
+                                        if (! $state) {
+                                            $set('billing_address', null);
+
+                                            return;
+                                        }
+
+                                        $customer = Customer::find($state);
+                                        if (! $customer) {
+                                            return;
+                                        }
+
+                                        $set('billing_address', $customer->address);
+                                    }),
+
+                                Grid::make(2)
+                                    ->schema([
+                                        Grid::make(1)
+                                            ->schema([
+                                                Textarea::make('billing_address')
+                                                    ->label('Billing Address')
+                                                    ->rows(3)
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($get, $set, $state) {
+                                                        if ($get('shipping_same_as_billing')) {
+                                                            $set('shipping_address', $state);
+                                                        }
+                                                    }),
+                                                Checkbox::make('shipping_same_as_billing')
+                                                    ->label('Shipping address same as billing')
+                                                    ->default(true)
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($get, $set, $state) {
+                                                        if ($state) {
+                                                            $set('shipping_address', $get('billing_address'));
+                                                        }
+                                                    }),
+                                            ])->columnSpan(1),
+
+                                        Textarea::make('shipping_address')
+                                            ->label('Shipping Address')
+                                            ->rows(3)
+                                            ->disabled(fn ($get) => $get('shipping_same_as_billing'))
+                                            ->dehydrated()
                                             ->columnSpan(1),
                                     ]),
-                            ])
-                            ->columns(1)
-                            ->live()
-                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, (float) $get('discount_on'), $state ?? [])),
+
+                                Textarea::make('notes')
+                                    ->label('Notes')
+                                    ->columnSpanFull(),
+                            ]),
                     ]),
 
-                Section::make('Total')
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(3)
+                        Section::make('Product Details')
+                            ->columnSpan(1)
+                            ->headerActions([
+                                Action::make('exportOrderItems')
+                                    ->label('Export to Excel')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->action(function ($livewire, $get) {
+                                        $items = collect($get('orderItems') ?? []);
+                                        $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
+                                        $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
+                                        $items = $items->map(function (array $item) use ($products, $principals): array {
+                                            return [...$item,
+                                                'item_name' => $products[$item['item_id'] ?? null] ?? null,
+                                                'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
+                                            ];
+                                        })->all();
+
+                                        return Excel::download(
+                                            new OrderItemsExport($items),
+                                            'order-products.xlsx',
+                                        );
+                                    }),
+                                Action::make('importOrderItems')
+                                    ->label('Import Products')
+                                    ->icon('heroicon-o-arrow-up-tray')
+                                    ->form([
+                                        FileUpload::make('file')
+                                            ->label('Excel File')
+                                            ->disk('local')
+                                            ->directory('imports')
+                                            ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                                            ->required(),
+                                    ])
+                                    ->action(function (array $data, $get, $set): void {
+                                        $path = Storage::disk('local')->path($data['file']);
+                                        $import = new OrderItemsImport;
+                                        Excel::import($import, $path);
+
+                                        $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
+                                        self::calculateOrderTotals($set, (float) $get('discount_on'), $get('orderItems') ?? []);
+
+                                        if ($import->failures() !== []) {
+                                            Notification::make()
+                                                ->warning()
+                                                ->title('Some rows were not imported')
+                                                ->body(collect($import->failures())->map(fn ($failure) => 'Row '.$failure['row'].': '.$failure['reason'])->implode(' '))
+                                                ->send();
+                                        }
+                                    }),
+                            ])
                             ->schema([
-                                TextInput::make('subtotal')
-                                    ->label('Gross Sales')
-                                    ->step('1')
-                                    ->prefix('IDR')
-                                    ->readOnly(),
-                                TextInput::make('discount_on')
-                                    ->label('Discount (%)')
-                                    ->numeric()
-                                    ->default(0)
-                                    ->suffix('%')
+                                Repeater::make('orderItems')
+                                    ->relationship()
+                                    ->schema([
+                                        Grid::make(7)
+                                            ->schema([
+                                                TextInput::make('principal_name')
+                                                    ->label('Principal')
+                                                    ->readOnly()
+                                                    ->dehydrated(false)
+                                                    ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                        $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
+                                                        $component->state($product?->principal?->name);
+                                                    }),
+                                                Select::make('item_id')
+                                                    ->label('Product')
+                                                    ->options(fn () => Product::query()
+                                                        ->orderBy('name')
+                                                        ->pluck('name', 'id'))
+                                                    ->searchable()
+                                                    ->required()
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, $set, $get): void {
+                                                        $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                        $set('principal_id', $product?->principal_id);
+                                                        $set('principal_name', $product?->principal?->name);
+                                                        self::updateLineTotal($set, $get, true);
+                                                    }),
+                                                TextInput::make('quantity')
+                                                    ->label('Qty')
+                                                    ->numeric()
+                                                    ->default(1)
+                                                    ->minValue(1)
+                                                    ->required()
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($set, $get): void {
+                                                        self::updateLineTotal($set, $get);
+                                                    })
+                                                    ->columnSpan(1),
+                                                Select::make('price_type')
+                                                    ->label('Price Type')
+                                                    ->options([
+                                                        'unit_price' => 'Unit Price',
+                                                        'ecatalog_price' => 'E-Catalog Price',
+                                                    ])
+                                                    ->default('unit_price')
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($set, $get): void {
+                                                        self::updateLineTotal($set, $get, true);
+                                                    })
+                                                    ->columnSpan(1),
+                                                TextInput::make('unit_price')
+                                                    ->label('Unit Price')
+                                                    ->numeric()
+                                                    ->prefix('IDR')
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($set, $get): void {
+                                                        self::updateLineTotal($set, $get);
+                                                    })
+                                                    ->columnSpan(1),
+                                                TextInput::make('discount_percent')
+                                                    ->label('Discount')
+                                                    ->numeric()
+                                                    ->default(0)
+                                                    ->minValue(0)
+                                                    ->maxValue(100)
+                                                    ->suffix('%')
+                                                    ->dehydrated(false)
+                                                    ->live()
+                                                    ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                        $quantity = (int) ($get('quantity') ?? 0);
+                                                        $gross = $quantity * (float) $get('unit_price');
+                                                        $discountAmount = (float) $get('discount_amount');
+                                                        $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
+                                                    })
+                                                    ->afterStateUpdated(function ($set, $get): void {
+                                                        self::updateLineTotal($set, $get);
+                                                    })
+                                                    ->columnSpan(1),
+                                                TextInput::make('subtotal')
+                                                    ->label('Line Total')
+                                                    ->numeric()
+                                                    ->prefix('IDR')
+                                                    ->readOnly()
+                                                    ->columnSpan(1),
+                                            ]),
+                                    ])
+                                    ->columns(1)
                                     ->live()
-                                    ->afterStateUpdated(fn ($set, $get, $state) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $state)),
-                                TextInput::make('total_amount')
-                                    ->label('Net Sales')
-                                    ->step('1')
-                                    ->prefix('IDR')
-                                    ->readOnly(),
+                                    ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, (float) $get('discount_on'), $state ?? [])),
+                            ]),
+
+                        Section::make('Total')
+                            ->columnSpan(1)
+                            ->schema([
+                                Grid::make(3)
+                                    ->schema([
+                                        TextInput::make('subtotal')
+                                            ->label('Gross Sales')
+                                            ->step('1')
+                                            ->prefix('IDR')
+                                            ->readOnly(),
+                                        TextInput::make('discount_on')
+                                            ->label('Discount (%)')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->suffix('%')
+                                            ->live()
+                                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $state)),
+                                        TextInput::make('total_amount')
+                                            ->label('Net Sales')
+                                            ->step('1')
+                                            ->prefix('IDR')
+                                            ->readOnly(),
+                                    ]),
                             ]),
                     ]),
 

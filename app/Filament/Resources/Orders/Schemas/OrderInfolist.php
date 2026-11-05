@@ -15,106 +15,101 @@ class OrderInfolist
     {
         return $schema
             ->components([
-                Section::make('Order Details')
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(7)
+                        Section::make('Order Details')
+                            ->columnSpan(1)
                             ->schema([
-                                TextEntry::make('order_number')
-                                    ->label('Order #')
-                                    ->weight('bold'),
-                                TextEntry::make('reg_inst')
-                                    ->label('Type')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'REG' => 'info',
-                                        'INST' => 'warning',
-                                        'Consumable' => 'success',
-                                        default => 'gray',
-                                    }),
-                                TextEntry::make('sales_type_id')
-                                    ->label('Sales Type'),
-                                TextEntry::make('jual_kso')
-                                    ->label('Jual/KSO'),
-                                TextEntry::make('distributor.name')
-                                    ->label('Distributor'),
-                                TextEntry::make('order_date')
-                                    ->label('Date')
-                                    ->date('d M Y')
-                                    ->formatStateUsing(fn ($state) => strtoupper(Carbon::parse($state)->translatedFormat('d M Y'))),
-                                TextEntry::make('po_number')
-                                    ->label('PO Number')
-                                    ->placeholder('-'),
-                                TextEntry::make('payment_method')
-                                    ->label('Payment Method'),
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('order_number')
+                                            ->label('Order #')
+                                            ->weight('bold'),
+                                        TextEntry::make('reg_inst')
+                                            ->label('Type')
+                                            ->badge()
+                                            ->color(fn (string $state): string => match ($state) {
+                                                'REG' => 'info',
+                                                'INST' => 'warning',
+                                                'Consumable' => 'success',
+                                                default => 'gray',
+                                            }),
+                                        TextEntry::make('sales_type_id')
+                                            ->label('Sales Type'),
+                                        TextEntry::make('jual_kso')
+                                            ->label('Jual/KSO'),
+                                        TextEntry::make('distributor.name')
+                                            ->label('Distributor'),
+                                        TextEntry::make('order_date')
+                                            ->label('Date')
+                                            ->date('d M Y')
+                                            ->formatStateUsing(fn ($state) => strtoupper(Carbon::parse($state)->translatedFormat('d M Y'))),
+                                        TextEntry::make('po_number')
+                                            ->label('PO Number')
+                                            ->placeholder('-'),
+                                        TextEntry::make('payment_method')
+                                            ->label('Payment Method'),
+                                        TextEntry::make('sales.name')
+                                            ->label('Sales / Marketing')
+                                            ->weight('bold'),
+                                        TextEntry::make('srPosition.name')
+                                            ->label('Sales Rep'),
+                                        TextEntry::make('spvPosition.name')
+                                            ->label('Supervisor'),
+                                        TextEntry::make('rsmAsmPosition.name')
+                                            ->label('RSM/ASM'),
+                                        TextEntry::make('headPosition.name')
+                                            ->label('Head'),
+                                        TextEntry::make('pmJpmPePosition.name')
+                                            ->label('PM/JPM/PE'),
+                                    ]),
                             ]),
 
-                    ]),
-
-                Section::make('Sales Details')
-                    ->columnSpanFull()
-                    ->schema([
-                        Grid::make(6)
-                            ->schema([
-                                TextEntry::make('srPosition.name')
-                                    ->label('Sales Rep'),
-                                TextEntry::make('spvPosition.name')
-                                    ->label('Supervisor'),
-                                TextEntry::make('rsmAsmPosition.name')
-                                    ->label('RSM/ASM'),
-                                TextEntry::make('headPosition.name')
-                                    ->label('Head'),
-                                TextEntry::make('pmJpmPePosition.name')
-                                    ->label('PM/JPM/PE'),
-                            ]),
-                    ]),
-
-                Section::make('Customer Details')
-                    ->columnSpanFull()
-                    ->schema([
-                        Grid::make(4)
+                        Section::make('Customer Details')
+                            ->columnSpan(1)
                             ->schema([
                                 TextEntry::make('customer.name')
                                     ->label('End Customer')
                                     ->weight('bold'),
-                            ]),
 
-                        TextEntry::make('billing_address')
-                            ->label('Billing Address')
-                            ->columnSpan(1),
-
-                        TextEntry::make('shipping_address')
-                            ->label('Shipping Address')
-                            ->columnSpan(1),
-                    ]),
-
-                Section::make('Product Details')
-                    ->columnSpanFull()
-                    ->schema([
-                        RepeatableEntry::make('orderItems')
-                            ->schema([
-                                Grid::make()
-                                    ->columns(4)
+                                Grid::make(2)
                                     ->schema([
-                                        TextEntry::make('item.name')
-                                            ->label('Item')
-                                            ->weight('bold'),
-                                        TextEntry::make('quantity')
-                                            ->label('Qty'),
-                                        TextEntry::make('unit_price')
-                                            ->label('Unit Price')
-                                            ->money('IDR'),
-                                        TextEntry::make('subtotal')
-                                            ->label('Line Total')
-                                            ->money('IDR'),
+                                        TextEntry::make('billing_address')
+                                            ->label('Billing Address'),
+                                        TextEntry::make('shipping_address')
+                                            ->label('Shipping Address'),
                                     ]),
                             ]),
                     ]),
 
-                Section::make('Total')
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(3)
+                        Section::make('Product Details')
+                            ->columnSpan(1)
+                            ->schema([
+                                RepeatableEntry::make('orderItems')
+                                    ->schema([
+                                        Grid::make(4)
+                                            ->schema([
+                                                TextEntry::make('item.name')
+                                                    ->label('Item')
+                                                    ->weight('bold'),
+                                                TextEntry::make('quantity')
+                                                    ->label('Qty'),
+                                                TextEntry::make('unit_price')
+                                                    ->label('Unit Price')
+                                                    ->money('IDR'),
+                                                TextEntry::make('subtotal')
+                                                    ->label('Line Total')
+                                                    ->money('IDR'),
+                                            ]),
+                                    ]),
+                            ]),
+
+                        Section::make('Total')
+                            ->columnSpan(1)
                             ->schema([
                                 TextEntry::make('subtotal')
                                     ->label('Gross Sales')
