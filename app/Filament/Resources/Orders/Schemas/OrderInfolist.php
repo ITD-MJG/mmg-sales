@@ -53,16 +53,6 @@ class OrderInfolist
                                         TextEntry::make('sales.name')
                                             ->label('Sales / Marketing')
                                             ->weight('bold'),
-                                        TextEntry::make('srPosition.name')
-                                            ->label('Sales Rep'),
-                                        TextEntry::make('spvPosition.name')
-                                            ->label('Supervisor'),
-                                        TextEntry::make('rsmAsmPosition.name')
-                                            ->label('RSM/ASM'),
-                                        TextEntry::make('headPosition.name')
-                                            ->label('Head'),
-                                        TextEntry::make('pmJpmPePosition.name')
-                                            ->label('PM/JPM/PE'),
                                     ]),
                             ]),
 
@@ -111,17 +101,20 @@ class OrderInfolist
                         Section::make('Total')
                             ->columnSpan(1)
                             ->schema([
-                                TextEntry::make('subtotal')
-                                    ->label('Gross Sales')
-                                    ->money('IDR'),
-                                TextEntry::make('discount_on')
-                                    ->label('Discount')
-                                    ->formatStateUsing(fn ($state) => $state ? $state.'%' : '0%'),
-                                TextEntry::make('total_amount')
-                                    ->label('Net Sales')
-                                    ->money('IDR')
-                                    ->weight('bold')
-                                    ->color('success'),
+                                Grid::make(3)
+                                    ->schema([
+                                        TextEntry::make('subtotal')
+                                            ->label('Gross Sales')
+                                            ->money('IDR'),
+                                        TextEntry::make('discount_on')
+                                            ->label('Discount')
+                                            ->formatStateUsing(fn ($state) => $state ? $state.'%' : '0%'),
+                                        TextEntry::make('total_amount')
+                                            ->label('Net Sales')
+                                            ->money('IDR')
+                                            ->weight('bold')
+                                            ->color('success'),
+                                    ]),
                             ]),
                     ]),
 
