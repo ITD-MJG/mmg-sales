@@ -36,11 +36,11 @@ class OrderForm
 
         return $schema
             ->components([
-                Grid::make(4)
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
                         Section::make('Order Details')
-                            ->columnSpan(3)
+                            ->columnSpan(1)
                             ->schema([
                                 Grid::make(3)->columns(fn (Get $get): int => $get('order_source') === 'manual' ? 2 : 3)
                                     ->schema([
@@ -276,174 +276,170 @@ class OrderForm
                             ]),
                     ]),
 
-                Grid::make(2)
+                Section::make('Product Details')
                     ->columnSpanFull()
-                    ->schema([
-                        Section::make('Product Details')
-                            ->columnSpan(1)
-                            ->headerActions([
-                                Action::make('exportOrderItems')
-                                    ->label('Export to Excel')
-                                    ->icon('heroicon-o-arrow-down-tray')
-                                    ->action(function ($livewire, $get) {
-                                        $items = collect($get('orderItems') ?? []);
-                                        $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
-                                        $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
-                                        $items = $items->map(function (array $item) use ($products, $principals): array {
-                                            return [...$item,
-                                                'item_name' => $products[$item['item_id'] ?? null] ?? null,
-                                                'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
-                                            ];
-                                        })->all();
+                    ->headerActions([
+                        Action::make('exportOrderItems')
+                            ->label('Export to Excel')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->action(function ($livewire, $get) {
+                                $items = collect($get('orderItems') ?? []);
+                                $products = Product::query()->whereIn('id', $items->pluck('item_id')->filter())->pluck('name', 'id');
+                                $principals = Principal::query()->whereIn('id', $items->pluck('principal_id')->filter())->pluck('name', 'id');
+                                $items = $items->map(function (array $item) use ($products, $principals): array {
+                                    return [...$item,
+                                        'item_name' => $products[$item['item_id'] ?? null] ?? null,
+                                        'principal_name' => $principals[$item['principal_id'] ?? null] ?? null,
+                                    ];
+                                })->all();
 
-                                        return Excel::download(
-                                            new OrderItemsExport($items),
-                                            'order-products.xlsx',
-                                        );
-                                    }),
-                                Action::make('importOrderItems')
-                                    ->label('Import Products')
-                                    ->icon('heroicon-o-arrow-up-tray')
-                                    ->form([
-                                        FileUpload::make('file')
-                                            ->label('Excel File')
-                                            ->disk('local')
-                                            ->directory('imports')
-                                            ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
-                                            ->required(),
-                                    ])
-                                    ->action(function (array $data, $get, $set): void {
-                                        $path = Storage::disk('local')->path($data['file']);
-                                        $import = new OrderItemsImport;
-                                        Excel::import($import, $path);
-
-                                        $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
-                                        self::calculateOrderTotals($set, (float) $get('discount_on'), $get('orderItems') ?? []);
-
-                                        if ($import->failures() !== []) {
-                                            Notification::make()
-                                                ->warning()
-                                                ->title('Some rows were not imported')
-                                                ->body(collect($import->failures())->map(fn ($failure) => 'Row '.$failure['row'].': '.$failure['reason'])->implode(' '))
-                                                ->send();
-                                        }
-                                    }),
+                                return Excel::download(
+                                    new OrderItemsExport($items),
+                                    'order-products.xlsx',
+                                );
+                            }),
+                        Action::make('importOrderItems')
+                            ->label('Import Products')
+                            ->icon('heroicon-o-arrow-up-tray')
+                            ->form([
+                                FileUpload::make('file')
+                                    ->label('Excel File')
+                                    ->disk('local')
+                                    ->directory('imports')
+                                    ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                                    ->required(),
                             ])
-                            ->schema([
-                                Repeater::make('orderItems')
-                                    ->relationship()
-                                    ->schema([
-                                        Grid::make(7)
-                                            ->schema([
-                                                TextInput::make('principal_name')
-                                                    ->label('Principal')
-                                                    ->readOnly()
-                                                    ->dehydrated(false)
-                                                    ->afterStateHydrated(function (TextInput $component, $get): void {
-                                                        $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
-                                                        $component->state($product?->principal?->name);
-                                                    }),
-                                                Select::make('item_id')
-                                                    ->label('Product')
-                                                    ->options(fn () => Product::query()
-                                                        ->orderBy('name')
-                                                        ->pluck('name', 'id'))
-                                                    ->searchable()
-                                                    ->required()
-                                                    ->live()
-                                                    ->afterStateUpdated(function ($state, $set, $get): void {
-                                                        $product = $state ? Product::query()->with('principal')->find($state) : null;
-                                                        $set('principal_id', $product?->principal_id);
-                                                        $set('principal_name', $product?->principal?->name);
-                                                        self::updateLineTotal($set, $get, true);
-                                                    }),
-                                                TextInput::make('quantity')
-                                                    ->label('Qty')
-                                                    ->numeric()
-                                                    ->default(1)
-                                                    ->minValue(1)
-                                                    ->required()
-                                                    ->live()
-                                                    ->afterStateUpdated(function ($set, $get): void {
-                                                        self::updateLineTotal($set, $get);
-                                                    })
-                                                    ->columnSpan(1),
-                                                Select::make('price_type')
-                                                    ->label('Price Type')
-                                                    ->options([
-                                                        'unit_price' => 'Unit Price',
-                                                        'ecatalog_price' => 'E-Catalog Price',
-                                                    ])
-                                                    ->default('unit_price')
-                                                    ->live()
-                                                    ->afterStateUpdated(function ($set, $get): void {
-                                                        self::updateLineTotal($set, $get, true);
-                                                    })
-                                                    ->columnSpan(1),
-                                                TextInput::make('unit_price')
-                                                    ->label('Unit Price')
-                                                    ->numeric()
-                                                    ->prefix('IDR')
-                                                    ->live()
-                                                    ->afterStateUpdated(function ($set, $get): void {
-                                                        self::updateLineTotal($set, $get);
-                                                    })
-                                                    ->columnSpan(1),
-                                                TextInput::make('discount_percent')
-                                                    ->label('Discount')
-                                                    ->numeric()
-                                                    ->default(0)
-                                                    ->minValue(0)
-                                                    ->maxValue(100)
-                                                    ->suffix('%')
-                                                    ->dehydrated(false)
-                                                    ->live()
-                                                    ->afterStateHydrated(function (TextInput $component, $get): void {
-                                                        $quantity = (int) ($get('quantity') ?? 0);
-                                                        $gross = $quantity * (float) $get('unit_price');
-                                                        $discountAmount = (float) $get('discount_amount');
-                                                        $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
-                                                    })
-                                                    ->afterStateUpdated(function ($set, $get): void {
-                                                        self::updateLineTotal($set, $get);
-                                                    })
-                                                    ->columnSpan(1),
-                                                TextInput::make('subtotal')
-                                                    ->label('Line Total')
-                                                    ->numeric()
-                                                    ->prefix('IDR')
-                                                    ->readOnly()
-                                                    ->columnSpan(1),
-                                            ]),
-                                    ])
-                                    ->columns(1)
-                                    ->live()
-                                    ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, (float) $get('discount_on'), $state ?? [])),
-                            ]),
+                            ->action(function (array $data, $get, $set): void {
+                                $path = Storage::disk('local')->path($data['file']);
+                                $import = new OrderItemsImport;
+                                Excel::import($import, $path);
 
-                        Section::make('Total')
-                            ->columnSpan(1)
+                                $set('orderItems', [...($get('orderItems') ?? []), ...$import->items()]);
+                                self::calculateOrderTotals($set, (float) $get('discount_on'), $get('orderItems') ?? []);
+
+                                if ($import->failures() !== []) {
+                                    Notification::make()
+                                        ->warning()
+                                        ->title('Some rows were not imported')
+                                        ->body(collect($import->failures())->map(fn ($failure) => 'Row '.$failure['row'].': '.$failure['reason'])->implode(' '))
+                                        ->send();
+                                }
+                            }),
+                    ])
+                    ->schema([
+                        Repeater::make('orderItems')
+                            ->relationship()
                             ->schema([
-                                Grid::make(3)
+                                Grid::make(7)
                                     ->schema([
-                                        TextInput::make('subtotal')
-                                            ->label('Gross Sales')
-                                            ->step('1')
+                                        TextInput::make('principal_name')
+                                            ->label('Principal')
+                                            ->readOnly()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                $product = $get('item_id') ? Product::query()->with('principal')->find($get('item_id')) : null;
+                                                $component->state($product?->principal?->name);
+                                            }),
+                                        Select::make('item_id')
+                                            ->label('Product')
+                                            ->options(fn () => Product::query()
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id'))
+                                            ->searchable()
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, $set, $get): void {
+                                                $product = $state ? Product::query()->with('principal')->find($state) : null;
+                                                $set('principal_id', $product?->principal_id);
+                                                $set('principal_name', $product?->principal?->name);
+                                                self::updateLineTotal($set, $get, true);
+                                            }),
+                                        TextInput::make('quantity')
+                                            ->label('Qty')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                            })
+                                            ->columnSpan(1),
+                                        Select::make('price_type')
+                                            ->label('Price Type')
+                                            ->options([
+                                                'unit_price' => 'Unit Price',
+                                                'ecatalog_price' => 'E-Catalog Price',
+                                            ])
+                                            ->default('unit_price')
+                                            ->live()
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get, true);
+                                            })
+                                            ->columnSpan(1),
+                                        TextInput::make('unit_price')
+                                            ->label('Unit Price')
+                                            ->numeric()
                                             ->prefix('IDR')
-                                            ->readOnly(),
-                                        TextInput::make('discount_on')
-                                            ->label('Discount (%)')
+                                            ->live()
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                            })
+                                            ->columnSpan(1),
+                                        TextInput::make('discount_percent')
+                                            ->label('Discount')
                                             ->numeric()
                                             ->default(0)
+                                            ->minValue(0)
+                                            ->maxValue(100)
                                             ->suffix('%')
+                                            ->dehydrated(false)
                                             ->live()
-                                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $state)),
-                                        TextInput::make('total_amount')
-                                            ->label('Net Sales')
-                                            ->step('1')
+                                            ->afterStateHydrated(function (TextInput $component, $get): void {
+                                                $quantity = (int) ($get('quantity') ?? 0);
+                                                $gross = $quantity * (float) $get('unit_price');
+                                                $discountAmount = (float) $get('discount_amount');
+                                                $component->state($gross > 0 ? round(($discountAmount / $gross) * 100, 4) : 0);
+                                            })
+                                            ->afterStateUpdated(function ($set, $get): void {
+                                                self::updateLineTotal($set, $get);
+                                            })
+                                            ->columnSpan(1),
+                                        TextInput::make('subtotal')
+                                            ->label('Line Total')
+                                            ->numeric()
                                             ->prefix('IDR')
-                                            ->readOnly(),
+                                            ->readOnly()
+                                            ->columnSpan(1),
                                     ]),
+                            ])
+                            ->columns(1)
+                            ->live()
+                            ->afterStateUpdated(fn ($set, $get, $state) => self::calculateOrderTotals($set, (float) $get('discount_on'), $state ?? [])),
+                    ]),
+
+                Section::make('Total')
+                    ->columnSpanFull()
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('subtotal')
+                                    ->label('Gross Sales')
+                                    ->step('1')
+                                    ->prefix('IDR')
+                                    ->readOnly(),
+                                TextInput::make('discount_on')
+                                    ->label('Discount (%)')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->suffix('%')
+                                    ->live()
+                                    ->afterStateUpdated(fn ($set, $get, $state) => self::calculateNetSales($set, (float) $get('subtotal'), (float) $state)),
+                                TextInput::make('total_amount')
+                                    ->label('Net Sales')
+                                    ->step('1')
+                                    ->prefix('IDR')
+                                    ->readOnly(),
                             ]),
                     ]),
 
