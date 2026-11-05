@@ -17,97 +17,99 @@ class LeadInfolist
     {
         return $schema
             ->components([
-                Section::make('Lead Details')
-                    ->columns(4)
+                Grid::make(2)
                     ->columnSpanFull()
                     ->schema([
-                        TextEntry::make('customer_name')
-                            ->label('Customer')
-                            ->weight('bold')
-                            ->url(fn ($record): ?string => $record->customer
-                                ? CustomerResource::getUrl('view', ['record' => $record->customer])
-                                : null)
-                            ->openUrlInNewTab(),
-                        TextEntry::make('status')
-                            ->badge()
-                            ->formatStateUsing(fn (string $state): string => ucfirst($state))
-                            ->color(fn (string $state): string => match ($state) {
-                                'converted' => 'success',
-                                'disqualified' => 'danger',
-                                'contacted' => 'info',
-                                default => 'gray',
-                            }),
-                        TextEntry::make('priority')
-                            ->badge()
-                            ->formatStateUsing(fn (string $state): string => ucfirst($state)),
-                        TextEntry::make('confidence_level')
-                            ->label('Confidence')
-                            ->badge()
-                            ->formatStateUsing(fn (?string $state): string => $state === null
-                                ? 'Not assessed'
-                                : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
-                            ->color(fn (?string $state): string => match ($state) {
-                                'low' => 'gray',
-                                'medium' => 'info',
-                                'high' => 'warning',
-                                'very_high' => 'success',
-                                'committed' => 'primary',
-                                default => 'gray',
-                            }),
-                        TextEntry::make('email')
-                            ->copyable(),
-                        TextEntry::make('phone')
-                            ->copyable(),
-                        TextEntry::make('collaborators.name')
-                            ->label('Assigned To')
-                            ->listWithLineBreaks(false)
-                            ->placeholder('Unassigned'),
-                        TextEntry::make('creator.name')
-                            ->label('Created By')
-
-                            ->url(fn ($record): ?string => $record->creator
-                                ? UserResource::getUrl('view', ['record' => $record->creator])
-                                : null)
-                            ->openUrlInNewTab(),
-                        TextEntry::make('created_at')
-                            ->label('Created')
-                            ->dateTime('d M Y H:i'),
-                    ]),
-
-                Section::make('Products')
-                    ->columnSpanFull()
-                    ->schema([
-                        RepeatableEntry::make('leadProductItems')
-                            ->label('Lead product items')
-                            ->columns(4)
-                            ->label('')
-                            ->table([
-                                RepeatableEntry\TableColumn::make('Product'),
-                                RepeatableEntry\TableColumn::make('Principal'),
-                                RepeatableEntry\TableColumn::make('Quantity'),
-                                RepeatableEntry\TableColumn::make('Unit Price'),
-                            ])
+                        Section::make('Lead Details')
+                            ->columns(2)
                             ->schema([
-                                TextEntry::make('product.name')
-                                    ->weight('bold'),
-                                TextEntry::make('product.principal.name'),
-                                TextEntry::make('quantity'),
-                                TextEntry::make('unit_price')
-                                    ->money('IDR'),
-                            ])
-                            ->placeholder('No products yet'),
-                        Grid::make(3)
+                                TextEntry::make('customer_name')
+                                    ->label('Customer')
+                                    ->weight('bold')
+                                    ->url(fn ($record): ?string => $record->customer
+                                        ? CustomerResource::getUrl('view', ['record' => $record->customer])
+                                        : null)
+                                    ->openUrlInNewTab(),
+                                TextEntry::make('status')
+                                    ->badge()
+                                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'converted' => 'success',
+                                        'disqualified' => 'danger',
+                                        'contacted' => 'info',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('priority')
+                                    ->badge()
+                                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+                                TextEntry::make('confidence_level')
+                                    ->label('Confidence')
+                                    ->badge()
+                                    ->formatStateUsing(fn (?string $state): string => $state === null
+                                        ? 'Not assessed'
+                                        : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
+                                    ->color(fn (?string $state): string => match ($state) {
+                                        'low' => 'gray',
+                                        'medium' => 'info',
+                                        'high' => 'warning',
+                                        'very_high' => 'success',
+                                        'committed' => 'primary',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('email')
+                                    ->copyable(),
+                                TextEntry::make('phone')
+                                    ->copyable(),
+                                TextEntry::make('collaborators.name')
+                                    ->label('Assigned To')
+                                    ->listWithLineBreaks(false)
+                                    ->placeholder('Unassigned'),
+                                TextEntry::make('creator.name')
+                                    ->label('Created By')
+
+                                    ->url(fn ($record): ?string => $record->creator
+                                        ? UserResource::getUrl('view', ['record' => $record->creator])
+                                        : null)
+                                    ->openUrlInNewTab(),
+                                TextEntry::make('created_at')
+                                    ->label('Created')
+                                    ->dateTime('d M Y H:i'),
+                            ]),
+
+                        Section::make('Products')
                             ->schema([
-                                TextEntry::make('estimated_revenue')
-                                    ->label('Expected Revenue')
-                                    ->money('IDR'),
-                                TextEntry::make('expected_closing_date')
-                                    ->label('Estimated Closing Date')
-                                    ->date('d M Y'),
-                                TextEntry::make('total_value')
-                                    ->label('Total Value')
-                                    ->money('IDR')
-                                    ->state(fn ($record): float => $record->leadProductItems->sum(fn ($item): float => (float) $item->quantity * (float) $item->unit_price)),
+                                RepeatableEntry::make('leadProductItems')
+                                    ->label('Lead product items')
+                                    ->columns(4)
+                                    ->label('')
+                                    ->table([
+                                        RepeatableEntry\TableColumn::make('Product'),
+                                        RepeatableEntry\TableColumn::make('Principal'),
+                                        RepeatableEntry\TableColumn::make('Quantity'),
+                                        RepeatableEntry\TableColumn::make('Unit Price'),
+                                    ])
+                                    ->schema([
+                                        TextEntry::make('product.name')
+                                            ->weight('bold'),
+                                        TextEntry::make('product.principal.name'),
+                                        TextEntry::make('quantity'),
+                                        TextEntry::make('unit_price')
+                                            ->money('IDR'),
+                                    ])
+                                    ->placeholder('No products yet'),
+                                Grid::make(3)
+                                    ->schema([
+                                        TextEntry::make('estimated_revenue')
+                                            ->label('Expected Revenue')
+                                            ->money('IDR'),
+                                        TextEntry::make('expected_closing_date')
+                                            ->label('Estimated Closing Date')
+                                            ->date('d M Y'),
+                                        TextEntry::make('total_value')
+                                            ->label('Total Value')
+                                            ->money('IDR')
+                                            ->state(fn ($record): float => $record->leadProductItems->sum(fn ($item): float => (float) $item->quantity * (float) $item->unit_price)),
+                                    ]),
                             ]),
                     ]),
 
