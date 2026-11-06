@@ -17,6 +17,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,22 @@ class ActivitiesTable
                 return $query;
             })
             ->defaultSort('performed_at', 'desc')
+            // One header per day, drawn as a date separator between the rows.
+            // Not offered in the grouping dropdown: the separator is part of
+            // the list's shape, not a user preference.
+            ->defaultGroup(
+                Group::make('performed_at')
+                    ->date()
+                    ->label('Date')
+                    ->titlePrefixedWithLabel(false)
+                    ->getTitleFromRecordUsing(fn (Activity $record): string => strtoupper($record->performed_at->translatedFormat('d M Y')))
+                    ->orderQueryUsing(function (Builder $query): Builder {
+                        // Group ordering is applied before the table's own sort and
+                        // would win, pinning the list to one direction and breaking
+                        // the Date column's sortable header. Let the sort order.
+                        return $query;
+                    }),
+            )
             ->columns([
                 TextColumn::make('activity_code')
                     ->label('Activity Code')
