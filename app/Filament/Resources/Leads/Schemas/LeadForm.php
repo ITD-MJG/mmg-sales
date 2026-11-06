@@ -218,12 +218,7 @@ class LeadForm
                                     ->required()
                                     ->searchable(),
                                 Select::make('status')
-                                    ->options([
-                                        'new' => 'New',
-                                        'contacted' => 'Contacted',
-                                        'converted' => 'Converted',
-                                        'disqualified' => 'Disqualified',
-                                    ])
+                                    ->options(Lead::STATUS_LABELS)
                                     ->default('new')
                                     ->required()
                                     ->searchable(),

@@ -13,18 +13,25 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Lead Report.
  *
- * Reports on the thin `leads` table — raw intake and its qualification — not
- * on opportunities. Leads carry no pipeline stages (won/lost belong to
- * opportunities); their enum stops at new/contacted/converted/disqualified.
+ * Reports on the `leads` table. A lead carries the EspoCRM pipeline
+ * (new → in_process → … → closed_won/closed_lost); the closed stages are what
+ * "open" excludes.
  *
  * Money here is `estimated_revenue`, the lead's own expectation. Actual
  * revenue is not a lead concept: it only exists once an order is raised.
+ * `closed_lost` is the only judged outcome a lead records, so it drives the
+ * judgement figures.
  */
 class PipelineReportService
 {
-    private const OPEN_STATUSES = ['new', 'contacted'];
-
-    private const CLOSED_STATUSES = ['converted', 'disqualified'];
+    /**
+     * Everything not closed, derived from the model so adding a stage does not
+     * silently drop it out of the pipeline totals.
+     */
+    private function openStatuses(): array
+    {
+        return array_values(array_diff(array_keys(Lead::STATUS_LABELS), Lead::CLOSED_STATUSES));
+    }
 
     public function generate(ReportFilterData $filters): PipelineReportData
     {
@@ -40,35 +47,25 @@ class PipelineReportService
         $primaryQuery = $this->buildBaseQuery($filters);
 
         $totalLeads = (clone $primaryQuery)->count();
-        $openLeads = (clone $primaryQuery)->whereIn('status', self::OPEN_STATUSES)->count();
-        $convertedLeads = (clone $primaryQuery)->where('status', 'converted')->count();
-        $disqualifiedLeads = (clone $primaryQuery)->where('status', 'disqualified')->count();
+        $openLeads = (clone $primaryQuery)->whereIn('status', $this->openStatuses())->count();
+        $disqualifiedLeads = (clone $primaryQuery)->where('status', Lead::LOST_STATUS)->count();
+        $contactedLeads = (clone $primaryQuery)->where('status', 'in_process')->count();
 
         $pipelineValue = (float) (clone $primaryQuery)
-            ->whereIn('status', self::OPEN_STATUSES)
+            ->whereIn('status', $this->openStatuses())
             ->sum('estimated_revenue');
 
-        $convertedValue = (float) (clone $primaryQuery)
-            ->where('status', 'converted')
-            ->sum('estimated_revenue');
-
-        // Win rate over judged leads only: a lead still in intake is neither a
-        // win nor a loss, so counting it in the denominator understates the rate.
-        $judgedLeads = $convertedLeads + $disqualifiedLeads;
-        $winRate = $judgedLeads > 0 ? ($convertedLeads / $judgedLeads) * 100 : 0.0;
-
-        $averageDealSize = $convertedLeads > 0 ? $convertedValue / $convertedLeads : 0.0;
+        $averageDealSize = $contactedLeads > 0
+            ? ((float) (clone $primaryQuery)->where('status', 'in_process')->sum('estimated_revenue')) / $contactedLeads
+            : 0.0;
 
         $unassessedLeads = (clone $primaryQuery)->whereNull('confidence_level')->count();
 
         return new PipelineReportData(
             totalLeads: $totalLeads,
             openLeads: $openLeads,
-            convertedLeads: $convertedLeads,
             disqualifiedLeads: $disqualifiedLeads,
             pipelineValue: $pipelineValue,
-            convertedValue: $convertedValue,
-            winRate: $winRate,
             averageDealSize: $averageDealSize,
             unassessedLeads: $unassessedLeads,
             leadsByStatus: $this->getLeadsByStatus($filters),
@@ -114,7 +111,7 @@ class PipelineReportService
 
         // Emit every status in enum order so a status with no rows still shows
         // as an explicit zero rather than vanishing from the chart.
-        return collect(['new', 'contacted', 'converted', 'disqualified'])
+        return collect(array_keys(Lead::STATUS_LABELS))
             ->map(function (string $status) use ($counts): array {
                 $row = $counts->get($status);
 
@@ -219,7 +216,7 @@ class PipelineReportService
                 'Expected Closing' => $lead->expected_closing_date?->format('d M Y'),
                 'Created Date' => $lead->created_at?->format('d M Y'),
                 'Converted Date' => $lead->converted_at?->format('d M Y'),
-                'Disqualified Date' => $lead->disqualified_at?->format('d M Y'),
+                'Closed Lost Date' => $lead->disqualified_at?->format('d M Y'),
             ]);
     }
 }

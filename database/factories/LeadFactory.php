@@ -26,7 +26,7 @@ class LeadFactory extends Factory
             'customer_name' => fake('id_ID')->company(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake('id_ID')->phoneNumber(),
-            'status' => fake()->randomElement(['new', 'contacted']),
+            'status' => fake()->randomElement(['new', 'in_process']),
             'source' => fake()->randomElement(['website', 'referral', 'cold_call', 'trade_show', 'partner', 'other']),
             'priority' => fake()->randomElement(['low', 'medium', 'high', 'urgent']),
             'notes' => fake()->paragraph(),
@@ -39,18 +39,10 @@ class LeadFactory extends Factory
         return $this->state(fn () => ['status' => $status]);
     }
 
-    public function converted(): static
-    {
-        return $this->state(fn () => [
-            'status' => 'converted',
-            'converted_at' => now(),
-        ]);
-    }
-
     public function disqualified(): static
     {
         return $this->state(fn () => [
-            'status' => 'disqualified',
+            'status' => Lead::LOST_STATUS,
             'disqualified_at' => now(),
         ]);
     }

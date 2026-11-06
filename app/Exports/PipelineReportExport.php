@@ -37,7 +37,7 @@ class PipelineReportExport implements FromCollection, WithHeadings, WithMapping,
             'Expected Closing',
             'Created Date',
             'Converted Date',
-            'Disqualified Date',
+            'Closed Lost Date',
         ];
     }
 
@@ -54,7 +54,7 @@ class PipelineReportExport implements FromCollection, WithHeadings, WithMapping,
             $row['Expected Closing'],
             $row['Created Date'],
             $row['Converted Date'],
-            $row['Disqualified Date'],
+            $row['Closed Lost Date'],
         ];
     }
 

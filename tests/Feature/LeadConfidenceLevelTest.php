@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\ConvertLeadToOpportunity;
 use App\Filament\Resources\Activities\Pages\CreateActivity;
 use App\Filament\Resources\Leads\Pages\CreateLead;
 use App\Filament\Resources\Leads\Pages\ListLeads;
@@ -119,19 +118,6 @@ it('shows confidence as a column and a filter on the lead list', function () {
         ->filterTable('confidence_level', 'none')
         ->assertCanSeeTableRecords([$unassessed])
         ->assertCanNotSeeTableRecords([$banded]);
-});
-
-it('carries the confidence band onto the opportunity on conversion', function () {
-    $lead = Lead::factory()->create([
-        'customer_id' => Customer::factory(),
-        'confidence_level' => 'very_high',
-        'estimated_revenue' => 250_000_000,
-    ]);
-
-    $opportunity = app(ConvertLeadToOpportunity::class)->handle($lead);
-
-    expect($opportunity->confidence_level)->toBe(80)
-        ->and((float) $opportunity->estimated_revenue)->toBe(250_000_000.0);
 });
 
 it('prefills the activity confidence from the selected lead', function () {

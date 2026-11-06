@@ -31,12 +31,12 @@ it('mounts the board component and renders status columns', function () {
     actingAs($this->user);
 
     Lead::factory()->create(['status' => 'new', 'created_by' => $this->user->id]);
-    Lead::factory()->create(['status' => 'disqualified', 'created_by' => $this->user->id]);
+    Lead::factory()->create(['status' => 'closed_lost', 'created_by' => $this->user->id]);
 
     Livewire::test(LeadBoard::class)
         ->assertSuccessful()
         ->assertSee('New')
-        ->assertSee('Disqualified');
+        ->assertSee('Closed (Lost)');
 });
 
 it('displays collaborator summary in board', function () {
@@ -45,7 +45,6 @@ it('displays collaborator summary in board', function () {
     $lead = Lead::factory()->create(['status' => 'new', 'created_by' => $this->user->id]);
     $collaborators = User::factory()->count(3)->create();
     $lead->collaborators()->attach($collaborators->pluck('id'));
-
 
     Livewire::test(LeadBoard::class)
         ->assertSee($collaborators[0]->name.' + 2')
@@ -86,7 +85,7 @@ it('scopes the board to own leads for staff', function () {
 it('switching viewTab to board keeps the page successful', function () {
     actingAs($this->user);
 
-    Lead::factory()->create(['status' => 'contacted', 'created_by' => $this->user->id]);
+    Lead::factory()->create(['status' => 'in_process', 'created_by' => $this->user->id]);
 
     Livewire::test(ListLeads::class)
         ->set('viewTab', 'board')
@@ -99,9 +98,9 @@ it('moves a lead card between status columns', function () {
     $lead = Lead::factory()->create(['status' => 'new', 'created_by' => $this->user->id]);
 
     Livewire::test(LeadBoard::class)
-        ->call('moveCard', (string) $lead->getKey(), 'contacted')
+        ->call('moveCard', (string) $lead->getKey(), 'in_process')
         ->assertSuccessful();
 
-    expect($lead->fresh()->status)->toBe('contacted')
+    expect($lead->fresh()->status)->toBe('in_process')
         ->and($lead->fresh()->position)->not->toBeNull();
 });

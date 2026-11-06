@@ -72,7 +72,10 @@ class SampleSalesDataSeeder extends Seeder
         }
         $customerIds = Customer::pluck('id')->toArray();
 
-        $leadStatuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
+        $leadStatuses = [
+            'new', 'in_process', 'prospecting', 'qualification',
+            'proposal', 'negotiation', 'closed_won', 'closed_lost',
+        ];
         $leadSources = ['website', 'referral', 'cold_call', 'trade_show', 'partner', 'other'];
         $leadPriorities = ['low', 'medium', 'high', 'urgent'];
 

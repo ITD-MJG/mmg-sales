@@ -9,11 +9,8 @@ readonly class PipelineReportData
     public function __construct(
         public int $totalLeads,
         public int $openLeads,
-        public int $convertedLeads,
         public int $disqualifiedLeads,
         public float $pipelineValue,
-        public float $convertedValue,
-        public float $winRate,
         public float $averageDealSize,
         public int $unassessedLeads,
         public Collection $leadsByStatus,

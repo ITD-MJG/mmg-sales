@@ -23,14 +23,13 @@ class CRMOverview extends BaseWidget
         $totalCompanies = Customer::count();
         $totalLeads = Lead::count();
 
-        // A lead is open until it is converted or disqualified; the 'won'/'lost'
-        // stages belong to opportunities, so filtering on them never matched.
-        $openLeads = Lead::query()->whereNotIn('status', ['converted', 'disqualified']);
+        // Open means anything short of a closed stage.
+        $openLeads = Lead::query()->whereNotIn('status', Lead::CLOSED_STATUSES);
 
         $pipelineValue = (clone $openLeads)->sum('estimated_revenue');
 
         // Stale Leads: No contact for > 30 days
-        $staleLeadsCount = Lead::whereNotIn('status', ['converted', 'disqualified'])
+        $staleLeadsCount = Lead::whereNotIn('status', Lead::CLOSED_STATUSES)
             ->where(function ($query) {
                 $query->where('last_contacted_at', '<', Carbon::now()->subDays(30))
                     ->orWhereNull('last_contacted_at');

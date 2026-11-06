@@ -40,9 +40,13 @@ class CustomerLeadsTable
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
-                        'converted' => 'success',
-                        'disqualified' => 'danger',
-                        'contacted' => 'info',
+                        'closed_won' => 'success',
+                        'closed_lost' => 'danger',
+                        'negotiation' => 'warning',
+                        'proposal' => 'primary',
+                        'qualification' => 'warning',
+                        'prospecting' => 'info',
+                        'in_process' => 'info',
                         default => 'gray',
                     })
                     ->sortable(),
@@ -62,9 +66,13 @@ class CustomerLeadsTable
                 SelectFilter::make('status')
                     ->options([
                         'new' => 'New',
-                        'contacted' => 'Contacted',
-                        'converted' => 'Converted',
-                        'disqualified' => 'Disqualified',
+                        'in_process' => 'In Process',
+                        'prospecting' => 'Prospecting',
+                        'qualification' => 'Qualification',
+                        'proposal' => 'Proposal',
+                        'negotiation' => 'Negotiation',
+                        'closed_won' => 'Closed (Won)',
+                        'closed_lost' => 'Closed (Lost)',
                     ]),
             ])
             ->headerActions([

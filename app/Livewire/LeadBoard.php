@@ -27,6 +27,7 @@ use Relaticle\Flowforge\Contracts\HasBoard;
 class LeadBoard extends Component implements HasActions, HasBoard, HasForms
 {
     use BaseBoard;
+
     protected string $view = 'livewire.lead-board';
 
     public function board(Board $board): Board
@@ -76,9 +77,13 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
             )
             ->columns([
                 Column::make('new')->label('New')->color('gray'),
-                Column::make('contacted')->label('Contacted')->color('blue'),
-                Column::make('converted')->label('Converted')->color('success'),
-                Column::make('disqualified')->label('Disqualified')->color('danger'),
+                Column::make('in_process')->label('In Process')->color('blue'),
+                Column::make('prospecting')->label('Prospecting')->color('info'),
+                Column::make('qualification')->label('Qualification')->color('warning'),
+                Column::make('proposal')->label('Proposal')->color('primary'),
+                Column::make('negotiation')->label('Negotiation')->color('warning'),
+                Column::make('closed_won')->label('Closed (Won)')->color('success'),
+                Column::make('closed_lost')->label('Closed (Lost)')->color('danger'),
             ]);
     }
 

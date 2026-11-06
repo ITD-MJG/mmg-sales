@@ -24,9 +24,13 @@ class PipelineByStatusWidget extends ChartWidget
 
         $colors = [
             'new' => 'rgb(107, 114, 128)',
-            'contacted' => 'rgb(59, 130, 246)',
-            'converted' => 'rgb(16, 185, 129)',
-            'disqualified' => 'rgb(239, 68, 68)',
+            'in_process' => 'rgb(59, 130, 246)',
+            'prospecting' => 'rgb(56, 189, 248)',
+            'qualification' => 'rgb(245, 158, 11)',
+            'proposal' => 'rgb(139, 92, 246)',
+            'negotiation' => 'rgb(249, 115, 22)',
+            'closed_won' => 'rgb(34, 197, 94)',
+            'closed_lost' => 'rgb(239, 68, 68)',
         ];
 
         return [

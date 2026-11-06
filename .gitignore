@@ -50,3 +50,14 @@ mmg-feedback-*.md
 /.codegraph
 /storage/backups/db/*.sql
 .env.testing
+
+# Local search/index tooling
+/.zvec-grep
+
+# Import spreadsheets and ad-hoc screenshots dropped in the repo root
+/*.xlsx
+/*.jpeg
+/*.png
+
+# Extracted database/schema dumps
+/mjg-vm.sql

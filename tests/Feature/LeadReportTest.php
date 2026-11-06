@@ -29,58 +29,49 @@ function leadReport(): PipelineReportData
 
 it('counts leads by the lead status enum', function () {
     Lead::factory()->create(['status' => 'new']);
-    Lead::factory()->create(['status' => 'contacted']);
-    Lead::factory()->create(['status' => 'converted']);
-    Lead::factory()->create(['status' => 'disqualified']);
+    Lead::factory()->create(['status' => 'in_process']);
+    Lead::factory()->create(['status' => 'closed_lost']);
 
     $data = leadReport();
 
-    expect($data->totalLeads)->toBe(4)
+    expect($data->totalLeads)->toBe(3)
         ->and($data->openLeads)->toBe(2)
-        ->and($data->convertedLeads)->toBe(1)
         ->and($data->disqualifiedLeads)->toBe(1);
 });
 
 it('groups leads by every status, including empty ones', function () {
-    Lead::factory()->create(['status' => 'contacted']);
+    Lead::factory()->create(['status' => 'in_process']);
 
     $data = leadReport();
 
-    expect($data->leadsByStatus)->toHaveCount(4)
+    expect($data->leadsByStatus)->toHaveCount(8)
         ->and($data->leadsByStatus->pluck('status')->all())
-        ->toBe(['new', 'contacted', 'converted', 'disqualified'])
+        ->toBe(array_keys(Lead::STATUS_LABELS))
         ->and($data->leadsByStatus->firstWhere('status', 'new')['count'])->toBe(0)
-        ->and($data->leadsByStatus->firstWhere('status', 'contacted')['count'])->toBe(1);
+        ->and($data->leadsByStatus->firstWhere('status', 'in_process')['count'])->toBe(1);
 });
 
 it('sums pipeline value from open leads only', function () {
     Lead::factory()->create(['status' => 'new', 'estimated_revenue' => 1_000_000]);
-    Lead::factory()->create(['status' => 'contacted', 'estimated_revenue' => 2_000_000]);
-    Lead::factory()->create(['status' => 'converted', 'estimated_revenue' => 4_000_000]);
-    Lead::factory()->create(['status' => 'disqualified', 'estimated_revenue' => 8_000_000]);
+    Lead::factory()->create(['status' => 'in_process', 'estimated_revenue' => 2_000_000]);
+    Lead::factory()->create(['status' => 'closed_lost', 'estimated_revenue' => 8_000_000]);
 
     $data = leadReport();
 
     expect($data->pipelineValue)->toBe(3_000_000.0)
-        ->and($data->convertedValue)->toBe(4_000_000.0)
-        ->and($data->averageDealSize)->toBe(4_000_000.0);
+        // Average expected value is per contacted lead: only the 2M row counts.
+        ->and($data->averageDealSize)->toBe(2_000_000.0);
 });
 
-it('computes win rate over judged leads, ignoring leads still in intake', function () {
+it('counts disqualified leads as the only judged outcome', function () {
     Lead::factory()->count(5)->create(['status' => 'new']);
-    Lead::factory()->count(3)->create(['status' => 'converted']);
-    Lead::factory()->create(['status' => 'disqualified']);
+    Lead::factory()->count(3)->create(['status' => 'in_process']);
+    Lead::factory()->create(['status' => 'closed_lost']);
 
     $data = leadReport();
 
-    // 3 converted of 4 judged, not of 9 total.
-    expect(round($data->winRate, 1))->toBe(75.0);
-});
-
-it('reports zero win rate when nothing has been judged', function () {
-    Lead::factory()->count(3)->create(['status' => 'new']);
-
-    expect(leadReport()->winRate)->toBe(0.0);
+    expect($data->disqualifiedLeads)->toBe(1)
+        ->and($data->openLeads)->toBe(8);
 });
 
 it('counts unassessed leads and buckets them under Not assessed', function () {
@@ -132,7 +123,7 @@ it('rejects the opportunity-only stages from the status filter', function () {
 it('exports lead rows with confidence and estimated revenue', function () {
     $lead = Lead::factory()->create([
         'title' => 'Analyzer rollout',
-        'status' => 'contacted',
+        'status' => 'in_process',
         'confidence_level' => 'very_high',
         'estimated_revenue' => 750_000_000,
         'expected_closing_date' => now()->addMonth(),
@@ -141,7 +132,7 @@ it('exports lead rows with confidence and estimated revenue', function () {
     $row = app(PipelineReportService::class)->getExportData($this->filters)->first();
 
     expect($row['Code'])->toBe($lead->lead_code)
-        ->and($row['Status'])->toBe('Contacted')
+        ->and($row['Status'])->toBe('In Process')
         ->and($row['Confidence'])->toBe('Very High')
         ->and($row['Estimated Revenue'])->toBe(750_000_000.0);
 });

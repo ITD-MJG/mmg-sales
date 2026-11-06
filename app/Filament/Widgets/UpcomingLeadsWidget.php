@@ -48,7 +48,13 @@ class UpcomingLeadsWidget extends BaseWidget
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
                         'new' => 'gray',
-                        'contacted' => 'info',
+                        'in_process' => 'info',
+                        'prospecting' => 'info',
+                        'qualification' => 'warning',
+                        'proposal' => 'primary',
+                        'negotiation' => 'warning',
+                        'closed_won' => 'success',
+                        'closed_lost' => 'danger',
                         'qualified' => 'primary',
                         'proposal' => 'warning',
                         'negotiation' => 'warning',

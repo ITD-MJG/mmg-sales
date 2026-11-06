@@ -97,15 +97,7 @@ class ActivityForm
                                             ->required()
                                             ->maxLength(255),
                                         Select::make('status')
-                                            ->options([
-                                                'new' => 'New',
-                                                'contacted' => 'Contacted',
-                                                'qualified' => 'Qualified',
-                                                'proposal' => 'Proposal',
-                                                'negotiation' => 'Negotiation',
-                                                'won' => 'Won',
-                                                'lost' => 'Lost',
-                                            ])
+                                            ->options(Lead::STATUS_LABELS)
                                             ->default('new'),
                                         Select::make('priority')
                                             ->options([

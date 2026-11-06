@@ -9,12 +9,7 @@ use Filament\Widgets\Widget;
 /**
  * Status breakdown of the thin `leads` table, as a funnel.
  *
- * The counterpart to OpportunityStatusChart, which is Super Admin only. Staff
- * work out of Leads, so this is the chart they get in that dashboard slot.
- *
- * The thin leads enum stops at new/contacted/converted/disqualified — the
- * pipeline stages (qualified, proposal, negotiation, won, lost) live on the
- * opportunity, not here. Charting those would render permanently empty bands.
+ * One band per lead status, in pipeline order: New through Closed (Lost).
  *
  * Drawn with Chart.js and chartjs-chart-funnel rather than the ApexCharts
  * widget the other dashboard charts use. That plugin plots the dataset in the
@@ -32,9 +27,13 @@ class LeadStatusChart extends Widget
      */
     private const BANDS = [
         'New' => 'new',
-        'Contacted' => 'contacted',
-        'Converted' => 'converted',
-        'Disqualified' => 'disqualified',
+        'In Process' => 'in_process',
+        'Prospecting' => 'prospecting',
+        'Qualification' => 'qualification',
+        'Proposal' => 'proposal',
+        'Negotiation' => 'negotiation',
+        'Closed (Won)' => 'closed_won',
+        'Closed (Lost)' => 'closed_lost',
     ];
 
     /**
@@ -42,7 +41,16 @@ class LeadStatusChart extends Widget
      *
      * @var list<string>
      */
-    private const COLORS = ['#6b7280', '#0ea5e9', '#22c55e', '#ef4444'];
+    private const COLORS = [
+        '#6b7280', // new
+        '#0ea5e9', // in_process
+        '#38bdf8', // prospecting
+        '#f59e0b', // qualification
+        '#8b5cf6', // proposal
+        '#f97316', // negotiation
+        '#22c55e', // closed_won
+        '#ef4444', // closed_lost
+    ];
 
     /**
      * Render inline rather than behind a lazy placeholder: the chart is a few

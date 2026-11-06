@@ -111,9 +111,13 @@ class LeadsTable
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
-                        'converted' => 'success',
-                        'disqualified' => 'danger',
-                        'contacted' => 'info',
+                        'closed_won' => 'success',
+                        'closed_lost' => 'danger',
+                        'negotiation' => 'warning',
+                        'proposal' => 'primary',
+                        'qualification' => 'warning',
+                        'prospecting' => 'info',
+                        'in_process' => 'info',
                         default => 'gray',
                     })
                     ->sortable()
@@ -190,12 +194,6 @@ class LeadsTable
                 TextColumn::make('customer.name')
                     ->label('Linked Customer')
                     ->searchable()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('opportunities_count')
-                    ->label('Opportunities')
-                    ->counts('opportunities')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 

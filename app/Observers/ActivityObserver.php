@@ -4,28 +4,19 @@ namespace App\Observers;
 
 use App\Models\Activity;
 use App\Models\Lead;
-use App\Models\Opportunity;
 
 class ActivityObserver
 {
     /**
      * Handle the Activity "created" event.
      *
-     * The pipeline stages (qualified → won/lost) live on the opportunity. The
-     * thin `leads` table is raw intake only and its enum stops at
-     * new/contacted/converted/disqualified, so a lead is never pushed into a
-     * pipeline stage here.
+     * Activities only move a lead between the two statuses the outcome
+     * vocabulary can justify: nothing reached (`new`) and something reached
+     * (`in_process`). Every later stage is a manual move the rep owns, and a
+     * hard stop is the one judgement that overrides them.
      */
     public function created(Activity $activity): void
     {
-        $opportunity = $activity->opportunity;
-
-        if ($opportunity) {
-            $this->advanceOpportunityStage($opportunity, $activity);
-
-            return;
-        }
-
         $lead = $activity->lead;
 
         if (! $lead) {
@@ -37,58 +28,15 @@ class ActivityObserver
 
         if ($this->isHardStop($activity)) {
             // Hard stop: the lead is disqualified, not "lost" — losing is a
-            // pipeline outcome that only exists on the opportunity.
-            $lead->status = 'disqualified';
+            // Hard stop: the one negative outcome a lead records.
+            $lead->status = Lead::LOST_STATUS;
             $lead->disqualified_at = now();
         } elseif ($lead->status === 'new') {
-            // New -> Contacted (any activity)
-            $lead->status = 'contacted';
+            // New -> In Process on any activity.
+            $lead->status = 'in_process';
         }
 
         $lead->save();
-    }
-
-    /**
-     * Advance the opportunity's stage from the activity, never regressing it.
-     */
-    private function advanceOpportunityStage(Opportunity $opportunity, Activity $activity): void
-    {
-        $opportunity->last_contacted_at = $activity->performed_at ?? now();
-
-        if ($this->isHardStop($activity)) {
-            $opportunity->stage = 'lost';
-            $opportunity->closed_at = now();
-
-            $opportunity->save();
-
-            return;
-        }
-
-        $type = strtolower($activity->type ?? '');
-        $subject = strtolower($activity->subject ?? '');
-
-        $isMeeting = str_contains($type, 'presentation')
-            || str_contains($type, 'demo')
-            || str_contains($type, 'meeting');
-
-        $isProposal = str_contains($subject, 'proposal')
-            || str_contains($subject, 'quote')
-            || str_contains($subject, 'kuotasi')
-            || str_contains($subject, 'penawaran');
-
-        if ($opportunity->stage === 'new') {
-            $opportunity->stage = 'contacted';
-        }
-
-        if ($opportunity->stage === 'contacted' && $isMeeting) {
-            $opportunity->stage = 'qualified';
-        }
-
-        if (in_array($opportunity->stage, ['contacted', 'qualified'], true) && $isProposal) {
-            $opportunity->stage = 'proposal';
-        }
-
-        $opportunity->save();
     }
 
     private function isHardStop(Activity $activity): bool

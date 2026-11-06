@@ -3,29 +3,40 @@
 namespace App\Console\Commands;
 
 use App\Models\Lead;
+use App\Services\LeadStatusResolver;
 use Illuminate\Console\Command;
 
+/**
+ * Replays the derivation rule over every lead and writes back the status its
+ * activities justify.
+ *
+ * The rule lives in LeadStatusResolver, which is also what the drift report
+ * reads, so this command cannot drift from the observer that runs on new
+ * activities. It only ever touches `in_process` and `new`: every later stage is
+ * a manual move, and `closed_lost` is a human judgement recorded by an activity.
+ */
 class SyncLeadStatuses extends Command
 {
     protected $signature = 'leads:sync-statuses {--dry-run : Preview changes without updating}';
 
-    protected $description = 'Replay activity/order status transitions for all leads with mismatched statuses';
+    protected $description = 'Rewrite lead statuses to the value their activities justify';
 
-    public function handle(): int
+    public function handle(LeadStatusResolver $resolver): int
     {
-        $leads = Lead::with('activities', 'orders')
-            ->whereIn('status', ['new', 'contacted', 'qualified', 'proposal'])
-            ->whereNull('deleted_at')
+        $leads = Lead::query()
+            ->whereIn('status', ['new', 'in_process'])
+            ->with('activities:id,lead_id,outcome')
             ->get();
 
         $updated = 0;
         $skipped = 0;
 
         foreach ($leads as $lead) {
-            $newStatus = $this->resolveStatus($lead);
+            $newStatus = $resolver->derive($lead);
 
             if ($newStatus === $lead->status) {
                 $skipped++;
+
                 continue;
             }
 
@@ -43,52 +54,5 @@ class SyncLeadStatuses extends Command
             : "Done: {$updated} updated, {$skipped} unchanged.");
 
         return Command::SUCCESS;
-    }
-
-    private function resolveStatus(Lead $lead): string
-    {
-        // Order always wins — lead is won
-        if ($lead->orders()->exists()) {
-            return 'won';
-        }
-
-        $activities = $lead->activities()->orderBy('performed_at')->get();
-
-        if ($activities->isEmpty()) {
-            return $lead->status;
-        }
-
-        $status = 'new';
-
-        foreach ($activities as $activity) {
-            // Hard stop
-            $outcome = strtolower($activity->outcome ?? '');
-            if ($activity->outcome === 'Not Interested' || in_array($outcome, ['tidak tertarik', 'batal', 'gagal'])) {
-                return 'lost';
-            }
-
-            // new → contacted (any activity)
-            if ($status === 'new') {
-                $status = 'contacted';
-            }
-
-            // contacted → qualified (meeting/presentation/demo — str_contains for "In-person Meeting", "Online Meeting")
-            if ($status === 'contacted') {
-                $type = strtolower($activity->type ?? '');
-                if (str_contains($type, 'presentation') || str_contains($type, 'demo') || str_contains($type, 'meeting')) {
-                    $status = 'qualified';
-                }
-            }
-
-            // contacted/qualified → proposal (subject match)
-            if (in_array($status, ['contacted', 'qualified'])) {
-                $subject = strtolower($activity->subject ?? '');
-                if (str_contains($subject, 'proposal') || str_contains($subject, 'quote') || str_contains($subject, 'kuotasi') || str_contains($subject, 'penawaran')) {
-                    $status = 'proposal';
-                }
-            }
-        }
-
-        return $status;
     }
 }

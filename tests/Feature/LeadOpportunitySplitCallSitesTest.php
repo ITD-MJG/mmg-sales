@@ -78,7 +78,7 @@ it('builds the lead report from leads, not opportunities', function () {
     ]);
 
     $lead = Lead::factory()->create([
-        'status' => 'contacted',
+        'status' => 'in_process',
         'estimated_revenue' => 5_000_000,
     ]);
     $lead->collaborators()->attach($rep->id, ['added_by' => $rep->id]);
@@ -97,7 +97,7 @@ it('builds the lead report from leads, not opportunities', function () {
     expect($data->totalLeads)->toBe(1)
         ->and($data->openLeads)->toBe(1)
         ->and($data->pipelineValue)->toBe(5_000_000.0)
-        ->and($data->leadsByStatus->firstWhere('status', 'contacted')['count'])->toBe(1)
+        ->and($data->leadsByStatus->firstWhere('status', 'in_process')['count'])->toBe(1)
         ->and($data->leadsBySalesRep)->toHaveCount(1)
         ->and($data->leadsBySalesRep->first()['name'])->toBe($rep->name)
         ->and($data->leadsBySalesRep->first()['value'])->toBe(5_000_000.0);

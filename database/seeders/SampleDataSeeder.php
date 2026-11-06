@@ -64,7 +64,7 @@ class SampleDataSeeder extends Seeder
         for ($i = 0; $i < 40; $i++) {
             $user = $users->random();
             $customer = $customers->random();
-            $status = fake()->randomElement(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']);
+            $status = fake()->randomElement(['new', 'in_process', 'in_process', 'closed_lost']);
 
             $ageDays = match (true) {
                 $i < 10 => rand(1, 2),
@@ -75,7 +75,7 @@ class SampleDataSeeder extends Seeder
             $createdAt = Carbon::now()->subDays($ageDays)->subHours(rand(1, 23));
             $convertedAt = null;
 
-            if (in_array($status, ['won', 'lost'])) {
+            if ($status === 'closed_lost') {
                 $convertedAt = (clone $createdAt)->addDays(rand(1, $ageDays));
             }
 

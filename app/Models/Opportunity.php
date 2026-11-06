@@ -27,6 +27,7 @@ class Opportunity extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
+            ->logFillable()
             ->logOnlyDirty()
             ->dontLogIfAttributesChangedOnly(['updated_at']);
     }

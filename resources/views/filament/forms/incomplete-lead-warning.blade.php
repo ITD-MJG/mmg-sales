@@ -20,16 +20,17 @@
                 color="warning"
                 icon="heroicon-m-pencil-square"
                 target="_blank"
+                class="w-full"
             >
                 Update Lead
             </x-filament::button>
+        @else
+            <x-filament::button
+                color="gray"
+                x-on:click="$dispatch('close-modal', { id: 'incomplete-lead-warning' })"
+            >
+                Close
+            </x-filament::button>
         @endif
-
-        <x-filament::button
-            color="gray"
-            x-on:click="$dispatch('close-modal', { id: 'incomplete-lead-warning' })"
-        >
-            {{ $editUrl ? 'Continue Anyway' : 'Close' }}
-        </x-filament::button>
     </x-slot>
 </x-filament::modal>

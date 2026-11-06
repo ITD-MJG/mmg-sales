@@ -25,6 +25,7 @@ class Lead extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
+            ->logFillable()
             ->logOnlyDirty()
             ->dontLogIfAttributesChangedOnly(['updated_at']);
     }
@@ -79,17 +80,36 @@ class Lead extends Model
     ];
 
     /**
-     * The lead enum stops at raw intake. Pipeline stages (won/lost, proposal…)
-     * live on opportunities, so they must never appear here.
+     * The EspoCRM pipeline vocabulary, minus `Assigned`: assignment is the
+     * collaborators relation here, not a status, so a lead can be assigned and
+     * sit at Proposal at the same time.
      *
      * @var array<string, string>
      */
     public const STATUS_LABELS = [
         'new' => 'New',
-        'contacted' => 'Contacted',
-        'converted' => 'Converted',
-        'disqualified' => 'Disqualified',
+        'in_process' => 'In Process',
+        'prospecting' => 'Prospecting',
+        'qualification' => 'Qualification',
+        'proposal' => 'Proposal',
+        'negotiation' => 'Negotiation',
+        'closed_won' => 'Closed (Won)',
+        'closed_lost' => 'Closed (Lost)',
     ];
+
+    /**
+     * Statuses that mean the lead is no longer being worked. Kept here so the
+     * "open" definition has one home instead of being re-typed per widget.
+     *
+     * @var list<string>
+     */
+    public const CLOSED_STATUSES = ['closed_won', 'closed_lost'];
+
+    /**
+     * The one judgement a lead records as a hard stop. Every other status is
+     * either intake or progress.
+     */
+    public const LOST_STATUS = 'closed_lost';
 
     public const CONFIDENCE_LABELS = [
         'low' => 'Low',
@@ -180,9 +200,16 @@ class Lead extends Model
             ->withTimestamps();
     }
 
+    /**
+     * The pivot carries quantity, unit_price and a denormalised principal_id
+     * for imported rows. They must be selected explicitly or the order form
+     * silently prefills quantity 1 and the product's list price.
+     */
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'lead_product')->withTimestamps();
+        return $this->belongsToMany(Product::class, 'lead_product')
+            ->withPivot(['principal_id', 'quantity', 'unit_price'])
+            ->withTimestamps();
     }
 
     public function leadProductItems(): HasMany
@@ -203,16 +230,6 @@ class Lead extends Model
     public function activityComments(): HasManyThrough
     {
         return $this->hasManyThrough(ActivityComment::class, Activity::class, 'lead_id');
-    }
-
-    public function opportunities(): HasMany
-    {
-        return $this->hasMany(Opportunity::class, 'converted_from_lead_id');
-    }
-
-    public function isConverted(): bool
-    {
-        return $this->status === 'converted';
     }
 
     /**

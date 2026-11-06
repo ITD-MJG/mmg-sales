@@ -26,7 +26,7 @@ function leadActivity(Lead $lead, array $attributes = []): Activity
 }
 
 it('accepts an activity on a lead only', function () {
-    $activity = leadActivity(Lead::factory()->create(['status' => 'contacted']));
+    $activity = leadActivity(Lead::factory()->create(['status' => 'in_process']));
 
     expect($activity->exists)->toBeTrue();
 });
@@ -74,12 +74,12 @@ it('runs the observer when an activity is created', function () {
 
     leadActivity($lead);
 
-    expect($lead->fresh()->status)->toBe('contacted');
+    expect($lead->fresh()->status)->toBe('in_process');
 });
 
 it('grants access to the creator of the linked lead', function () {
     $creator = User::factory()->create();
-    $lead = Lead::factory()->create(['created_by' => $creator->id, 'status' => 'contacted']);
+    $lead = Lead::factory()->create(['created_by' => $creator->id, 'status' => 'in_process']);
     $activity = leadActivity($lead);
 
     expect($activity->isAccessibleBy($creator))->toBeTrue();
@@ -95,7 +95,7 @@ it('grants access to the creator of the linked opportunity', function () {
 
 it('denies access to a stranger', function () {
     $stranger = User::factory()->create();
-    $lead = Lead::factory()->create(['status' => 'contacted']);
+    $lead = Lead::factory()->create(['status' => 'in_process']);
     $activity = leadActivity($lead);
 
     expect($activity->isAccessibleBy($stranger))->toBeFalse();
@@ -104,7 +104,7 @@ it('denies access to a stranger', function () {
 it('scopes activities to both the lead and opportunity branches', function () {
     $rep = User::factory()->create();
 
-    $lead = Lead::factory()->create(['created_by' => $rep->id, 'status' => 'contacted']);
+    $lead = Lead::factory()->create(['created_by' => $rep->id, 'status' => 'in_process']);
     $viaLead = leadActivity($lead);
 
     $opportunity = Opportunity::factory()->create(['created_by' => $rep->id]);

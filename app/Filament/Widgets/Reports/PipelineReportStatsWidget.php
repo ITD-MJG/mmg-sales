@@ -41,17 +41,13 @@ class PipelineReportStatsWidget extends StatsOverviewWidget
             Stat::make('Total Leads', number_format($data->totalLeads))
                 ->description($statusSummary ?: '-'),
 
-            Stat::make('Win Rate', number_format($data->winRate, 1).'%')
-                ->description("{$data->convertedLeads} converted of ".($data->convertedLeads + $data->disqualifiedLeads).' judged')
-                ->color($data->winRate >= 50 ? 'success' : 'warning'),
+            Stat::make('Disqualified', number_format($data->disqualifiedLeads))
+                ->description('Contacts judged not interested')
+                ->descriptionIcon('heroicon-m-x-circle')
+                ->color($data->disqualifiedLeads > 0 ? 'warning' : 'success'),
 
-            Stat::make('Converted Value', $formatter->formatCurrency($data->convertedValue, 'IDR'))
-                ->description("{$data->convertedLeads} leads converted")
-                ->descriptionIcon('heroicon-m-check-badge')
-                ->color('success'),
-
-            Stat::make('Average Deal Size', $formatter->formatCurrency($data->averageDealSize, 'IDR'))
-                ->description('Converted leads only'),
+            Stat::make('Average Expected Value', $formatter->formatCurrency($data->averageDealSize, 'IDR'))
+                ->description('Per contacted lead'),
 
             Stat::make('Not Assessed', number_format($data->unassessedLeads))
                 ->description('Leads with no confidence level')
