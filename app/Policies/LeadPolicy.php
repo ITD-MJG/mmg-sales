@@ -18,7 +18,7 @@ class LeadPolicy extends BasePolicy
         }
 
         // A read-only global viewer (Director in Management) may view any lead,
-        // matching the query-level scope in HasVisibilityScope::applyVisibilityScope().
+        // matching HasVisibilityScope::visibleUserIds() returning null.
         // Writes stay denied by BasePolicy::before().
         if ($user->hasGlobalVisibility()) {
             return true;
@@ -32,6 +32,13 @@ class LeadPolicy extends BasePolicy
             $lead->created_by === $user->id
             || in_array($lead->created_by, $user->subordinateUserIds(), true)
         ) {
+            return true;
+        }
+
+        // A lead handed to a collaborator is theirs to read, matching the
+        // `orWhereHas('collaborators')` branch of applyLeadVisibilityScope().
+        // Writing stays creator-only — see update()/delete() below.
+        if ($lead->collaborators()->whereKey($user->getKey())->exists()) {
             return true;
         }
 

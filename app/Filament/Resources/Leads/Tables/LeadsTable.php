@@ -22,10 +22,19 @@ class LeadsTable
 {
     use HasVisibilityScope;
 
+    /**
+     * The rows a user may see on the list, the board and the status chart.
+     *
+     * Leads are owned by their creator or by any collaborator, so this must use
+     * `applyLeadVisibilityScope()`: the ownership-only `applyVisibilityScope()`
+     * matched `created_by` alone and hid a lead from the rep it was handed to.
+     * Everyone else still resolves through `visibleUserIds()`, so managers keep
+     * seeing their team's leads and global viewers see everything.
+     */
     public static function listVisibilityQuery(Builder $query, ?User $user): Builder
     {
         if (! $user?->isMarketingDepartment()) {
-            self::applyVisibilityScope($query, 'created_by');
+            self::applyLeadVisibilityScope($query, 'created_by');
         }
 
         return $query;

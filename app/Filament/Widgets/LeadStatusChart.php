@@ -69,7 +69,9 @@ class LeadStatusChart extends Widget
     {
         $query = Lead::query();
 
-        self::applyVisibilityScope($query, 'created_by');
+        // Leads are owned by their creator or any collaborator; the bar counts
+        // must agree with what the lead list shows.
+        self::applyLeadVisibilityScope($query, 'created_by');
 
         $counts = $query
             ->whereIn('status', array_values(self::BANDS))
