@@ -15,6 +15,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -49,6 +50,29 @@ class LeadsTable
 
                 return $query;
             })
+            // One header per day a lead was created, as a date separator between
+            // the rows. Not offered in the grouping dropdown: the separator is
+            // part of the list's shape, not a user preference.
+            //
+            // The separator title is written by hand rather than left to `->date()`:
+            // a date group re-parses the title as a date and formats it with the
+            // table's default format, which ignores `getTitleFromRecordUsing()` and
+            // cannot be uppercased. `whereDate` in `scopeQueryByKeyUsing()` keeps
+            // the day bucketing the `date()` flag would have done.
+            ->defaultGroup(
+                Group::make('created_at')
+                    ->label('Created')
+                    ->titlePrefixedWithLabel(false)
+                    ->getKeyFromRecordUsing(fn (Lead $record): string => $record->created_at->toDateString())
+                    ->getTitleFromRecordUsing(fn (Lead $record): string => strtoupper($record->created_at->translatedFormat('d M Y')))
+                    ->scopeQueryByKeyUsing(fn (Builder $query, string $key): Builder => $query->whereDate('leads.created_at', $key))
+                    ->orderQueryUsing(function (Builder $query): Builder {
+                        // Group ordering is applied before the table's own sort and
+                        // would win, pinning the list to one direction and breaking
+                        // the sortable headers. Let the sort order.
+                        return $query;
+                    }),
+            )
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()

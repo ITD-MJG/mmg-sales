@@ -84,12 +84,19 @@ class ActivitiesTable
             // One header per day, drawn as a date separator between the rows.
             // Not offered in the grouping dropdown: the separator is part of
             // the list's shape, not a user preference.
+            //
+            // The separator title is written by hand rather than left to `->date()`:
+            // a date group re-parses the title as a date and formats it with the
+            // table's default format, which ignores `getTitleFromRecordUsing()` and
+            // cannot be uppercased. `whereDate` in `scopeQueryByKeyUsing()` keeps
+            // the day bucketing the `date()` flag would have done.
             ->defaultGroup(
                 Group::make('performed_at')
-                    ->date()
                     ->label('Date')
                     ->titlePrefixedWithLabel(false)
+                    ->getKeyFromRecordUsing(fn (Activity $record): string => $record->performed_at->toDateString())
                     ->getTitleFromRecordUsing(fn (Activity $record): string => strtoupper($record->performed_at->translatedFormat('d M Y')))
+                    ->scopeQueryByKeyUsing(fn (Builder $query, string $key): Builder => $query->whereDate('activities.performed_at', $key))
                     ->orderQueryUsing(function (Builder $query): Builder {
                         // Group ordering is applied before the table's own sort and
                         // would win, pinning the list to one direction and breaking
