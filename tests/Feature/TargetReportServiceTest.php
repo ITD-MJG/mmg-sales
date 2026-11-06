@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-function targetFilters(array $overrides = []): ReportFilterData
+function yearlyTargetFilters(array $overrides = []): ReportFilterData
 {
     return new ReportFilterData(...array_merge([
         'startDate' => Carbon::now()->startOfYear(),
@@ -26,7 +26,7 @@ it('sums monthly targets across the selected range', function () {
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 1, 'monthly_target' => 1000000]);
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 2, 'monthly_target' => 2000000]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     expect($result->totalTarget)->toBe(3000000.0);
 });
@@ -36,7 +36,7 @@ it('spreads an annual target evenly when no monthly rows exist', function () {
 
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => null, 'annual_target' => 12000000]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     expect($result->monthlyComparison)->toHaveCount(12);
     expect($result->monthlyComparison->first()['target'])->toBe(1000000.0);
@@ -49,7 +49,7 @@ it('prefers the monthly row over the annual spread for that month', function () 
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => null, 'annual_target' => 12000000]);
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 1, 'monthly_target' => 500000]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     $january = $result->monthlyComparison->firstWhere('month', 1);
     $february = $result->monthlyComparison->firstWhere('month', 2);
@@ -75,7 +75,7 @@ it('sums estimated revenue of opportunities created in each month', function () 
         'created_at' => Carbon::now()->startOfYear()->addDays(10),
     ]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     expect($result->totalLeadValue)->toBe(1000000.0);
 });
@@ -94,7 +94,7 @@ it('sums order total_amount in each month', function () {
         'order_date' => Carbon::now()->startOfYear()->addDays(20)->format('Y-m-d'),
     ]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     expect($result->totalOrderValue)->toBe(10000000.0);
 });
@@ -113,7 +113,7 @@ it('excludes opportunities and orders outside the date range', function () {
         'order_date' => Carbon::now()->subYears(2)->format('Y-m-d'),
     ]);
 
-    $result = (new TargetReportService)->generate(targetFilters());
+    $result = (new TargetReportService)->generate(yearlyTargetFilters());
 
     expect($result->totalLeadValue)->toBe(0.0);
     expect($result->totalOrderValue)->toBe(0.0);
@@ -137,7 +137,7 @@ it('scopes targets and order value to the selected sales representative', functi
         'order_date' => Carbon::now()->startOfYear()->addDays(3)->format('Y-m-d'),
     ]);
 
-    $result = (new TargetReportService)->generate(targetFilters(["userId" => $mine->id]));
+    $result = (new TargetReportService)->generate(yearlyTargetFilters(["userId" => $mine->id]));
 
     expect($result->totalTarget)->toBe(1000000.0);
     expect($result->totalOrderValue)->toBe(300000.0);
@@ -166,7 +166,7 @@ it('survives a cache round trip on the serializing store', function () {
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 1, 'monthly_target' => 1234567]);
 
     $service = app(TargetReportService::class);
-    $filters = targetFilters();
+    $filters = yearlyTargetFilters();
 
     $first = $service->generate($filters);
     $second = $service->generate($filters);

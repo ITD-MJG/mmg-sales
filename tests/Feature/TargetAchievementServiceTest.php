@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Services\Reports\TargetAchievementService;
 use Carbon\Carbon;
 
-function targetFilters(User $user, array $overrides = []): ReportFilterData
+function monthlyTargetFilters(User $user, array $overrides = []): ReportFilterData
 {
     return new ReportFilterData(...array_merge([
         'startDate' => Carbon::now()->startOfMonth(),
@@ -46,7 +46,7 @@ it('compares orders against the monthly target', function () {
         'total_amount' => 50000,
     ]);
 
-    $result = (new TargetAchievementService)->generate(targetFilters($user));
+    $result = (new TargetAchievementService)->generate(monthlyTargetFilters($user));
 
     expect($result->monthlyTarget)->toBe(100000.0);
     expect($result->totalOrderRevenue)->toBe(50000.0);
@@ -68,7 +68,7 @@ it('compares lead pipeline value against the monthly target', function () {
         'estimated_revenue' => 80000,
     ]);
 
-    $result = (new TargetAchievementService)->generate(targetFilters($user));
+    $result = (new TargetAchievementService)->generate(monthlyTargetFilters($user));
 
     expect($result->totalLeadValue)->toBe(80000.0);
     expect($result->leadAchievement)->toBe(40.0);
@@ -96,7 +96,7 @@ it('only counts records belonging to the selected user', function () {
         'total_amount' => 999999,
     ]);
 
-    $result = (new TargetAchievementService)->generate(targetFilters($user));
+    $result = (new TargetAchievementService)->generate(monthlyTargetFilters($user));
 
     expect($result->totalOrderRevenue)->toBe(10000.0);
     expect($result->totalOrders)->toBe(1);
@@ -116,7 +116,7 @@ it('excludes orders outside the date range', function () {
         'total_amount' => 50000,
     ]);
 
-    $result = (new TargetAchievementService)->generate(targetFilters($user));
+    $result = (new TargetAchievementService)->generate(monthlyTargetFilters($user));
 
     expect($result->totalOrderRevenue)->toBe(10000.0);
 });
@@ -142,7 +142,7 @@ it('builds a monthly breakdown covering the whole range', function () {
         'estimated_revenue' => 40000,
     ]);
 
-    $result = (new TargetAchievementService)->generate(targetFilters(
+    $result = (new TargetAchievementService)->generate(monthlyTargetFilters(
         $user,
         ['endDate' => Carbon::now()->addMonths(2)->endOfMonth()],
     ));
