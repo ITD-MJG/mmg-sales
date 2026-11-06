@@ -51,12 +51,11 @@ it('orders the lead separators by creation day', function () {
     $newer = leadCreatedAt($secondDay->toDateTimeString());
 
     $html = Livewire::test(ListLeads::class)
-        ->sortTable('created_at', 'asc')
-        ->assertCanSeeTableRecords([$older, $newer], inOrder: true)
+        ->assertCanSeeTableRecords([$newer, $older], inOrder: true)
         ->html();
 
     $firstHeader = strtoupper($firstDay->translatedFormat('d M Y'));
     $secondHeader = strtoupper($secondDay->translatedFormat('d M Y'));
 
-    expect(strpos($html, $firstHeader))->toBeLessThan(strpos($html, $secondHeader));
+    expect(strpos($html, $secondHeader))->toBeLessThan(strpos($html, $firstHeader));
 });

@@ -22,23 +22,23 @@ beforeEach(function () {
     Livewire::actingAs($this->user);
 });
 
-it('sorts the leads table by title ascending and descending', function () {
+it('sorts the leads table by customer name ascending and descending', function () {
     $customer = Customer::factory()->create();
     $alpha = Lead::factory()->create([
         'customer_id' => $customer->id,
         'created_by' => $this->user->id,
-        'title' => 'Alpha sorting lead',
+        'customer_name' => 'Alpha sorting lead',
     ]);
     $zulu = Lead::factory()->create([
         'customer_id' => $customer->id,
         'created_by' => $this->user->id,
-        'title' => 'Zulu sorting lead',
+        'customer_name' => 'Zulu sorting lead',
     ]);
 
     Livewire::test(ListLeads::class)
-        ->sortTable('title', 'asc')
+        ->sortTable('customer_name', 'asc')
         ->assertCanSeeTableRecords([$alpha, $zulu], inOrder: true)
-        ->sortTable('title', 'desc')
+        ->sortTable('customer_name', 'desc')
         ->assertCanSeeTableRecords([$zulu, $alpha], inOrder: true);
 });
 

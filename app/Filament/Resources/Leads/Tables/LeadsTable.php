@@ -50,6 +50,9 @@ class LeadsTable
 
                 return $query;
             })
+            // Newest day first, which is also the order the day groups read in
+            // while the group's own ordering stays out of the way.
+            ->defaultSort('created_at', 'desc')
             // One header per day a lead was created, as a date separator between
             // the rows. Not offered in the grouping dropdown: the separator is
             // part of the list's shape, not a user preference.
