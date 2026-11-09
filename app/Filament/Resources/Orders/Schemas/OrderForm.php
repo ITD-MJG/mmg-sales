@@ -71,7 +71,12 @@ class OrderForm
                                             ->label('Lead')
                                             ->options(fn ($get) => match ($get('order_source')) {
                                                 'leads' => Lead::query()
-                                                    ->where('created_by', auth()->id())
+                                                    ->where(function ($query): void {
+                                                        if (! auth()->user()?->hasGlobalVisibility()) {
+                                                            $query->where('created_by', auth()->id())
+                                                                ->orWhereHas('collaborators', fn ($collaborators) => $collaborators->whereKey(auth()->id()));
+                                                        }
+                                                    })
                                                     ->pluck('title', 'id'),
                                                 default => [],
                                             })
@@ -86,7 +91,15 @@ class OrderForm
                                             ->afterStateUpdated(function ($set, $get, ?string $state): void {
                                                 $sourceType = $get('order_source');
                                                 $source = match ($sourceType) {
-                                                    'leads' => $state ? Lead::query()->where('created_by', auth()->id())->with(['customer', 'products.principal', 'creator', 'collaborators'])->find($state) : null,
+                                                    'leads' => $state ? Lead::query()
+                                                        ->where(function ($query): void {
+                                                            if (! auth()->user()?->hasGlobalVisibility()) {
+                                                                $query->where('created_by', auth()->id())
+                                                                    ->orWhereHas('collaborators', fn ($collaborators) => $collaborators->whereKey(auth()->id()));
+                                                            }
+                                                        })
+                                                        ->with(['customer', 'products.principal', 'creator', 'collaborators'])
+                                                        ->find($state) : null,
                                                     default => null,
                                                 };
 

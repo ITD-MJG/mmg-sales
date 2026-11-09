@@ -93,6 +93,26 @@ test('selecting an owned lead prefills customer, source details, products, creat
         ])
         ->assertFormFieldExists('source_record_id');
 });
+/**
+ * Global viewers may use any lead as an order source, not only leads they
+ * created or collaborate on.
+ */
+test('global users can select any lead as an order source', function () {
+    $actor = User::factory()->create();
+    $actor->assignRole('Super Admin');
+    $creator = User::factory()->create();
+    $lead = Lead::factory()->create(['created_by' => $creator->id]);
+
+    $component = Livewire::actingAs($actor)->test(CreateOrder::class);
+
+    $component->set('data.order_source', 'leads')
+        ->assertFormFieldExists('source_record_id', function ($field) use ($lead): bool {
+            return isset($field->getOptions()[$lead->id]);
+        })
+        ->set('data.source_record_id', $lead->id)
+        ->assertFormSet(['sales_id' => $creator->id]);
+});
+
 
 test('changing the source or clearing its record resets source-populated fields for manual entry', function () {
     $actor = User::factory()->create();
