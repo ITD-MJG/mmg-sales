@@ -136,6 +136,10 @@ class LeadForm
                                             })
                                             ->searchable()
                                             ->preload()
+                                            ->distinct()
+                                            ->validationMessages([
+                                                'distinct' => 'This product is already listed on another line.',
+                                            ])
                                             ->required(),
                                         TextInput::make('quantity')
                                             ->label('Qty')
