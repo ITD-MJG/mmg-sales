@@ -260,7 +260,8 @@ it('shows a modal warning when the selected lead has no estimated revenue', func
     livewire(CreateActivity::class)
         ->set('data.lead_id', $lead->id)
         ->assertDispatched('open-modal')
-        ->assertSee('incomplete-lead-warning');
+        ->assertSee('incomplete-lead-warning')
+        ->assertDontSee('fi-modal-close-btn', escape: false);
 });
 
 it('does not warn when the selected lead has estimated revenue and closing date', function () {

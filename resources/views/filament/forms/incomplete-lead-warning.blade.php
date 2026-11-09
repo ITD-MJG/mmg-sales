@@ -3,6 +3,9 @@
     icon="heroicon-o-exclamation-triangle"
     icon-color="warning"
     width="md"
+    :close-button="false"
+    :close-by-clicking-away="false"
+    :close-by-escaping="false"
 >
     <x-slot name="heading">
         Lead details are incomplete
@@ -21,6 +24,7 @@
                 icon="heroicon-m-pencil-square"
                 target="_blank"
                 class="w-full"
+                x-on:click="$dispatch('close-modal', { id: 'incomplete-lead-warning' })"
             >
                 Update Lead
             </x-filament::button>
