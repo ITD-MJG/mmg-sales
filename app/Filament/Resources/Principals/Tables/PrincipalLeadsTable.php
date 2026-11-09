@@ -30,7 +30,8 @@ class PrincipalLeadsTable
                 TextColumn::make('lead_code')
                     ->label('Lead Code')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn (Lead $record): string => LeadResource::getUrl('view', ['record' => $record])),
 
                 TextColumn::make('title')
                     ->label('Title')

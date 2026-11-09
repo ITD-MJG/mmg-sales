@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\Leads\LeadResource;
+use App\Filament\Resources\Orders\OrderResource;
 use App\Filament\Resources\Principals\PrincipalResource;
 use App\Filament\Resources\Principals\Tables\PrincipalLeadsTable;
 use App\Filament\Resources\Principals\Tables\PrincipalOrdersTable;
@@ -22,6 +24,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\seed;
+use function Pest\Livewire\livewire;
 
 uses(RefreshDatabase::class);
 
@@ -161,4 +164,23 @@ it('registers a working principal view page', function () {
         ->assertSeeLivewire(PrincipalStatsWidget::class)
         ->assertSeeLivewire(PrincipalLeadsWidget::class)
         ->assertSeeLivewire(PrincipalOrdersWidget::class);
+});
+
+it('links each lead code in the principal leads table to the lead', function () {
+    $lead = principalLead($this->principal);
+
+    livewire(PrincipalLeadsWidget::class, ['record' => $this->principal])
+        ->assertSeeHtml(LeadResource::getUrl('view', ['record' => $lead]));
+});
+
+it('links each order number in the principal orders table to the order', function () {
+    $order = Order::factory()->create();
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'item_id' => $this->product->id,
+        'principal_id' => $this->principal->id,
+    ]);
+
+    livewire(PrincipalOrdersWidget::class, ['record' => $this->principal])
+        ->assertSeeHtml(OrderResource::getUrl('view', ['record' => $order]));
 });

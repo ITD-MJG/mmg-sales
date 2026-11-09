@@ -29,7 +29,8 @@ class PrincipalOrdersTable
                     ->label('Order #')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->url(fn (Order $record): string => OrderResource::getUrl('view', ['record' => $record])),
 
                 TextColumn::make('order_date')
                     ->label('Date')
