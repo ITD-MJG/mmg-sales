@@ -38,7 +38,7 @@ class CustomerLeadsTable
 
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->formatStateUsing(fn (string $state): string => Lead::STATUS_LABELS[$state] ?? ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
                         'closed_won' => 'success',
                         'closed_lost' => 'danger',
@@ -64,16 +64,7 @@ class CustomerLeadsTable
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->options([
-                        'new' => 'New',
-                        'in_process' => 'In Process',
-                        'prospecting' => 'Prospecting',
-                        'qualification' => 'Qualification',
-                        'proposal' => 'Proposal',
-                        'negotiation' => 'Negotiation',
-                        'closed_won' => 'Closed (Won)',
-                        'closed_lost' => 'Closed (Lost)',
-                    ]),
+                    ->options(Lead::STATUS_LABELS),
             ])
             ->headerActions([
                 Action::make('create')

@@ -32,7 +32,7 @@ class LeadInfolist
                                     ->openUrlInNewTab(),
                                 TextEntry::make('status')
                                     ->badge()
-                                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                                    ->formatStateUsing(fn (string $state): string => Lead::STATUS_LABELS[$state] ?? ucfirst($state))
                                     ->color(fn (string $state): string => match ($state) {
                                         'closed_won' => 'success',
                                         'closed_lost' => 'danger',
