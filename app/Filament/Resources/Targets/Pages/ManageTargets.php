@@ -13,11 +13,8 @@ class ManageTargets extends ManageRecords
     protected function getHeaderActions(): array
     {
         return [
-            // An annual target is one row with a null month, so the same form
-            // cannot add a second one - the user edits the existing row.
             CreateAction::make()
-                ->modalDescription('Enter either one annual target for the year or a target for a single month. To change an existing target, edit its row in the table.')
-                ->mutateDataUsing(fn (array $data): array => TargetResource::normalizeTargetPayload($data)),
+                ->modalDescription('Enter one target per representative per month. Edit an existing row to report its actual.'),
         ];
     }
 }

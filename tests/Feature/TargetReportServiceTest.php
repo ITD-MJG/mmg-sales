@@ -31,22 +31,9 @@ it('sums monthly targets across the selected range', function () {
     expect($result->totalTarget)->toBe(3000000.0);
 });
 
-it('spreads an annual target evenly when no monthly rows exist', function () {
+it('leaves months without a target row at zero', function () {
     $user = User::factory()->create();
 
-    Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => null, 'annual_target' => 12000000]);
-
-    $result = (new TargetReportService)->generate(yearlyTargetFilters());
-
-    expect($result->monthlyComparison)->toHaveCount(12);
-    expect($result->monthlyComparison->first()['target'])->toBe(1000000.0);
-    expect($result->totalTarget)->toBe(12000000.0);
-});
-
-it('prefers the monthly row over the annual spread for that month', function () {
-    $user = User::factory()->create();
-
-    Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => null, 'annual_target' => 12000000]);
     Target::create(['user_id' => $user->id, 'year' => now()->year, 'month' => 1, 'monthly_target' => 500000]);
 
     $result = (new TargetReportService)->generate(yearlyTargetFilters());
@@ -54,8 +41,10 @@ it('prefers the monthly row over the annual spread for that month', function () 
     $january = $result->monthlyComparison->firstWhere('month', 1);
     $february = $result->monthlyComparison->firstWhere('month', 2);
 
+    expect($result->monthlyComparison)->toHaveCount(12);
     expect($january['target'])->toBe(500000.0);
-    expect($february['target'])->toBe(1000000.0);
+    expect($february['target'])->toBe(0.0);
+    expect($result->totalTarget)->toBe(500000.0);
 });
 
 it('sums estimated revenue of opportunities created in each month', function () {

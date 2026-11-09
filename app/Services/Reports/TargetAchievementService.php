@@ -36,7 +36,7 @@ class TargetAchievementService
             ->whereBetween('year', [$startYear, $endYear])
             ->get();
 
-        $annualTarget = (float) $targets->sum('annual_target');
+        $annualTarget = (float) $targets->sum('monthly_target');
         $monthlyTarget = (float) $targets->sum('monthly_target');
 
         $orderRevenue = (float) Order::query()

@@ -25,7 +25,11 @@ class SalesTargetWidget extends BaseWidget
             ->first();
 
         $monthlyTarget = (float) ($target->monthly_target ?? 0);
-        $annualTarget = (float) ($target->annual_target ?? 0);
+        // A year has no annual row any more; its annual target is the sum of
+        // the rep's monthly targets.
+        $annualTarget = (float) Target::where('user_id', $user->id)
+            ->where('year', now()->year)
+            ->sum('monthly_target');
 
         $annualShippedAmount = Order::query()
             ->where('created_by', $user->id)

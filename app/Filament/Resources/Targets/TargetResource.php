@@ -15,12 +15,12 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ManageRecords;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Component;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
@@ -46,23 +46,15 @@ class TargetResource extends Resource
                     ->label('Sales Representative')
                     ->relationship('user', 'name')
                     ->required()
-                    // The targets unique key is (user_id, year, month), but SQL
-                    // treats a NULL month as distinct, so a year's annual row can
-                    // be inserted twice. Guard it here: one per rep per year.
-                    ->rule(fn (Get $get): Unique => Rule::unique('targets', 'user_id')
-                        ->where(fn ($query) => $query
-                            ->where('year', $get('year'))
-                            ->whereNull('month'))
-                        ->ignore(self::currentRecordKey()),
-                        fn (Get $get): bool => $get('scope') === 'annual')
-                    ->rule(fn (Get $get): Unique => Rule::unique('targets', 'user_id')
+                    // One row per rep per month, so the target and the actual
+                    // the rep reports for that period stay on the same record.
+                    ->rule(fn (Get $get, Component $livewire): Unique => Rule::unique('targets', 'user_id')
                         ->where(fn ($query) => $query
                             ->where('year', $get('year'))
                             ->where('month', $get('month')))
-                        ->ignore(self::currentRecordKey()),
-                        fn (Get $get): bool => $get('scope') === 'month')
+                        ->ignore(self::currentRecordKey($livewire)))
                     ->validationMessages([
-                        'unique' => 'This representative already has a target for that period. Edit the existing row instead.',
+                        'unique' => 'This representative already has a target for that month. Edit the existing row instead.',
                     ]),
                 TextInput::make('year')
                     ->label('Year')
@@ -70,94 +62,51 @@ class TargetResource extends Resource
                     ->numeric()
                     ->minValue(2020)
                     ->maxValue(2030),
-                // Not a targets column: an annual target is a single row with a
-                // null month, so this picks which amount is persisted and how the
-                // uniqueness rules above are scoped.
-                Select::make('scope')
-                    ->label('Target Type')
-                    ->options([
-                        'annual' => 'Annual (spread over 12 months)',
-                        'month' => 'Specific month',
-                    ])
-                    ->default('annual')
-                    ->selectablePlaceholder(false)
-                    ->live()
-                    // Dehydrated so the payload can be normalized before saving.
-                    ->dehydrated()
-                    ->afterStateHydrated(function (Set $set, ?Target $record): void {
-                        if ($record) {
-                            $set('scope', $record->month === null ? 'annual' : 'month');
-                        }
-                    })
-                    ->required(),
-                TextInput::make('annual_target')
-                    ->label('Annual Target')
-                    ->numeric()
-                    ->prefix('Rp')
-                    ->nullable()
-                    ->required(fn (Get $get): bool => $get('scope') === 'annual')
-                    ->visible(fn (Get $get): bool => $get('scope') === 'annual')
-                    ->helperText('Stored on one row for the whole year. Months without their own target share it evenly.'),
                 Select::make('month')
                     ->label('Month')
-                    ->options([
-                        1 => 'January',
-                        2 => 'February',
-                        3 => 'March',
-                        4 => 'April',
-                        5 => 'May',
-                        6 => 'June',
-                        7 => 'July',
-                        8 => 'August',
-                        9 => 'September',
-                        10 => 'October',
-                        11 => 'November',
-                        12 => 'December',
-                    ])
-                    ->nullable()
-                    ->required(fn (Get $get): bool => $get('scope') === 'month')
-                    ->visible(fn (Get $get): bool => $get('scope') === 'month'),
+                    ->options(self::monthOptions())
+                    ->required(),
                 TextInput::make('monthly_target')
                     ->label('Monthly Target')
                     ->numeric()
                     ->prefix('Rp')
+                    ->required(),
+                // The rep reports achievement against their own month, so the
+                // actual is entered on an existing target rather than alongside
+                // the target it is measured against.
+                TextInput::make('actual')
+                    ->label('Actual')
+                    ->numeric()
+                    ->prefix('Rp')
                     ->nullable()
-                    ->required(fn (Get $get): bool => $get('scope') === 'month')
-                    ->visible(fn (Get $get): bool => $get('scope') === 'month'),
+                    ->helperText('Revenue the rep recorded for this month.')
+                    ->hiddenOn('create'),
             ]);
     }
 
     /**
-     * The row being edited, so the uniqueness rules do not reject an unchanged
-     * annual or monthly target on save.
+     * @return array<int, string>
      */
-    protected static function currentRecordKey(): ?int
+    public static function monthOptions(): array
     {
-        $page = app(ManageRecords::class);
-
-        return method_exists($page, 'getRecord') && $page->getRecord()
-            ? $page->getRecord()->getKey()
-            : null;
+        return collect(range(1, 12))
+            ->mapWithKeys(fn (int $month): array => [$month => Carbon::create()->month($month)->format('F')])
+            ->all();
     }
 
     /**
-     * A target covers one amount scope, so the opposite amount is blanked rather
-     * than left behind: summing `annual_target` across a year's rows would
-     * otherwise multiply a rep's annual quota by the number of monthly rows.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
+     * The row being edited, so the uniqueness rule does not reject an unchanged
+     * target on save.
      */
-    public static function normalizeTargetPayload(array $data): array
+    protected static function currentRecordKey(?Component $livewire): ?int
     {
-        if (($data['scope'] ?? null) === 'annual') {
-            $data['month'] = null;
-            $data['monthly_target'] = null;
-        } else {
-            $data['annual_target'] = null;
+        if (! $livewire instanceof ManageRecords) {
+            return null;
         }
 
-        return $data;
+        $mounted = $livewire->mountedActions[0] ?? null;
+
+        return $mounted['context']['recordKey'] ?? null;
     }
 
     public static function table(Table $table): Table
@@ -175,14 +124,22 @@ class TargetResource extends Resource
                     ->label('Month')
                     ->formatStateUsing(fn ($state) => $state ? Carbon::create()->month($state)->format('F') : 'N/A')
                     ->sortable(),
-                TextColumn::make('annual_target')
-                    ->label('Annual Target')
-                    ->money('IDR')
-                    ->sortable(),
                 TextColumn::make('monthly_target')
-                    ->label('Monthly Target')
+                    ->label('Target')
                     ->money('IDR')
                     ->sortable(),
+                TextColumn::make('actual')
+                    ->label('Actual')
+                    ->money('IDR')
+                    ->sortable()
+                    ->placeholder('Not reported'),
+                TextColumn::make('variance')
+                    ->label('Variance')
+                    ->state(fn (?Target $record): float => (float) ($record?->actual ?? 0) - (float) ($record?->monthly_target ?? 0))
+                    ->money('IDR')
+                    ->color(fn (?Target $record): string => (float) ($record?->actual ?? 0) >= (float) ($record?->monthly_target ?? 0) ? 'success' : 'danger')
+                    ->placeholder('-')
+                    ->visible(fn (?Target $record): bool => $record?->actual !== null),
             ])
             ->filters([
                 //

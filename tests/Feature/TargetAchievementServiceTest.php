@@ -36,7 +36,6 @@ it('compares orders against the monthly target', function () {
         'user_id' => $user->id,
         'year' => Carbon::now()->year,
         'month' => Carbon::now()->month,
-        'annual_target' => 1200000,
         'monthly_target' => 100000,
     ]);
 

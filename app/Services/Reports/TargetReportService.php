@@ -78,9 +78,8 @@ class TargetReportService
     }
 
     /**
-     * A month's target is the sum of its `monthly_target` rows. When a year has
-     * only an annual row (month is null, per the targets unique key), the
-     * annual target is spread evenly across that year's months.
+     * A month's target is the sum of its `monthly_target` rows for the selected
+     * representatives, keyed by `Y-m` for the chart axis.
      *
      * @param  Collection<int, array{key: string, label: string, year: int, month: int}>  $months
      * @return array<string, float>
@@ -97,28 +96,14 @@ class TargetReportService
             $query->whereIn('user_id', $filters->userIds);
         }
 
-        $rows = $query->get(['year', 'month', 'annual_target', 'monthly_target']);
+        $monthly = $query->get(['year', 'month', 'monthly_target'])
+            ->groupBy(fn (Target $target): string => "{$target->year}-{$target->month}")
+            ->map(fn (Collection $group): float => (float) $group->sum('monthly_target'));
 
         $resolved = [];
 
-        foreach ($years as $year) {
-            $yearRows = $rows->where('year', $year);
-
-            $monthly = $yearRows->whereNotNull('month')
-                ->groupBy('month')
-                ->map(fn (Collection $group): float => (float) $group->sum('monthly_target'));
-
-            $annual = (float) $yearRows->whereNull('month')->sum('annual_target');
-
-            foreach ($months->where('year', $year) as $month) {
-                $key = $month['key'];
-
-                if ($monthly->has($month['month'])) {
-                    $resolved[$key] = $monthly->get($month['month']);
-                } elseif ($annual > 0) {
-                    $resolved[$key] = round($annual / 12, 2);
-                }
-            }
+        foreach ($months as $month) {
+            $resolved[$month['key']] = $monthly->get("{$month['year']}-{$month['month']}", 0.0);
         }
 
         return $resolved;

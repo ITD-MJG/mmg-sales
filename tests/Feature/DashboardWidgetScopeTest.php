@@ -84,11 +84,13 @@ beforeEach(function () {
         ]);
     }
 
+    // One target row per month of the frozen year, so the annual total a widget
+    // derives is the monthly amount times twelve.
     foreach ([
-        [$this->manager, 100, 1200],
-        [$this->subordinate, 20, 240],
-        [$this->outsider, 400, 4800],
-    ] as [$owner, $leadRevenue, $annualTarget]) {
+        [$this->manager, 100, 100],
+        [$this->subordinate, 20, 20],
+        [$this->outsider, 400, 400],
+    ] as [$owner, $leadRevenue, $monthlyTarget]) {
         Lead::factory()->create([
             'created_by' => $owner->id,
             'estimated_revenue' => $leadRevenue,
@@ -96,12 +98,14 @@ beforeEach(function () {
             'status' => 'new',
         ]);
 
-        Target::create([
-            'user_id' => $owner->id,
-            'year' => 2026,
-            'month' => null,
-            'annual_target' => $annualTarget,
-        ]);
+        foreach (range(1, 12) as $month) {
+            Target::create([
+                'user_id' => $owner->id,
+                'year' => 2026,
+                'month' => $month,
+                'monthly_target' => $monthlyTarget,
+            ]);
+        }
     }
 });
 

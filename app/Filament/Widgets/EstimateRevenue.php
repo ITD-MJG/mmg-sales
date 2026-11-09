@@ -42,20 +42,15 @@ class EstimateRevenue extends ChartWidget
 
         $targets = $targetQuery
             ->whereIn('year', $months->pluck('year')->unique())
-            ->get(['year', 'month', 'annual_target', 'monthly_target'])
+            ->get(['year', 'month', 'monthly_target'])
             ->groupBy('year');
 
         $targetValues = $months->map(function ($month) use ($targets): float {
-            $yearTargets = $targets->get($month->year, collect());
-            $monthlyTargets = $yearTargets->whereNotNull('month')->where('month', $month->month);
+            $monthly = $targets->get($month->year, collect())
+                ->where('month', $month->month)
+                ->sum('monthly_target');
 
-            if ($monthlyTargets->isNotEmpty()) {
-                return (float) $monthlyTargets->sum('monthly_target');
-            }
-
-            $annualTarget = (float) $yearTargets->whereNull('month')->sum('annual_target');
-
-            return $annualTarget > 0 ? round($annualTarget / 12, 2) : 0;
+            return (float) $monthly;
         });
 
         return [

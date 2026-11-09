@@ -23,15 +23,15 @@ class Target extends Model
         'user_id',
         'year',
         'month',
-        'annual_target',
         'monthly_target',
+        'actual',
     ];
 
     protected $casts = [
         'year' => 'integer',
         'month' => 'integer',
-        'annual_target' => 'decimal:2',
         'monthly_target' => 'decimal:2',
+        'actual' => 'decimal:2',
     ];
 
     public function user(): BelongsTo
