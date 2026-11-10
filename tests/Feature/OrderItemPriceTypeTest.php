@@ -11,9 +11,11 @@ it('has correct casts for decimal fields', function () {
     $orderItem = new OrderItem;
     $casts = $orderItem->getCasts();
 
-    expect($casts['unit_price'] ?? null)->toBe('decimal:2');
-    expect($casts['current_price'] ?? null)->toBe('decimal:2');
-    expect($casts['subtotal'] ?? null)->toBe('decimal:2');
+    // Four decimals: a PO's Harga is pre-VAT, so 1.500.000 / 1,11 keeps a
+    // fraction that two decimals would truncate into a 3-rupiah shortfall.
+    expect($casts['unit_price'] ?? null)->toBe('decimal:4');
+    expect($casts['current_price'] ?? null)->toBe('decimal:4');
+    expect($casts['subtotal'] ?? null)->toBe('decimal:4');
 });
 
 it('calculates line total correctly with unit_price', function () {

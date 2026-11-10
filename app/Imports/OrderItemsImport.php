@@ -85,7 +85,8 @@ class OrderItemsImport implements ToCollection, WithHeadingRow
                 'current_price' => $unitPrice,
                 'price_type' => 'unit_price',
                 'discount_amount' => 0,
-                'subtotal' => round($quantity * $unitPrice, 2),
+                // Four decimals: a pre-VAT price rarely lands on a whole rupiah.
+                'subtotal' => round($quantity * $unitPrice, 4),
             ];
         }
     }

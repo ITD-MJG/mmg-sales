@@ -254,3 +254,74 @@ test('order discount changes net sales without touching any line total', functio
         'net_sales_total' => 150000,
     ]);
 });
+
+test('net sales matches the PO Total when the price keeps its pre-VAT fraction', function () {
+    $actor = User::factory()->create();
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $actor->assignRole('Super Admin');
+
+    $product = Product::factory()->create(['unit_price' => 1500000]);
+
+    // "PO BBLKM PLG Pekybio centrifuge 50mL_28092026.xlsx": Harga is
+    // 1.500.000 / 1,11 = 1.351.351,3514 and the sheet prints 1.351.351.
+    // Nine boxes total 12.162.162 there, not the 12.162.159 you get from
+    // multiplying the printed rupiah value.
+    $component = Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->fillForm([
+            'orderItems' => [
+                [
+                    'item_id' => $product->id,
+                    'quantity' => 9,
+                    'price_type' => 'unit_price',
+                    'unit_price' => 1351351.3513513512,
+                    'discount_percent' => 0,
+                ],
+            ],
+            'discount_on' => 0,
+        ]);
+
+    $component->assertFormSet([
+        'subtotal' => 12162162.16,
+        'total_amount' => 12162162,
+        'net_sales_total' => 12162162,
+    ]);
+});
+
+test('the pre-VAT fraction survives being saved on the order line', function () {
+    $sales = \App\Models\Department::factory()->create(['name' => \App\Models\Department::SALES]);
+    $actor = User::factory()->create(['department_id' => $sales->id]);
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $actor->assignRole('Super Admin');
+
+    $product = Product::factory()->create(['unit_price' => 1500000]);
+
+    Livewire::actingAs($actor)
+        ->test(CreateOrder::class)
+        ->fillForm([
+            'order_source' => 'manual',
+            'end_customer_id' => \App\Models\Customer::factory()->create(['status' => 'active'])->id,
+            'jual_kso' => 'Jual',
+            'distributor_id' => \App\Models\Distributor::factory()->create()->id,
+            'sales_id' => User::factory()->create(['department_id' => $sales->id])->id,
+            'order_date' => now(),
+            'orderItems' => [
+                [
+                    'item_id' => $product->id,
+                    'quantity' => 9,
+                    'price_type' => 'unit_price',
+                    'unit_price' => 1351351.3513513512,
+                    'discount_percent' => 0,
+                ],
+            ],
+            'discount_on' => 0,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $order = \App\Models\Order::query()->latest('id')->firstOrFail();
+
+    expect((float) $order->orderItems()->first()->unit_price)->toBe(1351351.3514)
+        ->and((float) $order->subtotal)->toBe(12162162.16)
+        ->and((float) $order->total_amount)->toBe(12162162.0);
+});
