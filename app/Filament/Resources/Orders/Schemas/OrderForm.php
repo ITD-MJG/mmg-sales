@@ -509,7 +509,7 @@ class OrderForm
         $discountAmount = round($grossTotal * ($discountPercent / 100), 2);
 
         $set('discount_amount', $discountAmount);
-        $set('subtotal', round($grossTotal - $discountAmount, 2));
+        $set('subtotal', round($grossTotal - $discountAmount, 4));
         self::syncOrderTotals($set, $get);
     }
 
@@ -526,11 +526,9 @@ class OrderForm
 
         $grossSales = round($grossSales, 2);
         $discountPercent = (float) $get('../../discount_on');
-        $netSales = round($grossSales * (1 - ($discountPercent / 100)), 2);
 
         $set('../../subtotal', $grossSales);
-        $set('../../total_amount', $netSales);
-        $set('../../net_sales_total', $netSales);
+        self::calculateNetSales($set, $grossSales, $discountPercent, '../../');
     }
 
     protected static function calculateOrderTotals($set, float $discountPercent, array $orderItems): void
@@ -542,13 +540,24 @@ class OrderForm
         }
 
         $set('subtotal', round($lineTotal, 2));
-        self::calculateNetSales($set, round($lineTotal, 2), $discountPercent);
+        self::calculateNetSales($set, $lineTotal, $discountPercent);
     }
 
-    protected static function calculateNetSales($set, float $grossSales, float $discountPercent): void
-    {
+    /**
+     * Net Sales follows the PO's Total cell: the line totals are summed at full
+     * precision and only the result is rounded, to whole rupiah.
+     *
+     * Rounding each line first is what produced the 3-rupiah gap — 9 boxes of
+     * 1.351.351,3514 total 12.162.162, but 9 x 1.351.351 totals 12.162.159.
+     */
+    protected static function calculateNetSales(
+        $set,
+        float $grossSales,
+        float $discountPercent,
+        string $prefix = '',
+    ): void {
         $netSales = round($grossSales * (1 - ($discountPercent / 100)));
-        $set('total_amount', $netSales);
-        $set('net_sales_total', $netSales);
+        $set($prefix.'total_amount', $netSales);
+        $set($prefix.'net_sales_total', $netSales);
     }
 }

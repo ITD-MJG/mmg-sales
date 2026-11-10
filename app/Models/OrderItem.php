@@ -26,10 +26,10 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
-            'unit_price' => 'decimal:2',
-            'current_price' => 'decimal:2',
+            'unit_price' => 'decimal:4',
+            'current_price' => 'decimal:4',
             'discount_amount' => 'decimal:2',
-            'subtotal' => 'decimal:2',
+            'subtotal' => 'decimal:4',
         ];
     }
 
