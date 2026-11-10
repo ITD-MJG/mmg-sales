@@ -6,6 +6,7 @@ use App\Exports\ActivitiesExport;
 use App\Filament\Resources\Activities\Pages\ListActivities;
 use App\Models\Activity;
 use App\Models\Customer;
+use App\Models\Lead;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,27 +39,27 @@ it('can export activities to excel', function () {
 });
 
 
-it('shows the activity owner as creator instead of the lead creator', function () {
-    $leadCreator = User::factory()->create();
-    $activityCreator = User::factory()->create();
+it('shows the activity owner as the sales rep, not the lead creator', function () {
+    $leadCreator = User::factory()->create(['name' => 'Lead Creator']);
+    $activityOwner = User::factory()->create(['name' => 'Activity Owner']);
     $customer = Customer::factory()->create();
-    $lead = \App\Models\Lead::factory()->create([
+    $lead = Lead::factory()->create([
         'customer_id' => $customer->id,
         'created_by' => $leadCreator->id,
     ]);
-    $activity = Activity::factory()->create([
+    Activity::factory()->create([
         'lead_id' => $lead->id,
         'customer_id' => $customer->id,
-        'user_id' => $activityCreator->id,
+        'user_id' => $activityOwner->id,
+        'performed_at' => now(),
     ]);
 
-    $columns = \App\Filament\Resources\Activities\Tables\ActivitiesTable::configure(\Filament\Tables\Table::make())
-        ->getColumns();
-    $creatorColumn = collect($columns)->first(fn ($column) => $column->getName() === 'user.name' && $column->getLabel() === 'Creator');
+    $html = livewire(ListActivities::class)->html();
 
-    expect($creatorColumn)->not->toBeNull();
-    expect($activity->user->name)->toBe($activityCreator->name);
-    expect($activity->lead->creator->name)->toBe($leadCreator->name);
+    // The column is the activity's own owner (`user_id`), never the lead's creator.
+    expect($html)->toContain('Sales Rep')
+        ->toContain('Activity Owner')
+        ->not->toContain('Activity Creator');
 });
 
 it('can export filtered activities to excel', function () {

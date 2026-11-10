@@ -147,7 +147,7 @@ class ActivitiesTable
                     ->sortable(),
 
                 TextColumn::make('user.name')
-                    ->label('Activity Creator')
+                    ->label('Sales Rep')
                     ->searchable()
                     ->sortable(),
 
