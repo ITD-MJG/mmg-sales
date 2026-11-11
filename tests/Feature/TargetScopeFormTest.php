@@ -205,3 +205,17 @@ it('hides the repeater when editing a single month', function () {
         ->mountTableAction('edit', $target)
         ->assertFormFieldHidden('monthly_targets');
 });
+
+it('renders twelve month rows on the create modal', function () {
+    $component = livewire(ManageTargets::class)->mountAction('create');
+
+    $state = $component->get('mountedActions.0.data.monthly_targets');
+
+    expect($state)->toHaveCount(12)
+        ->and(array_column($state, 'month'))->toBe(range(1, 12));
+
+    $component->assertFormFieldVisible('monthly_targets')
+        ->assertFormFieldHidden('month')
+        ->assertFormFieldHidden('monthly_target')
+        ->assertFormFieldHidden('actual');
+});
