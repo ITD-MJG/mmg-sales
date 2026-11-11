@@ -49,7 +49,12 @@ class TargetResource extends Resource
                     ->relationship('user', 'name')
                     ->required()
                     ->rule(fn (Get $get, Component $livewire): Unique => Rule::unique('targets', 'user_id')
-                        ->where(fn ($query) => $query->where('year', $get('year')))
+                        // Create submits a whole year through the repeater, so
+                        // one row for that year blocks it. Edit works on a
+                        // single month, so only that month may collide.
+                        ->where(fn ($query) => $get('month')
+                            ? $query->where('year', $get('year'))->where('month', $get('month'))
+                            : $query->where('year', $get('year')))
                         ->ignore(self::currentRecordKey($livewire)))
                     ->validationMessages([
                         'unique' => 'This representative already has targets for that year. Edit the existing rows instead.',

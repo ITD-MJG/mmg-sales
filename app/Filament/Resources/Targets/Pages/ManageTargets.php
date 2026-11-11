@@ -6,6 +6,9 @@ use App\Filament\Resources\Targets\TargetResource;
 use App\Models\Target;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ManageRecords;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ManageTargets extends ManageRecords
 {
@@ -23,12 +26,22 @@ class ManageTargets extends ManageRecords
                         ->filter(fn (array $row): bool => filled($row['monthly_target'] ?? null))
                         ->keyBy(fn (array $row): int => (int) $row['month']);
 
-                    foreach ($rows as $month => $row) {
-                        Target::create([
-                            'user_id' => $data['user_id'],
-                            'year' => $data['year'],
-                            'month' => $month,
-                            'monthly_target' => $row['monthly_target'],
+                    try {
+                        // All or nothing: a collision partway through would
+                        // otherwise leave the rep with a half-written year.
+                        DB::transaction(function () use ($rows, $data): void {
+                            foreach ($rows as $month => $row) {
+                                Target::create([
+                                    'user_id' => $data['user_id'],
+                                    'year' => $data['year'],
+                                    'month' => $month,
+                                    'monthly_target' => $row['monthly_target'],
+                                ]);
+                            }
+                        });
+                    } catch (UniqueConstraintViolationException) {
+                        throw ValidationException::withMessages([
+                            'data.user_id' => 'This representative already has targets for that year. Edit the existing rows instead.',
                         ]);
                     }
 

@@ -219,3 +219,60 @@ it('renders twelve month rows on the create modal', function () {
         ->assertFormFieldHidden('monthly_target')
         ->assertFormFieldHidden('actual');
 });
+
+it('edits one of several targets for the same representative and year', function () {
+    foreach ([1, 2] as $month) {
+        Target::create([
+            'user_id' => $this->user->id,
+            'year' => 2026,
+            'month' => $month,
+            'monthly_target' => 10_000_000,
+        ]);
+    }
+
+    $february = Target::query()->where('month', 2)->sole();
+
+    livewire(ManageTargets::class)
+        ->mountTableAction('edit', $february)
+        ->fillForm(['actual' => 5_000_000])
+        ->callMountedTableAction()
+        ->assertHasNoFormErrors();
+
+    expect((float) $february->refresh()->actual)->toBe(5_000_000.0);
+});
+
+it('leaves no partial rows when a month collides on save', function () {
+    $created = false;
+
+    Target::creating(function (Target $target) use (&$created) {
+        if ($created || (int) $target->month !== 1) {
+            return;
+        }
+
+        $created = true;
+
+        Target::insert([
+            'user_id' => $target->user_id,
+            'year' => $target->year,
+            'month' => 2,
+            'monthly_target' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    livewire(ManageTargets::class)
+        ->callAction('create', [
+            'user_id' => $this->user->id,
+            'year' => 2026,
+            'monthly_targets' => [
+                ['month' => 1, 'monthly_target' => 10_000_000],
+                ['month' => 2, 'monthly_target' => 20_000_000],
+            ],
+        ])
+        ->assertHasErrors();
+
+    // The rollback takes the colliding insert with it, so the rep is left with
+    // no half-written year rather than a partial one.
+    expect(Target::query()->count())->toBe(0);
+});
