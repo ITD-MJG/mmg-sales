@@ -192,3 +192,16 @@ it('reports the actual on an existing target', function () {
     expect((float) $target->refresh()->actual)->toBe(7_500_000.0)
         ->and((float) $target->monthly_target)->toBe(10_000_000.0);
 });
+
+it('hides the repeater when editing a single month', function () {
+    $target = Target::create([
+        'user_id' => $this->user->id,
+        'year' => 2026,
+        'month' => 3,
+        'monthly_target' => 10_000_000,
+    ]);
+
+    livewire(ManageTargets::class)
+        ->mountTableAction('edit', $target)
+        ->assertFormFieldHidden('monthly_targets');
+});
