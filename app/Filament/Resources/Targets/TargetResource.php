@@ -10,6 +10,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ManageRecords;
@@ -46,15 +48,11 @@ class TargetResource extends Resource
                     ->label('Sales Representative')
                     ->relationship('user', 'name')
                     ->required()
-                    // One row per rep per month, so the target and the actual
-                    // the rep reports for that period stay on the same record.
                     ->rule(fn (Get $get, Component $livewire): Unique => Rule::unique('targets', 'user_id')
-                        ->where(fn ($query) => $query
-                            ->where('year', $get('year'))
-                            ->where('month', $get('month')))
+                        ->where(fn ($query) => $query->where('year', $get('year')))
                         ->ignore(self::currentRecordKey($livewire)))
                     ->validationMessages([
-                        'unique' => 'This representative already has a target for that month. Edit the existing row instead.',
+                        'unique' => 'This representative already has targets for that year. Edit the existing rows instead.',
                     ]),
                 TextInput::make('year')
                     ->label('Year')
@@ -62,25 +60,61 @@ class TargetResource extends Resource
                     ->numeric()
                     ->minValue(2020)
                     ->maxValue(2030),
+                Repeater::make('monthly_targets')
+                    ->label('Monthly Targets')
+                    ->hiddenOn('edit')
+                    ->addable(false)
+                    ->deletable(false)
+                    ->reorderable(false)
+                    ->default(fn (): array => collect(range(1, 12))
+                        ->map(fn (int $month): array => ['month' => $month])
+                        ->all())
+                    ->schema([
+                        Hidden::make('month')
+                            ->rules(['integer', 'between:1,12']),
+                        TextInput::make('monthly_target')
+                            ->label(fn (Get $get): string => self::monthName((int) $get('month')))
+                            ->numeric()
+                            ->minValue(0)
+                            ->prefix('Rp'),
+                    ])
+                    ->itemLabel(fn (array $state): ?string => isset($state['month'])
+                        ? self::monthName((int) $state['month'])
+                        : null)
+                    ->required()
+                    ->minItems(1)
+                    // Twelve blank rows satisfy `required()` and `minItems()`, so
+                    // the form needs its own "at least one amount" check.
+                    ->rule(fn (): \Closure => function (string $attribute, $value, \Closure $fail): void {
+                        $filled = collect($value)->contains(
+                            fn ($row): bool => filled($row['monthly_target'] ?? null)
+                        );
+
+                        if (! $filled) {
+                            $fail('Enter a target for at least one month.');
+                        }
+                    }),
+                // The rep reports achievement against their own month, so the
+                // actual is entered on an existing target rather than alongside
+                // the target it is measured against.
                 Select::make('month')
                     ->label('Month')
                     ->options(self::monthOptions())
-                    ->required(),
+                    ->required()
+                    ->visibleOn('edit'),
                 TextInput::make('monthly_target')
                     ->label('Monthly Target')
                     ->numeric()
                     ->prefix('Rp')
-                    ->required(),
-                // The rep reports achievement against their own month, so the
-                // actual is entered on an existing target rather than alongside
-                // the target it is measured against.
+                    ->required()
+                    ->visibleOn('edit'),
                 TextInput::make('actual')
                     ->label('Actual')
                     ->numeric()
                     ->prefix('Rp')
                     ->nullable()
                     ->helperText('Revenue the rep recorded for this month.')
-                    ->hiddenOn('create'),
+                    ->visibleOn('edit'),
             ]);
     }
 
@@ -90,8 +124,13 @@ class TargetResource extends Resource
     public static function monthOptions(): array
     {
         return collect(range(1, 12))
-            ->mapWithKeys(fn (int $month): array => [$month => Carbon::create()->month($month)->format('F')])
+            ->mapWithKeys(fn (int $month): array => [$month => self::monthName($month)])
             ->all();
+    }
+
+    public static function monthName(int $month): string
+    {
+        return Carbon::create()->month($month)->format('F');
     }
 
     /**
