@@ -73,11 +73,11 @@ class OrderInfolist
                             ]),
                     ]),
 
-                Grid::make(2)
+                Grid::make(4)
                     ->columnSpanFull()
                     ->schema([
                         Section::make('Product Details')
-                            ->columnSpan(1)
+                            ->columnSpan(3)
                             ->schema([
                                 RepeatableEntry::make('orderItems')
                                     ->schema([
@@ -101,20 +101,17 @@ class OrderInfolist
                         Section::make('Total')
                             ->columnSpan(1)
                             ->schema([
-                                Grid::make(3)
-                                    ->schema([
-                                        TextEntry::make('subtotal')
-                                            ->label('Gross Sales')
-                                            ->money('IDR'),
-                                        TextEntry::make('discount_on')
-                                            ->label('Discount')
-                                            ->formatStateUsing(fn ($state) => $state ? $state.'%' : '0%'),
-                                        TextEntry::make('total_amount')
-                                            ->label('Net Sales')
-                                            ->money('IDR')
-                                            ->weight('bold')
-                                            ->color('success'),
-                                    ]),
+                                TextEntry::make('subtotal')
+                                    ->label('Gross Sales')
+                                    ->money('IDR'),
+                                TextEntry::make('discount_on')
+                                    ->label('Discount')
+                                    ->formatStateUsing(fn ($state) => $state ? $state.'%' : '0%'),
+                                TextEntry::make('total_amount')
+                                    ->label('Net Sales')
+                                    ->money('IDR')
+                                    ->weight('bold')
+                                    ->color('success'),
                             ]),
                     ]),
 
