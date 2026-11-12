@@ -19,7 +19,7 @@ class PaymentStatusRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->orderBy('created_at', 'desc'))
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('status')
                     ->badge()
