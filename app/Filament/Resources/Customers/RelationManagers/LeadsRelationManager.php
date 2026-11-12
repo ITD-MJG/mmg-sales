@@ -35,9 +35,10 @@ class LeadsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return CustomerLeadsTable::configure(
-            $table->modifyQueryUsing(fn (Builder $query): Builder => $query
-                ->with(['creator:id,name', 'collaborators:id,name', 'latestActivity'])
-                ->orderByDesc('created_at'))
+            $table
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query
+                    ->with(['creator:id,name', 'collaborators:id,name', 'latestActivity']))
+                ->defaultSort('created_at', 'desc')
         );
     }
 }

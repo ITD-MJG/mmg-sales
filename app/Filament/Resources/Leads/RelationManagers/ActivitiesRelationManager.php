@@ -91,6 +91,6 @@ class ActivitiesRelationManager extends RelationManager
                     ->modalHeading(fn ($record): string => $record->subject)
                     ->modalWidth('7xl'),
             ])
-            ->modifyQueryUsing(fn ($query) => $query->orderBy('performed_at', 'desc'));
+            ->defaultSort('performed_at', 'desc');
     }
 }

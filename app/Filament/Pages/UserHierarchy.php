@@ -95,7 +95,7 @@ class UserHierarchy extends Page implements HasTable
                             ->send();
                     }),
             ])
-            ->modifyQueryUsing(fn ($query) => $query->orderBy('name'));
+            ->defaultSort('name');
     }
 
     public function content(Schema $schema): Schema
