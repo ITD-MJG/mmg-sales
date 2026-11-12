@@ -102,11 +102,11 @@ class ActivityInfolist
                                     ->columnSpanFull(),
                             ]),
 
-                        Section::make('Notes & Feedback')
+                        Section::make('Reports & Feedback')
                             ->columns(4)
                             ->schema([
                                 TextEntry::make('description')
-                                    ->label('Summary')
+                                    ->label('Comprehensive Report')
                                     ->markdown()
                                     ->columnSpanFull(),
                                 TextEntry::make('purpose'),
