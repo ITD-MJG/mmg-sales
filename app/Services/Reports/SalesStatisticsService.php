@@ -84,6 +84,11 @@ class SalesStatisticsService
     }
 
     /**
+     * Orders belong to the rep they are assigned to (`sales_id`), not to whoever
+     * keyed the record (`created_by`) — a manager entering an order on a rep's
+     * behalf must not be credited with it. Leads have no `sales_id`, so they stay
+     * on `created_by`.
+     *
      * @param  list<int>  $userIds
      * @return Collection<int, array{orders: int, revenue: float, month_key: string}|Collection>
      */
@@ -91,7 +96,7 @@ class SalesStatisticsService
     {
         return $this->byMonth(
             Order::query()
-                ->whereIn('created_by', $userIds)
+                ->whereIn('sales_id', $userIds)
                 ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
             'order_date',
             'SUM(total_amount) as revenue, COUNT(*) as orders',
@@ -194,7 +199,7 @@ class SalesStatisticsService
         $orders = $this->perUser(
             Order::query()
                 ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
-            'created_by',
+            'sales_id',
             'SUM(total_amount) as revenue, COUNT(*) as total',
         );
 

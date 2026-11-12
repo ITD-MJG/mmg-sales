@@ -55,7 +55,7 @@ function statisticsFor(?int $userId, ?int $managerId = null)
 
 it('reports a single rep when a sales rep is selected', function (): void {
     Order::factory()->create([
-        'created_by' => $this->rep->id,
+        'sales_id' => $this->rep->id,
         'order_date' => now()->toDateString(),
         'total_amount' => 1_000_000,
     ]);
@@ -75,6 +75,20 @@ it('reports a single rep when a sales rep is selected', function (): void {
         ->and($data->managerName)->toBeNull();
 });
 
+it('credits the assigned rep, not whoever keyed the order', function (): void {
+    $admin = User::factory()->create(['department_id' => $this->sales->id]);
+
+    Order::factory()->create([
+        'sales_id' => $this->rep->id,
+        'created_by' => $admin->id,
+        'order_date' => now()->toDateString(),
+        'total_amount' => 750_000,
+    ]);
+
+    expect(statisticsFor($this->rep->id)->totalRevenue)->toBe(750_000.0)
+        ->and(statisticsFor($admin->id)->totalRevenue)->toBe(0.0);
+});
+
 it('rolls a manager line up from the whole reporting chain', function (): void {
     $subordinate = User::factory()->create([
         'department_id' => $this->sales->id,
@@ -83,7 +97,7 @@ it('rolls a manager line up from the whole reporting chain', function (): void {
 
     foreach ([$this->manager->id, $this->rep->id, $subordinate->id] as $userId) {
         Order::factory()->create([
-            'created_by' => $userId,
+            'sales_id' => $userId,
             'order_date' => now()->toDateString(),
             'total_amount' => 100_000,
         ]);
@@ -100,12 +114,12 @@ it('excludes users outside the selected manager chain', function (): void {
     $outsider = User::factory()->create(['department_id' => $this->sales->id]);
 
     Order::factory()->create([
-        'created_by' => $this->rep->id,
+        'sales_id' => $this->rep->id,
         'order_date' => now()->toDateString(),
         'total_amount' => 100_000,
     ]);
     Order::factory()->create([
-        'created_by' => $outsider->id,
+        'sales_id' => $outsider->id,
         'order_date' => now()->toDateString(),
         'total_amount' => 900_000,
     ]);
@@ -124,7 +138,7 @@ it('lists only the manager reporting line in the team breakdown', function (): v
 
 it('ignores records outside the selected date range', function (): void {
     Order::factory()->create([
-        'created_by' => $this->rep->id,
+        'sales_id' => $this->rep->id,
         'order_date' => now()->subYear()->toDateString(),
         'total_amount' => 5_000_000,
     ]);
