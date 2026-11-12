@@ -17,23 +17,20 @@ abstract class BasePolicy
     protected array $authorizedRoles = [];
 
     /**
-     * Abilities that mutate data. A read-only global viewer (a Director in
-     * the Management department) is denied every one of these, including the
-     * custom abilities that are not named after a CRUD verb.
+     * Abilities that destroy data. A global viewer (a Director in the
+     * Management department) may create and edit, but never delete.
      *
      * @var list<string>
      */
-    protected array $writeAbilities = [
-        'create', 'update', 'delete', 'restore', 'forceDelete',
-        'createForLead', 'createForActivity',
-        'addCollaborator', 'removeCollaborator',
+    protected array $destructiveAbilities = [
+        'delete', 'restore', 'forceDelete',
     ];
 
     public function before(User $user, string $ability): ?bool
     {
-        // A Director in the Management department is a read-only global viewer:
-        // they may see every record but may never write one.
-        if ($user->isReadOnlyGlobalViewer() && in_array($ability, $this->writeAbilities, true)) {
+        // A Director in the Management department sees every record and may
+        // create and edit Leads and Activities, but never destroys one.
+        if ($user->isGlobalViewer() && in_array($ability, $this->destructiveAbilities, true)) {
             return false;
         }
 

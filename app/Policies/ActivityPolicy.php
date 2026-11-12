@@ -13,11 +13,20 @@ class ActivityPolicy extends BasePolicy
      * Staff can only update their own activities.
      * Supervisors+ can oversee but cannot modify subordinate records.
      */
+    /**
+     * Determine whether the user can update the model.
+     * Staff can only update their own activities; a global viewer may edit any.
+     * Supervisors+ can oversee but cannot modify subordinate records.
+     */
     public function update(User $user, $model): bool
     {
         // Must have update permission AND be the owner
         if (! $user->hasPermissionTo("update_{$this->model}")) {
             return false;
+        }
+
+        if ($user->isGlobalViewer()) {
+            return true;
         }
 
         return $model->user_id === $user->id;
@@ -40,11 +49,12 @@ class ActivityPolicy extends BasePolicy
 
     /**
      * A thin lead has no collaborators — attachment is an opportunity concept.
-     * Only its creator (and a Super Admin) may log activities against it.
+     * Only its creator, a global viewer and a Super Admin may log activities
+     * against it.
      */
     public function createForLead(User $user, $lead): bool
     {
-        if ($user->hasRole('Super Admin')) {
+        if ($user->hasRole('Super Admin') || $user->isGlobalViewer()) {
             return true;
         }
 

@@ -47,7 +47,7 @@ class LeadPolicy extends BasePolicy
 
     /**
      * Determine whether the user can update the model.
-     * Staff can only update their own leads.
+     * Staff can only update their own leads; a global viewer may edit any.
      * Supervisors+ can oversee but cannot modify subordinate records.
      */
     public function update(User $user, $model): bool
@@ -55,6 +55,10 @@ class LeadPolicy extends BasePolicy
         // Must have update permission AND be the creator
         if (! $user->hasPermissionTo("update_{$this->model}")) {
             return false;
+        }
+
+        if ($user->isGlobalViewer()) {
+            return true;
         }
 
         return $model->created_by === $user->id;

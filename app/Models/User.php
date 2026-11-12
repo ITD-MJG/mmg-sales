@@ -227,9 +227,12 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Whether this user may never write, even to records they can see.
+     * A Management-department Director who is not a Super Admin.
+     *
+     * They see every record and may create and edit Leads and Activities, but
+     * never delete: BasePolicy::before() denies the destructive abilities.
      */
-    public function isReadOnlyGlobalViewer(): bool
+    public function isGlobalViewer(): bool
     {
         return $this->isManagementDirector() && ! $this->isSuperAdmin();
     }

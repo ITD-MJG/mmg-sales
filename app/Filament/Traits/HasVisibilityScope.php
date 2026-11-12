@@ -100,9 +100,10 @@ trait HasVisibilityScope
             return true;
         }
 
-        // Management department is view-only, cannot modify any records
-        if ($user->isReadOnlyGlobalViewer()) {
-            return false;
+        // A Management Director may edit any record (delete stays denied by
+        // the policy layer).
+        if ($user->isGlobalViewer()) {
+            return true;
         }
 
         // Everyone else: can only modify their own records

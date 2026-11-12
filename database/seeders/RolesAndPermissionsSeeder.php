@@ -138,9 +138,14 @@ class RolesAndPermissionsSeeder extends Seeder
         // granted explicitly: it is not in the shared reference bundle, since
         // only master-data owners (Import & Purchasing Supervisor) and global
         // viewers should reach it.
+        //
+        // Leads and Activities are the one place a global viewer writes: they
+        // may create and edit both, but never delete (BasePolicy::before()).
         $directorPermissions = array_merge($reportPermissions, $viewReference, [
             'view_any_distributor', 'view_distributor',
             'view_any_activity_comment', 'view_activity_comment',
+            'view_any_lead', 'view_lead', 'create_lead', 'update_lead',
+            'view_any_activity', 'view_activity', 'create_activity', 'update_activity',
         ]);
 
         Role::findOrCreate('Management Director')->syncPermissions($directorPermissions);
