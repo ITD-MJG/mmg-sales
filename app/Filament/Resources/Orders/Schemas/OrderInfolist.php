@@ -100,6 +100,9 @@ class OrderInfolist
 
                         Section::make('Total')
                             ->columnSpan(1)
+                            // Follows the viewport while the tall product list scrolls
+                            // past it; lg-only because below that the two stack.
+                            ->extraAttributes(['class' => 'lg:sticky lg:top-20 lg:self-start'])
                             ->schema([
                                 TextEntry::make('subtotal')
                                     ->label('Gross Sales')
