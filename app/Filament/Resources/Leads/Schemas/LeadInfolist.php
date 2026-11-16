@@ -49,15 +49,12 @@ class LeadInfolist
                                 TextEntry::make('confidence_level')
                                     ->label('Confidence')
                                     ->badge()
-                                    ->formatStateUsing(fn (?string $state): string => $state === null
-                                        ? 'Not assessed'
-                                        : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
-                                    ->color(fn (?string $state): string => match ($state) {
-                                        'low' => 'gray',
-                                        'medium' => 'info',
-                                        'high' => 'warning',
-                                        'very_high' => 'success',
-                                        'committed' => 'primary',
+                                    ->formatStateUsing(fn (int|string|null $state): string => Lead::confidenceLabel($state))
+                                    ->color(fn (int|string|null $state): string => match (true) {
+                                        $state === null => 'gray',
+                                        $state >= 76 => 'success',
+                                        $state >= 51 => 'warning',
+                                        $state >= 26 => 'info',
                                         default => 'gray',
                                     }),
                                 TextEntry::make('email')

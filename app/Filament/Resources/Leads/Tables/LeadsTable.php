@@ -181,25 +181,16 @@ class LeadsTable
                 TextColumn::make('confidence_level')
                     ->label('Confidence')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): ?string => $state === null ? null : (Lead::CONFIDENCE_LABELS[$state] ?? $state))
-                    ->color(fn (?string $state): string => match ($state) {
-                        'low' => 'gray',
-                        'medium' => 'info',
-                        'high' => 'warning',
-                        'very_high' => 'success',
-                        'committed' => 'primary',
+                    ->formatStateUsing(fn (int|string|null $state): string => Lead::confidenceLabel($state))
+                    ->color(fn (int|string|null $state): string => match (true) {
+                        $state === null => 'gray',
+                        $state >= 76 => 'success',
+                        $state >= 51 => 'warning',
+                        $state >= 26 => 'info',
                         default => 'gray',
                     })
                     ->placeholder('Not assessed')
-                    // Bands sort by their weight, not alphabetically: "committed"
-                    // is the strongest band but sorts before "low" as a string.
-                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByRaw(
-                        'CASE leads.confidence_level '
-                        .collect(Lead::CONFIDENCE_WEIGHTS)
-                            ->map(fn (int $weight, string $band): string => "WHEN '{$band}' THEN {$weight}")
-                            ->implode(' ')
-                        .' ELSE 0 END '.($direction === 'desc' ? 'desc' : 'asc')
-                    ))
+                    ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('source')
@@ -262,15 +253,16 @@ class LeadsTable
             ->filters([
                 SelectFilter::make('confidence_level')
                     ->label('Confidence')
-                    ->options([
-                        ...Lead::CONFIDENCE_LABELS,
-                        'none' => 'Not assessed',
-                    ])
+                    ->options(Lead::confidenceFilterOptions())
                     ->query(fn (Builder $query, array $data): Builder => $query->when(
                         filled($data['value']),
-                        fn (Builder $query): Builder => $data['value'] === 'none'
-                            ? $query->whereNull('confidence_level')
-                            : $query->where('confidence_level', $data['value']),
+                        function (Builder $query) use ($data): Builder {
+                            $range = Lead::confidenceRange($data['value']);
+
+                            return $range === null
+                                ? $query->whereNull('confidence_level')
+                                : $query->whereBetween('confidence_level', $range);
+                        },
                     )),
                 TrashedFilter::make(),
             ])

@@ -56,7 +56,7 @@ class ActivityForm
                                         // The lead owns confidence. Snapshotting it onto the
                                         // visit keeps the per-visit history without asking the
                                         // rep to answer the same question twice.
-                                        $set('confidence_level', $lead->confidence_weight);
+                                        $set('confidence_level', $lead->confidence_level);
 
                                         if (filled($lead->estimated_revenue) && filled($lead->expected_closing_date)) {
                                             return;
@@ -267,15 +267,15 @@ class ActivityForm
                                     ->label('Is this lead/project worth keeping?')
                                     ->default(true),
 
-                                Select::make('confidence_level')
+                                TextInput::make('confidence_level')
                                     ->label('Confidence after this activity')
-                                    ->options(Lead::confidenceWeightOptions())
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->step(1)
+                                    ->suffix('%')
                                     ->helperText('Prefilled from the lead. Changing it here updates the lead.')
-                                    ->placeholder('Not assessed')
-                                    // The column is NOT NULL and uses 0 as its "not
-                                    // assessed" sentinel, so an empty select must
-                                    // dehydrate to 0 rather than null.
-                                    ->dehydrateStateUsing(fn ($state): int => (int) ($state ?? 0)),
+                                    ->placeholder('Not assessed'),
 
                                 DatePicker::make('next_contact_date')
                                     ->label('Next Contact Date'),

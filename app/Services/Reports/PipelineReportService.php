@@ -97,7 +97,13 @@ class PipelineReportService
             )
             ->when(
                 filled($filters->leadConfidence) && $filters->leadConfidence !== 'none',
-                fn (Builder $query): Builder => $query->where('leads.confidence_level', $filters->leadConfidence),
+                function (Builder $query) use ($filters): Builder {
+                    $range = Lead::confidenceRange($filters->leadConfidence);
+
+                    return $range === null
+                        ? $query->whereNull('leads.confidence_level')
+                        : $query->whereBetween('leads.confidence_level', $range);
+                },
             );
     }
 
@@ -126,26 +132,32 @@ class PipelineReportService
 
     private function getLeadsByConfidence(ReportFilterData $filters): Collection
     {
-        $counts = $this->buildBaseQuery($filters)
-            ->selectRaw('leads.confidence_level as band, COUNT(*) as count, COALESCE(SUM(leads.estimated_revenue), 0) as value')
+        $rows = $this->buildBaseQuery($filters)
+            ->selectRaw('leads.confidence_level as level, COUNT(*) as count, COALESCE(SUM(leads.estimated_revenue), 0) as value')
             ->groupBy('leads.confidence_level')
-            ->get()
-            ->keyBy(fn ($row): string => $row->band ?? 'none');
+            ->get();
 
-        $bands = collect(Lead::CONFIDENCE_LABELS)
-            ->map(fn (string $label, string $band): array => [
-                'band' => $band,
-                'label' => $label,
-                'count' => (int) ($counts->get($band)->count ?? 0),
-                'value' => (float) ($counts->get($band)->value ?? 0),
+        // Bucket the raw percentages in PHP so the chart keeps a fixed set of
+        // ranges and an explicit zero for ranges with no leads.
+        return collect(Lead::CONFIDENCE_RANGES)
+            ->map(function (array $range, string $key) use ($rows): array {
+                $inRange = $rows->filter(fn ($row): bool => $row->level !== null
+                    && (int) $row->level >= $range['min']
+                    && (int) $row->level <= $range['max']);
+
+                return [
+                    'band' => $key,
+                    'label' => $range['label'],
+                    'count' => (int) $inRange->sum('count'),
+                    'value' => (float) $inRange->sum('value'),
+                ];
+            })
+            ->push([
+                'band' => 'none',
+                'label' => 'Not assessed',
+                'count' => (int) $rows->whereNull('level')->sum('count'),
+                'value' => (float) $rows->whereNull('level')->sum('value'),
             ]);
-
-        return $bands->push([
-            'band' => 'none',
-            'label' => 'Not assessed',
-            'count' => (int) ($counts->get('none')->count ?? 0),
-            'value' => (float) ($counts->get('none')->value ?? 0),
-        ]);
     }
 
     private function getLeadsBySalesRep(ReportFilterData $filters): Collection
@@ -209,9 +221,7 @@ class PipelineReportService
                 'Customer' => $lead->customer?->name ?? $lead->customer_name,
                 'Sales Rep' => $lead->collaborators->first()?->name,
                 'Status' => Lead::STATUS_LABELS[$lead->status] ?? ucfirst((string) $lead->status),
-                'Confidence' => $lead->confidence_level === null
-                    ? 'Not assessed'
-                    : (Lead::CONFIDENCE_LABELS[$lead->confidence_level] ?? $lead->confidence_level),
+                'Confidence' => Lead::confidenceLabel($lead->confidence_level),
                 'Estimated Revenue' => (float) $lead->estimated_revenue,
                 'Expected Closing' => $lead->expected_closing_date?->format('d M Y'),
                 'Created Date' => $lead->created_at?->format('d M Y'),

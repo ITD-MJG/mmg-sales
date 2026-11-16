@@ -76,25 +76,25 @@ it('counts disqualified leads as the only judged outcome', function () {
 
 it('counts unassessed leads and buckets them under Not assessed', function () {
     Lead::factory()->count(2)->create(['confidence_level' => null]);
-    Lead::factory()->create(['confidence_level' => 'high']);
+    Lead::factory()->create(['confidence_level' => 85]);
 
     $data = leadReport();
 
     expect($data->unassessedLeads)->toBe(2)
         ->and($data->leadsByConfidence->firstWhere('band', 'none')['label'])->toBe('Not assessed')
         ->and($data->leadsByConfidence->firstWhere('band', 'none')['count'])->toBe(2)
-        ->and($data->leadsByConfidence->firstWhere('band', 'high')['count'])->toBe(1)
-        ->and($data->leadsByConfidence)->toHaveCount(6);
+        ->and($data->leadsByConfidence->firstWhere('band', '76-100')['count'])->toBe(1)
+        ->and($data->leadsByConfidence)->toHaveCount(5);
 });
 
 it('filters by confidence, including the not-assessed bucket', function () {
     Lead::factory()->create(['confidence_level' => null]);
-    Lead::factory()->create(['confidence_level' => 'high']);
+    Lead::factory()->create(['confidence_level' => 85]);
 
     $assessed = app(PipelineReportService::class)->generate(ReportFilterData::fromArray([
         'start_date' => now()->subYear()->toDateString(),
         'end_date' => now()->addYear()->toDateString(),
-        'lead_confidence' => 'high',
+        'lead_confidence' => '76-100',
     ]));
 
     $unassessed = app(PipelineReportService::class)->generate(ReportFilterData::fromArray([
@@ -124,7 +124,7 @@ it('exports lead rows with confidence and estimated revenue', function () {
     $lead = Lead::factory()->create([
         'title' => 'Analyzer rollout',
         'status' => 'in_process',
-        'confidence_level' => 'very_high',
+        'confidence_level' => 90,
         'estimated_revenue' => 750_000_000,
         'expected_closing_date' => now()->addMonth(),
     ]);
@@ -133,7 +133,7 @@ it('exports lead rows with confidence and estimated revenue', function () {
 
     expect($row['Code'])->toBe($lead->lead_code)
         ->and($row['Status'])->toBe('In Process')
-        ->and($row['Confidence'])->toBe('Very High')
+        ->and($row['Confidence'])->toBe('90%')
         ->and($row['Estimated Revenue'])->toBe(750_000_000.0);
 });
 

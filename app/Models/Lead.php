@@ -58,25 +58,7 @@ class Lead extends Model
         'last_contacted_at' => 'datetime',
         'estimated_revenue' => 'decimal:2',
         'expected_closing_date' => 'date',
-    ];
-
-    /**
-     * Numeric weight per confidence band.
-     *
-     * Confidence is a judgement, not a forecast input: pipeline value is the
-     * raw estimated revenue, and actual revenue only arrives when the lead
-     * converts and an order is raised. The weights exist solely so the band
-     * can be stored as an integer on activities (which cannot hold the band
-     * string) and ordered meaningfully in queries.
-     *
-     * @var array<string, int>
-     */
-    public const CONFIDENCE_WEIGHTS = [
-        'low' => 10,
-        'medium' => 30,
-        'high' => 60,
-        'very_high' => 80,
-        'committed' => 95,
+        'confidence_level' => 'integer',
     ];
 
     /**
@@ -111,47 +93,57 @@ class Lead extends Model
      */
     public const LOST_STATUS = 'closed_lost';
 
-    public const CONFIDENCE_LABELS = [
-        'low' => 'Low',
-        'medium' => 'Medium',
-        'high' => 'High',
-        'very_high' => 'Very High',
-        'committed' => 'Committed',
+    /**
+     * Confidence is a 0-100 percentage: a rep's own judgement of how likely the
+     * lead is to close. Nullable on purpose so an unassessed lead stays
+     * distinguishable from one deliberately rated at a low percentage.
+     *
+     * These ranges drive the list/report filters and the confidence chart.
+     *
+     * @var array<string, array{min: int, max: int, label: string}>
+     */
+    public const CONFIDENCE_RANGES = [
+        '0-25' => ['min' => 0, 'max' => 25, 'label' => 'Low (0-25%)'],
+        '26-50' => ['min' => 26, 'max' => 50, 'label' => 'Medium (26-50%)'],
+        '51-75' => ['min' => 51, 'max' => 75, 'label' => 'High (51-75%)'],
+        '76-100' => ['min' => 76, 'max' => 100, 'label' => 'Very High (76-100%)'],
     ];
 
     /**
-     * Weight => label, for the activity form's confidence select: activities
-     * keep the legacy 0-100 integer, so they store the band's weight.
-     *
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    public static function confidenceWeightOptions(): array
+    public static function confidenceFilterOptions(): array
     {
-        return array_combine(
-            array_values(self::CONFIDENCE_WEIGHTS),
-            array_values(self::CONFIDENCE_LABELS),
-        );
+        return collect(self::CONFIDENCE_RANGES)
+            ->map(fn (array $range): string => $range['label'])
+            ->put('none', 'Not assessed')
+            ->all();
     }
 
-    public static function confidenceBandForWeight(?int $weight): ?string
+    /**
+     * @return array{0: int, 1: int}|null [min, max] for a range key, null for "none" or unknown.
+     */
+    public static function confidenceRange(?string $key): ?array
     {
-        if (blank($weight)) {
+        if (blank($key) || ! isset(self::CONFIDENCE_RANGES[$key])) {
             return null;
         }
 
-        $band = array_search((int) $weight, self::CONFIDENCE_WEIGHTS, true);
-
-        return $band === false ? null : $band;
+        return [self::CONFIDENCE_RANGES[$key]['min'], self::CONFIDENCE_RANGES[$key]['max']];
     }
 
-    public function getConfidenceWeightAttribute(): ?int
+    public static function confidenceLabel(int|string|null $percent): string
     {
-        return self::CONFIDENCE_WEIGHTS[$this->confidence_level] ?? null;
+        if ($percent === null || $percent === '') {
+            return 'Not assessed';
+        }
+
+        return (int) $percent.'%';
     }
 
     public function isConfidenceAssessed(): bool
     {
-        return filled($this->confidence_level);
+        return $this->confidence_level !== null;
     }
 
     public function generateCode(): string

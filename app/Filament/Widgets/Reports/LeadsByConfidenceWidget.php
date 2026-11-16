@@ -23,11 +23,10 @@ class LeadsByConfidenceWidget extends ChartWidget
         $rows = $data->leadsByConfidence;
 
         $colors = [
-            'low' => 'rgb(107, 114, 128)',
-            'medium' => 'rgb(59, 130, 246)',
-            'high' => 'rgb(245, 158, 11)',
-            'very_high' => 'rgb(16, 185, 129)',
-            'committed' => 'rgb(8, 145, 178)',
+            '0-25' => 'rgb(107, 114, 128)',
+            '26-50' => 'rgb(59, 130, 246)',
+            '51-75' => 'rgb(245, 158, 11)',
+            '76-100' => 'rgb(16, 185, 129)',
             'none' => 'rgb(209, 213, 219)',
         ];
 

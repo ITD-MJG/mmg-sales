@@ -226,12 +226,15 @@ class LeadForm
                                     ->default('new')
                                     ->required()
                                     ->searchable(),
-                                Select::make('confidence_level')
+                                TextInput::make('confidence_level')
                                     ->label('Confidence Level')
-                                    ->options(Lead::CONFIDENCE_LABELS)
-                                    ->helperText('How likely this lead is to close. Leave empty until you have actually judged it.')
-                                    ->placeholder('Not assessed')
-                                    ->searchable(),
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->step(1)
+                                    ->suffix('%')
+                                    ->helperText('How likely this lead is to close, from 0 to 100%. Leave empty until you have actually judged it.')
+                                    ->placeholder('Not assessed'),
                             ]),
                         Section::make('Notes')
                             ->columnSpanFull()

@@ -113,10 +113,7 @@ class PipelineReportPage extends Page
                                     ]),
                                 Select::make('lead_confidence')
                                     ->label('Confidence')
-                                    ->options([
-                                        ...Lead::CONFIDENCE_LABELS,
-                                        'none' => 'Not assessed',
-                                    ]),
+                                    ->options(Lead::confidenceFilterOptions()),
                             ]),
                     ])
                     ->collapsible(),

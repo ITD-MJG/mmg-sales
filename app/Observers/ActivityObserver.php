@@ -50,14 +50,14 @@ class ActivityObserver
     /**
      * Handle the Activity "saved" event.
      *
-     * Confidence is owned by the lead as a band; the visit only carries a
+     * Confidence is owned by the lead as a 0-100 percentage; the activity only carries a
      * snapshot of it. When a rep raises or lowers confidence after a
      * conversation, that judgement has to land back on the lead, otherwise the
      * snapshot is the only place it ever lives.
      */
     public function saved(Activity $activity): void
     {
-        if (blank($activity->lead_id) || blank($activity->confidence_level)) {
+        if (blank($activity->lead_id) || $activity->confidence_level === null) {
             return;
         }
 
@@ -83,13 +83,13 @@ class ActivityObserver
             return;
         }
 
-        $band = Lead::confidenceBandForWeight($activity->confidence_level);
+        $percent = (int) $activity->confidence_level;
 
-        if ($band === null || $lead->confidence_level === $band) {
+        if ($lead->confidence_level === $percent) {
             return;
         }
 
-        $lead->confidence_level = $band;
+        $lead->confidence_level = $percent;
         $lead->save();
     }
 
