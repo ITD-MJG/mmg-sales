@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Illuminate\Validation\Rule;
@@ -225,7 +226,12 @@ class LeadForm
                                     ->options(Lead::STATUS_LABELS)
                                     ->default('new')
                                     ->required()
-                                    ->searchable(),
+                                    ->searchable()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
+                                        'confidence_level',
+                                        Lead::defaultConfidenceForStatus($state),
+                                    )),
                                 TextInput::make('confidence_level')
                                     ->label('Confidence Level')
                                     ->numeric()

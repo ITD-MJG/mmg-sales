@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
  * Lead Report.
  *
  * Reports on the `leads` table. A lead carries the EspoCRM pipeline
- * (new → in_process → … → closed_won/closed_lost); the closed stages are what
+ * (new → prospect → … → closed_won/closed_lost); the closed stages are what
  * "open" excludes.
  *
  * Money here is `estimated_revenue`, the lead's own expectation. Actual
@@ -49,14 +49,14 @@ class PipelineReportService
         $totalLeads = (clone $primaryQuery)->count();
         $openLeads = (clone $primaryQuery)->whereIn('status', $this->openStatuses())->count();
         $disqualifiedLeads = (clone $primaryQuery)->where('status', Lead::LOST_STATUS)->count();
-        $contactedLeads = (clone $primaryQuery)->where('status', 'in_process')->count();
+        $contactedLeads = (clone $primaryQuery)->where('status', 'prospect')->count();
 
         $pipelineValue = (float) (clone $primaryQuery)
             ->whereIn('status', $this->openStatuses())
             ->sum('estimated_revenue');
 
         $averageDealSize = $contactedLeads > 0
-            ? ((float) (clone $primaryQuery)->where('status', 'in_process')->sum('estimated_revenue')) / $contactedLeads
+            ? ((float) (clone $primaryQuery)->where('status', 'prospect')->sum('estimated_revenue')) / $contactedLeads
             : 0.0;
 
         $unassessedLeads = (clone $primaryQuery)->whereNull('confidence_level')->count();

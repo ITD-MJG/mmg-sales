@@ -64,7 +64,7 @@ class SampleDataSeeder extends Seeder
         for ($i = 0; $i < 40; $i++) {
             $user = $users->random();
             $customer = $customers->random();
-            $status = fake()->randomElement(['new', 'in_process', 'in_process', 'closed_lost']);
+            $status = fake()->randomElement(['new', 'prospect', 'prospect', 'closed_lost']);
 
             $ageDays = match (true) {
                 $i < 10 => rand(1, 2),

@@ -9,7 +9,7 @@ use Filament\Widgets\Widget;
 /**
  * Status breakdown of the thin `leads` table, as a funnel.
  *
- * One band per lead status, in pipeline order: New through Closed (Lost).
+ * One band per lead status, in pipeline order: New Lead through Hold.
  *
  * Drawn with Chart.js and chartjs-chart-funnel rather than the ApexCharts
  * widget the other dashboard charts use. That plugin plots the dataset in the
@@ -26,14 +26,16 @@ class LeadStatusChart extends Widget
      * @var array<string, string>
      */
     private const BANDS = [
-        'New' => 'new',
-        'In Process' => 'in_process',
-        'Prospecting' => 'prospecting',
-        'Qualification' => 'qualification',
-        'Proposal' => 'proposal',
-        'Negotiation' => 'negotiation',
-        'Closed (Won)' => 'closed_won',
-        'Closed (Lost)' => 'closed_lost',
+        'New Lead' => 'new',
+        'Prospect/ Discovery' => 'prospect',
+        'Qualification/ Acceptance of Need' => 'qualification',
+        'Quotation' => 'quotation',
+        'Convince' => 'convince',
+        'Negotiate' => 'negotiate',
+        'Decision Maker' => 'decision_maker',
+        'Win' => 'closed_won',
+        'Lost' => 'closed_lost',
+        'Hold' => 'hold',
     ];
 
     /**
@@ -43,13 +45,15 @@ class LeadStatusChart extends Widget
      */
     private const COLORS = [
         '#6b7280', // new
-        '#0ea5e9', // in_process
-        '#38bdf8', // prospecting
+        '#0ea5e9', // prospect
         '#f59e0b', // qualification
-        '#8b5cf6', // proposal
-        '#f97316', // negotiation
+        '#8b5cf6', // quotation
+        '#06b6d4', // convince
+        '#f97316', // negotiate
+        '#6366f1', // decision_maker
         '#22c55e', // closed_won
         '#ef4444', // closed_lost
+        '#94a3b8', // hold
     ];
 
     /**

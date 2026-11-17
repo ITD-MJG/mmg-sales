@@ -33,7 +33,7 @@ it('renders the status badge with the declared label, not the raw column value',
         ->assertSuccessful()
         ->html();
 
-    expect($html)->toContain('Closed (Won)')
+    expect($html)->toContain('Win')
         ->and($html)->not->toContain('Closed_won');
 });
 
@@ -52,7 +52,7 @@ it('renders every declared status label in the table badge', function () {
 
     // Snake_case values must never reach the rendered badge text.
     expect($html)->not->toContain('closed_won')
-        ->and($html)->not->toContain('in_process');
+        ->and($html)->not->toContain('prospect');
 });
 
 it('renders the status badge on the lead infolist with the declared label', function () {
@@ -62,7 +62,7 @@ it('renders the status badge on the lead infolist with the declared label', func
         ->assertSuccessful()
         ->html();
 
-    expect($html)->toContain('Closed (Lost)')
+    expect($html)->toContain('Lost')
         ->and($html)->not->toContain('Closed_lost');
 });
 
@@ -71,14 +71,14 @@ it('renders the declared status label on the customer leads widget', function ()
     Lead::factory()->create([
         'customer_id' => $customer->id,
         'created_by' => $this->user->id,
-        'status' => 'in_process',
+        'status' => 'prospect',
     ]);
 
     $html = Livewire::test(CustomerLeadsWidget::class, ['record' => $customer])
         ->assertSuccessful()
         ->html();
 
-    expect($html)->toContain('In Process')
+    expect($html)->toContain('Prospect/ Discovery')
         ->and($html)->not->toContain('In_process');
 });
 
@@ -99,6 +99,6 @@ it('renders the declared status label on the principal leads widget', function (
         ->assertSuccessful()
         ->html();
 
-    expect($html)->toContain('Closed (Lost)')
+    expect($html)->toContain('Lost')
         ->and($html)->not->toContain('Closed_lost');
 });

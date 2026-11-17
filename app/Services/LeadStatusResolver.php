@@ -18,7 +18,7 @@ use App\Models\Lead;
  *                     counts. Fails when outcome is missing, which it is on
  *                     ~35% of activities.
  *  - deriveFromAnyActivity() lenient: mirrors what ActivityObserver::created
- *                     does today — any activity at all means in_process.
+ *                     does today — any activity at all means prospect.
  *
  * The gap between them is the cost of the missing outcomes, so both are
  * reported rather than one chosen silently.
@@ -38,11 +38,13 @@ class LeadStatusResolver
      * @var list<string>
      */
     public const BEYOND_INTAKE = [
-        'prospecting',
         'qualification',
-        'proposal',
-        'negotiation',
+        'quotation',
+        'convince',
+        'negotiate',
+        'decision_maker',
         'closed_won',
+        'hold',
     ];
 
     /**
@@ -54,7 +56,7 @@ class LeadStatusResolver
             return $terminal;
         }
 
-        return $this->hasReachedActivity($lead) ? 'in_process' : 'new';
+        return $this->hasReachedActivity($lead) ? 'prospect' : 'new';
     }
 
     /**
@@ -67,7 +69,7 @@ class LeadStatusResolver
             return $terminal;
         }
 
-        return $this->hasAnyActivity($lead) ? 'in_process' : 'new';
+        return $this->hasAnyActivity($lead) ? 'prospect' : 'new';
     }
 
     /**
@@ -84,13 +86,13 @@ class LeadStatusResolver
      * `closed_lost` is driven by a hard stop, which is a genuine judgement and
      * never reversed by a later activity, matching ActivityObserver::isHardStop.
      *
-     * Everything past `in_process` — prospecting, qualification, proposal,
-     * negotiation, closed_won — is a human stage move that activities do not
+     * Everything past `prospect` — qualification, quotation, convince, negotiate,
+     * decision_maker, closed_won, hold — is a human stage move that activities do not
      * contradict, so those statuses are kept as stored. Only the two the
      * outcome vocabulary can actually justify are derived, which is why a lead
      * with no activities at all also keeps its stored status.
      *
-     * `in_process` is reversible: it only claims somebody was reached, and when
+     * `prospect` is reversible: it only claims somebody was reached, and when
      * no activity supports that claim the evidence wins and the lead falls back
      * to `new`. Whichever way you rule this, the call site should own the
      * decision rather than this class — a lead's status is not a side effect of

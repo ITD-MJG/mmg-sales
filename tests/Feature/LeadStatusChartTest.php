@@ -43,11 +43,11 @@ function salesStaff(): User
     return $user;
 }
 
-it('fixes the top-to-bottom order at New, Contacted, Disqualified', function () {
+it('fixes the top-to-bottom order at New Lead through Hold', function () {
     // The funnel plugin plots the dataset in the order given and exposes no
     // sort-by-value, so this array *is* the top-to-bottom reading.
     expect(leadStatusData(salesStaff())['labels'])
-        ->toBe(['New', 'In Process', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed (Won)', 'Closed (Lost)']);
+        ->toBe(['New Lead', 'Prospect/ Discovery', 'Qualification/ Acceptance of Need', 'Quotation', 'Convince', 'Negotiate', 'Decision Maker', 'Win', 'Lost', 'Hold']);
 });
 
 it('keeps the declared band order even when a later status is largest', function () {
@@ -60,18 +60,18 @@ it('keeps the declared band order even when a later status is largest', function
 
     // Labels stay in declared order and the values follow them, so New holds
     // the smaller count and Disqualified the larger.
-    expect($data['labels'])->toBe(['New', 'In Process', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed (Won)', 'Closed (Lost)'])
-        ->and($data['values'])->toBe([2, 0, 0, 0, 0, 0, 0, 9]);
+    expect($data['labels'])->toBe(['New Lead', 'Prospect/ Discovery', 'Qualification/ Acceptance of Need', 'Quotation', 'Convince', 'Negotiate', 'Decision Maker', 'Win', 'Lost', 'Hold'])
+        ->and($data['values'])->toBe([2, 0, 0, 0, 0, 0, 0, 0, 9, 0]);
 });
 
 it('counts leads by status', function () {
     $staff = salesStaff();
 
     Lead::factory()->count(3)->create(['status' => 'new', 'created_by' => $staff->id]);
-    Lead::factory()->count(4)->create(['status' => 'in_process', 'created_by' => $staff->id]);
+    Lead::factory()->count(4)->create(['status' => 'prospect', 'created_by' => $staff->id]);
     Lead::factory()->count(1)->create(['status' => 'closed_lost', 'created_by' => $staff->id]);
 
-    expect(leadStatusValues($staff))->toBe([3, 4, 0, 0, 0, 0, 0, 1]);
+    expect(leadStatusValues($staff))->toBe([3, 4, 0, 0, 0, 0, 0, 0, 1, 0]);
 });
 
 it('scopes the counts to the staff member own leads', function () {
@@ -135,11 +135,11 @@ it('draws on a canvas through the bundled chart module', function () {
 
 it('keeps the values numeric and one per band', function () {
     $staff = salesStaff();
-    Lead::factory()->count(2)->create(['status' => 'in_process', 'created_by' => $staff->id]);
+    Lead::factory()->count(2)->create(['status' => 'prospect', 'created_by' => $staff->id]);
 
     $data = leadStatusData($staff);
 
-    expect($data['values'])->toHaveCount(8);
+    expect($data['values'])->toHaveCount(10);
 
     foreach ($data['values'] as $value) {
         expect($value)->toBeInt();
@@ -151,8 +151,8 @@ it('gives every band its own colour so each status paints and the legend fills',
     // statuses alike and collapse their legend entries.
     $data = leadStatusData(salesStaff());
 
-    expect($data['colors'])->toHaveCount(8)
-        ->and(array_unique($data['colors']))->toHaveCount(8);
+    expect($data['colors'])->toHaveCount(10)
+        ->and(array_unique($data['colors']))->toHaveCount(10);
 });
 
 it('counts a status the enum no longer knows as zero rather than dropping the band', function () {

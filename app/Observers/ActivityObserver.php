@@ -12,7 +12,7 @@ class ActivityObserver
      *
      * Activities only move a lead between the two statuses the outcome
      * vocabulary can justify: nothing reached (`new`) and something reached
-     * (`in_process`). Every later stage is a manual move the rep owns, and a
+     * (`prospect`). Every later stage is a manual move the rep owns, and a
      * hard stop is the one judgement that overrides them.
      */
     public function created(Activity $activity): void
@@ -32,8 +32,8 @@ class ActivityObserver
             $lead->status = Lead::LOST_STATUS;
             $lead->disqualified_at = now();
         } elseif ($lead->status === 'new') {
-            // New -> In Process on any activity.
-            $lead->status = 'in_process';
+            // New -> Prospect on any activity.
+            $lead->status = 'prospect';
         }
 
         $lead->save();

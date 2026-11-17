@@ -69,15 +69,42 @@ class Lead extends Model
      * @var array<string, string>
      */
     public const STATUS_LABELS = [
-        'new' => 'New',
-        'in_process' => 'In Process',
-        'prospecting' => 'Prospecting',
-        'qualification' => 'Qualification',
-        'proposal' => 'Proposal',
-        'negotiation' => 'Negotiation',
-        'closed_won' => 'Closed (Won)',
-        'closed_lost' => 'Closed (Lost)',
+        'new' => 'New Lead',
+        'prospect' => 'Prospect/ Discovery',
+        'qualification' => 'Qualification/ Acceptance of Need',
+        'quotation' => 'Quotation',
+        'convince' => 'Convince',
+        'negotiate' => 'Negotiate',
+        'decision_maker' => 'Decision Maker',
+        'closed_won' => 'Win',
+        'closed_lost' => 'Lost',
+        'hold' => 'Hold',
     ];
+
+    /**
+     * The confidence a status implies when a rep has not judged the lead
+     * themselves. Used as the default when a status is chosen, and applied on
+     * save only when confidence was not set in the same change.
+     *
+     * @var array<string, int>
+     */
+    public const STATUS_CONFIDENCE = [
+        'new' => 10,
+        'prospect' => 20,
+        'qualification' => 30,
+        'quotation' => 40,
+        'convince' => 50,
+        'negotiate' => 60,
+        'decision_maker' => 70,
+        'closed_won' => 100,
+        'closed_lost' => 0,
+        'hold' => 30,
+    ];
+
+    public static function defaultConfidenceForStatus(?string $status): ?int
+    {
+        return self::STATUS_CONFIDENCE[$status] ?? null;
+    }
 
     /**
      * Statuses that mean the lead is no longer being worked. Kept here so the
@@ -158,6 +185,27 @@ class Lead extends Model
         static::creating(function (Lead $lead) {
             if (is_null($lead->created_by) && auth()->check()) {
                 $lead->created_by = auth()->id();
+            }
+        });
+
+        static::saving(function (Lead $lead) {
+            if (! $lead->isDirty('status')) {
+                return;
+            }
+
+            // A confidence set in the same save is a deliberate judgement.
+            if ($lead->isDirty('confidence_level') && $lead->confidence_level !== null) {
+                return;
+            }
+
+            // Only replace a confidence that was itself derived from the old
+            // status; a hand-set value survives a stage move.
+            $originalConfidence = $lead->getOriginal('confidence_level');
+            $wasDerived = $originalConfidence === null
+                || $originalConfidence === self::defaultConfidenceForStatus($lead->getOriginal('status'));
+
+            if ($wasDerived) {
+                $lead->confidence_level = self::defaultConfidenceForStatus($lead->status);
             }
         });
     }

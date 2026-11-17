@@ -36,11 +36,13 @@ class LeadInfolist
                                     ->color(fn (string $state): string => match ($state) {
                                         'closed_won' => 'success',
                                         'closed_lost' => 'danger',
-                                        'negotiation' => 'warning',
-                                        'proposal' => 'primary',
+                                        'decision_maker' => 'primary',
+                                        'negotiate' => 'warning',
+                                        'convince' => 'info',
+                                        'quotation' => 'primary',
                                         'qualification' => 'warning',
-                                        'prospecting' => 'info',
-                                        'in_process' => 'info',
+                                        'prospect' => 'info',
+                                        'hold' => 'gray',
                                         default => 'gray',
                                     }),
                                 TextEntry::make('priority')

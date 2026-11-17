@@ -47,9 +47,10 @@ it('formats a percentage for display', function () {
 });
 
 it('treats an unassessed lead as unknown rather than worthless', function () {
-    $unassessed = Lead::factory()->create(['confidence_level' => null]);
+    $unassessed = Lead::factory()->create();
+    $unassessed->update(['confidence_level' => null]);
 
-    expect($unassessed->isConfidenceAssessed())->toBeFalse()
+    expect($unassessed->fresh()->isConfidenceAssessed())->toBeFalse()
         ->and(Lead::factory()->create(['confidence_level' => 0])->isConfidenceAssessed())->toBeTrue();
 });
 
@@ -105,7 +106,8 @@ it('saves a chosen confidence percentage on a new lead', function () {
 
 it('shows confidence as a column and a filter on the lead list', function () {
     $assessed = Lead::factory()->create(['confidence_level' => 85, 'created_by' => $this->user->id]);
-    $unassessed = Lead::factory()->create(['confidence_level' => null, 'created_by' => $this->user->id]);
+    $unassessed = Lead::factory()->create(['created_by' => $this->user->id]);
+    $unassessed->update(['confidence_level' => null]);
 
     livewire(ListLeads::class)
         ->assertTableColumnExists('confidence_level')

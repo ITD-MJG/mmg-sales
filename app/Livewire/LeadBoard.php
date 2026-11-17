@@ -76,14 +76,16 @@ class LeadBoard extends Component implements HasActions, HasBoard, HasForms
                 ])
             )
             ->columns([
-                Column::make('new')->label('New')->color('gray'),
-                Column::make('in_process')->label('In Process')->color('blue'),
-                Column::make('prospecting')->label('Prospecting')->color('info'),
-                Column::make('qualification')->label('Qualification')->color('warning'),
-                Column::make('proposal')->label('Proposal')->color('primary'),
-                Column::make('negotiation')->label('Negotiation')->color('warning'),
-                Column::make('closed_won')->label('Closed (Won)')->color('success'),
-                Column::make('closed_lost')->label('Closed (Lost)')->color('danger'),
+                Column::make('new')->label('New Lead')->color('gray'),
+                Column::make('prospect')->label('Prospect/ Discovery')->color('info'),
+                Column::make('qualification')->label('Qualification/ Acceptance of Need')->color('warning'),
+                Column::make('quotation')->label('Quotation')->color('primary'),
+                Column::make('convince')->label('Convince')->color('info'),
+                Column::make('negotiate')->label('Negotiate')->color('warning'),
+                Column::make('decision_maker')->label('Decision Maker')->color('primary'),
+                Column::make('closed_won')->label('Win')->color('success'),
+                Column::make('closed_lost')->label('Lost')->color('danger'),
+                Column::make('hold')->label('Hold')->color('gray'),
             ]);
     }
 

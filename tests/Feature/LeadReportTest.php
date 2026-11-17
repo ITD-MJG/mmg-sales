@@ -29,7 +29,7 @@ function leadReport(): PipelineReportData
 
 it('counts leads by the lead status enum', function () {
     Lead::factory()->create(['status' => 'new']);
-    Lead::factory()->create(['status' => 'in_process']);
+    Lead::factory()->create(['status' => 'prospect']);
     Lead::factory()->create(['status' => 'closed_lost']);
 
     $data = leadReport();
@@ -40,20 +40,20 @@ it('counts leads by the lead status enum', function () {
 });
 
 it('groups leads by every status, including empty ones', function () {
-    Lead::factory()->create(['status' => 'in_process']);
+    Lead::factory()->create(['status' => 'prospect']);
 
     $data = leadReport();
 
-    expect($data->leadsByStatus)->toHaveCount(8)
+    expect($data->leadsByStatus)->toHaveCount(10)
         ->and($data->leadsByStatus->pluck('status')->all())
         ->toBe(array_keys(Lead::STATUS_LABELS))
         ->and($data->leadsByStatus->firstWhere('status', 'new')['count'])->toBe(0)
-        ->and($data->leadsByStatus->firstWhere('status', 'in_process')['count'])->toBe(1);
+        ->and($data->leadsByStatus->firstWhere('status', 'prospect')['count'])->toBe(1);
 });
 
 it('sums pipeline value from open leads only', function () {
     Lead::factory()->create(['status' => 'new', 'estimated_revenue' => 1_000_000]);
-    Lead::factory()->create(['status' => 'in_process', 'estimated_revenue' => 2_000_000]);
+    Lead::factory()->create(['status' => 'prospect', 'estimated_revenue' => 2_000_000]);
     Lead::factory()->create(['status' => 'closed_lost', 'estimated_revenue' => 8_000_000]);
 
     $data = leadReport();
@@ -65,7 +65,7 @@ it('sums pipeline value from open leads only', function () {
 
 it('counts disqualified leads as the only judged outcome', function () {
     Lead::factory()->count(5)->create(['status' => 'new']);
-    Lead::factory()->count(3)->create(['status' => 'in_process']);
+    Lead::factory()->count(3)->create(['status' => 'prospect']);
     Lead::factory()->create(['status' => 'closed_lost']);
 
     $data = leadReport();
@@ -75,7 +75,7 @@ it('counts disqualified leads as the only judged outcome', function () {
 });
 
 it('counts unassessed leads and buckets them under Not assessed', function () {
-    Lead::factory()->count(2)->create(['confidence_level' => null]);
+    Lead::factory()->count(2)->create()->each(fn (Lead $lead) => $lead->update(['confidence_level' => null]));
     Lead::factory()->create(['confidence_level' => 85]);
 
     $data = leadReport();
@@ -88,7 +88,7 @@ it('counts unassessed leads and buckets them under Not assessed', function () {
 });
 
 it('filters by confidence, including the not-assessed bucket', function () {
-    Lead::factory()->create(['confidence_level' => null]);
+    Lead::factory()->create()->update(['confidence_level' => null]);
     Lead::factory()->create(['confidence_level' => 85]);
 
     $assessed = app(PipelineReportService::class)->generate(ReportFilterData::fromArray([
@@ -123,7 +123,7 @@ it('rejects the opportunity-only stages from the status filter', function () {
 it('exports lead rows with confidence and estimated revenue', function () {
     $lead = Lead::factory()->create([
         'title' => 'Analyzer rollout',
-        'status' => 'in_process',
+        'status' => 'prospect',
         'confidence_level' => 90,
         'estimated_revenue' => 750_000_000,
         'expected_closing_date' => now()->addMonth(),
@@ -132,13 +132,13 @@ it('exports lead rows with confidence and estimated revenue', function () {
     $row = app(PipelineReportService::class)->getExportData($this->filters)->first();
 
     expect($row['Code'])->toBe($lead->lead_code)
-        ->and($row['Status'])->toBe('In Process')
+        ->and($row['Status'])->toBe('Prospect/ Discovery')
         ->and($row['Confidence'])->toBe('90%')
         ->and($row['Estimated Revenue'])->toBe(750_000_000.0);
 });
 
 it('exports Not assessed for a lead without a confidence level', function () {
-    Lead::factory()->create(['confidence_level' => null, 'status' => 'new']);
+    Lead::factory()->create(['status' => 'new'])->update(['confidence_level' => null]);
 
     $row = app(PipelineReportService::class)->getExportData($this->filters)->first();
 

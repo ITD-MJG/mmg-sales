@@ -39,13 +39,14 @@ return new class extends Migration
             $table->unsignedTinyInteger('confidence_level')->nullable()->change();
         });
 
-        // Activities used 0 as their "not assessed" sentinel. Null carries the
-        // same meaning without stealing a genuine 0%.
-        DB::table('activities')->where('confidence_level', 0)->update(['confidence_level' => null]);
-
+        // Widen to nullable before writing nulls: the old column rejects them.
         Schema::table('activities', function (Blueprint $table) {
             $table->unsignedTinyInteger('confidence_level')->nullable()->default(null)->change();
         });
+
+        // Activities used 0 as their "not assessed" sentinel. Null carries the
+        // same meaning without stealing a genuine 0%.
+        DB::table('activities')->where('confidence_level', 0)->update(['confidence_level' => null]);
     }
 
     public function down(): void

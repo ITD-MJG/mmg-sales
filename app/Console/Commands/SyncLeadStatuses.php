@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  *
  * The rule lives in LeadStatusResolver, which is also what the drift report
  * reads, so this command cannot drift from the observer that runs on new
- * activities. It only ever touches `in_process` and `new`: every later stage is
+ * activities. It only ever touches `prospect` and `new`: every later stage is
  * a manual move, and `closed_lost` is a human judgement recorded by an activity.
  */
 class SyncLeadStatuses extends Command
@@ -24,7 +24,7 @@ class SyncLeadStatuses extends Command
     public function handle(LeadStatusResolver $resolver): int
     {
         $leads = Lead::query()
-            ->whereIn('status', ['new', 'in_process'])
+            ->whereIn('status', ['new', 'prospect'])
             ->with('activities:id,lead_id,outcome')
             ->get();
 

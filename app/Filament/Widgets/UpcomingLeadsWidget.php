@@ -45,21 +45,17 @@ class UpcomingLeadsWidget extends BaseWidget
                     ->color(fn ($state) => Carbon::parse($state)->isPast() ? 'danger' : (Carbon::parse($state)->diffInDays(now()) <= 7 ? 'warning' : 'success')),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->formatStateUsing(fn (string $state): string => Lead::STATUS_LABELS[$state] ?? ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
-                        'new' => 'gray',
-                        'in_process' => 'info',
-                        'prospecting' => 'info',
-                        'qualification' => 'warning',
-                        'proposal' => 'primary',
-                        'negotiation' => 'warning',
                         'closed_won' => 'success',
                         'closed_lost' => 'danger',
-                        'qualified' => 'primary',
-                        'proposal' => 'warning',
-                        'negotiation' => 'warning',
-                        'won' => 'success',
-                        'lost' => 'danger',
+                        'decision_maker' => 'primary',
+                        'negotiate' => 'warning',
+                        'convince' => 'info',
+                        'quotation' => 'primary',
+                        'qualification' => 'warning',
+                        'prospect' => 'info',
+                        'hold' => 'gray',
                         default => 'gray',
                     }),
             ])

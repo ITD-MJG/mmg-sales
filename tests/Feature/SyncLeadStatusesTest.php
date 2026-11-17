@@ -17,11 +17,11 @@ it('promotes leads whose activities prove the contact was reached', function ():
 
     $this->artisan('leads:sync-statuses')->assertSuccessful();
 
-    expect($lead->fresh()->status)->toBe('in_process');
+    expect($lead->fresh()->status)->toBe('prospect');
 });
 
 it('demotes a contacted lead with nothing to support it', function (): void {
-    $lead = Lead::factory()->create(['status' => 'in_process']);
+    $lead = Lead::factory()->create(['status' => 'prospect']);
     Activity::factory()->forLead($lead)->create(['outcome' => 'No Answer']);
 
     $this->artisan('leads:sync-statuses')->assertSuccessful();
@@ -55,9 +55,9 @@ it('changes nothing on a dry run', function (): void {
 });
 
 it('leaves a lead with no activities alone', function (): void {
-    $lead = Lead::factory()->create(['status' => 'in_process']);
+    $lead = Lead::factory()->create(['status' => 'prospect']);
 
     $this->artisan('leads:sync-statuses')->assertSuccessful();
 
-    expect($lead->fresh()->status)->toBe('in_process');
+    expect($lead->fresh()->status)->toBe('prospect');
 });

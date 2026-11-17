@@ -21,17 +21,17 @@ it('treats a missing outcome as no contact under the strict rule but as contact 
     $resolver = new LeadStatusResolver;
 
     expect($resolver->derive($lead))->toBe('new')
-        ->and($resolver->deriveFromAnyActivity($lead))->toBe('in_process');
+        ->and($resolver->deriveFromAnyActivity($lead))->toBe('prospect');
 });
 
-it('derives in_process for every outcome that proves the contact was reached', function (string $outcome): void {
+it('derives prospect for every outcome that proves the contact was reached', function (string $outcome): void {
     // The factory's outcome default is random and the observer advances the
     // lead on any activity, so pin the status and spell out the outcome.
     $lead = Lead::factory()->create(['status' => 'new']);
     Activity::factory()->forLead($lead)->create(['outcome' => $outcome]);
     $lead->refresh();
 
-    expect((new LeadStatusResolver)->derive($lead))->toBe('in_process');
+    expect((new LeadStatusResolver)->derive($lead))->toBe('prospect');
 })->with(['Interested', 'Need more info', 'Postponed']);
 
 it('does not treat no answer as contact', function (): void {
@@ -71,7 +71,7 @@ it('reports drift when the stored status disagrees with the activities', functio
 
 it('logs attribute changes on a lead', function (): void {
     $lead = Lead::factory()->create(['status' => 'new']);
-    $lead->update(['status' => 'in_process']);
+    $lead->update(['status' => 'prospect']);
 
     $entry = DB::table('activity_log')
         ->where('subject_type', Lead::class)
@@ -84,7 +84,7 @@ it('logs attribute changes on a lead', function (): void {
     // caller-supplied bag and stays empty for model events.
     expect($entry)->not->toBeNull()
         ->and($entry->attribute_changes)->toContain('"status"')
-        ->and($entry->attribute_changes)->toContain('in_process');
+        ->and($entry->attribute_changes)->toContain('prospect');
 });
 
 it('logs attribute changes on an opportunity', function (): void {

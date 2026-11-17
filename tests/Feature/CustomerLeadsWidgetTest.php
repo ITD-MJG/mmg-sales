@@ -63,7 +63,7 @@ it('labels the lead code column as a hash', function () {
 it('filters the customer leads by status', function () {
     $contacted = Lead::factory()->create([
         'customer_id' => $this->customer->id,
-        'status' => 'in_process',
+        'status' => 'prospect',
     ]);
     $new = Lead::factory()->create([
         'customer_id' => $this->customer->id,
@@ -71,7 +71,7 @@ it('filters the customer leads by status', function () {
     ]);
 
     customerLeadsWidget($this->customer)
-        ->filterTable('status', 'in_process')
+        ->filterTable('status', 'prospect')
         ->assertCanSeeTableRecords([$contacted])
         ->assertCanNotSeeTableRecords([$new]);
 });

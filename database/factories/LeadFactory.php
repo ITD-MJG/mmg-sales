@@ -26,7 +26,7 @@ class LeadFactory extends Factory
             'customer_name' => fake('id_ID')->company(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake('id_ID')->phoneNumber(),
-            'status' => fake()->randomElement(['new', 'in_process']),
+            'status' => fake()->randomElement(['new', 'prospect']),
             'source' => fake()->randomElement(['website', 'referral', 'cold_call', 'trade_show', 'partner', 'other']),
             'priority' => fake()->randomElement(['low', 'medium', 'high', 'urgent']),
             'notes' => fake()->paragraph(),
