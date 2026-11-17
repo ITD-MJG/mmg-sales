@@ -48,7 +48,7 @@ class CustomerCommentHistoryWidget extends TableWidget
             ->headerActions([
                 Action::make('create')
                     ->label('Create new Comment')
-                    ->authorize(fn (): bool => auth()->user()?->hasPermissionTo('create_activity_comment') ?? false)
+                    ->authorize(fn (): bool => auth()->user()?->can('create_activity_comment') ?? false)
                     ->schema([
                         Select::make('activity_id')
                             ->label('Activity')

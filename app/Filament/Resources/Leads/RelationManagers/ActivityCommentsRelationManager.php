@@ -36,7 +36,7 @@ class ActivityCommentsRelationManager extends RelationManager
         $user = auth()->user();
         $lead = $this->getOwnerRecord();
 
-        $allowed = $user?->hasPermissionTo('create_activity_comment')
+        $allowed = $user?->can('create_activity_comment')
             && $lead instanceof Lead
             && ($user->hasGlobalVisibility() || $lead->created_by === $user->id || in_array($lead->created_by, $user->subordinateUserIds(), true));
 

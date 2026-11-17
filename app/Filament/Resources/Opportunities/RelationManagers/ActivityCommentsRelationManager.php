@@ -36,7 +36,7 @@ class ActivityCommentsRelationManager extends RelationManager
         $user = auth()->user();
         $opportunity = $this->getOwnerRecord();
 
-        $allowed = $user?->hasPermissionTo('create_activity_comment')
+        $allowed = $user?->can('create_activity_comment')
             && $opportunity instanceof Opportunity
             && $opportunity->isAccessibleBy($user);
 

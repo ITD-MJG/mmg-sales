@@ -21,7 +21,11 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasCode, HasFactory, HasRoles, LogsActivity, Notifiable;
+    use HasCode, HasFactory, LogsActivity, Notifiable;
+
+    use HasRoles {
+        hasPermissionTo as protected hasPermissionToViaRoles;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -186,6 +190,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->department?->name === 'Marketing';
     }
+
     /**
      * Whether the user is a Director within the Management department.
      *
@@ -211,6 +216,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->isSuperAdmin() || $this->isManagementDirector();
     }
+
     /**
      * Whether this territory-scoped manager (RSM/ASM) with a territory may act
      * on records owned by the given user. Managers without a territory fall
@@ -240,5 +246,20 @@ class User extends Authenticatable implements FilamentUser
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('Super Admin');
+    }
+
+    /**
+     * Super Admin bypasses every permission check, not just the ones that go
+     * through Gate. Direct hasPermissionTo()/hasAnyPermission() calls in
+     * widgets and relation managers would otherwise see the role's empty
+     * permission set and deny access.
+     */
+    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->hasPermissionToViaRoles($permission, $guardName);
     }
 }
