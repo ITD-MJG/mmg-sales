@@ -76,7 +76,8 @@ it('renders revenue by principal as a doughnut share', function () {
     $spec = chartSpec(RevenueByPrincipalChart::class);
 
     expect($spec['type'])->toBe('doughnut')
-        ->and($spec['options']['plugins']['legend']['display'])->toBeTrue();
+        ->and($spec['raw'])->toContain('legend: {')
+        ->and($spec['raw'])->toContain('onClick');
 });
 
 it('renders product ranking as horizontal bars', function () {
@@ -221,6 +222,41 @@ it('aggregates the rep ranking per rep, not per rep-and-customer', function () {
     // One bar for the rep, carrying the sum across both customers.
     expect($data['labels'])->toBe(['Febrian Vantoni'])
         ->and($data['datasets'][0]['data'])->toBe([5]);
+});
+
+it('labels revenue by principal with its share and links each slice to the principal', function () {
+    $first = Principal::factory()->create(['name' => 'Alpha Medical']);
+    $second = Principal::factory()->create(['name' => 'Beta Devices']);
+
+    $order = Order::factory()->create([
+        'created_by' => $this->user->id,
+        'order_date' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'principal_id' => $first->id,
+        'quantity' => 3,
+        'unit_price' => 100,
+        'subtotal' => 300,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'principal_id' => $second->id,
+        'quantity' => 1,
+        'unit_price' => 100,
+        'subtotal' => 100,
+    ]);
+
+    $instance = app(RevenueByPrincipalChart::class);
+    $data = (function (): array {
+        return $this->getData();
+    })->call($instance);
+
+    expect($data['labels'][0])->toBe('Alpha Medical (75.0%)')
+        ->and($data['labels'][1])->toBe('Beta Devices (25.0%)')
+        ->and($data['datasets'][0]['urls'][0])->toContain('/principals/'.$first->id);
 });
 
 it('renders every redesigned widget without error', function () {

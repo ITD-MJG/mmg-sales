@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use Filament\Widgets\Widget;
@@ -65,7 +66,7 @@ class LeadStatusChart extends Widget
 
     protected string $view = 'filament.widgets.lead-status-chart';
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 2;
 
     public static function canView(): bool
     {
@@ -99,6 +100,12 @@ class LeadStatusChart extends Widget
                 array_values(self::BANDS),
             ),
             'colors' => self::COLORS,
+            'urls' => array_map(
+                fn (string $status): string => LeadResource::getUrl('index', [
+                    'filters' => ['status' => ['value' => $status]],
+                ]),
+                array_values(self::BANDS),
+            ),
         ];
     }
 }

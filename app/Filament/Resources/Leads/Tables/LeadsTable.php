@@ -253,6 +253,9 @@ class LeadsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options(Lead::STATUS_LABELS),
                 SelectFilter::make('confidence_level')
                     ->label('Confidence')
                     ->options(Lead::confidenceFilterOptions())

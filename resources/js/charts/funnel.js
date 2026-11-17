@@ -22,7 +22,7 @@ Chart.register(
  * nothing by value, so New → Contacted → Converted → Disqualified stays put
  * even when a later status outnumbers an earlier one.
  */
-export function renderFunnel(canvas, { labels, values, colors }) {
+export function renderFunnel(canvas, { labels, values, colors, urls }) {
     // Inherit the surrounding text colour, so the legend and axis labels track
     // Filament's light and dark themes instead of Chart.js' grey default.
     const textColor =
@@ -41,6 +41,7 @@ export function renderFunnel(canvas, { labels, values, colors }) {
                     // Shrink the trapezoid inward from both edges rather than
                     // anchoring at the top, so the bands stay centred.
                     shrinkAnchor: 'middle',
+                    urls,
                 },
             ],
         },
@@ -89,6 +90,17 @@ export function renderFunnel(canvas, { labels, values, colors }) {
                         label: (context) => ` ${context.label}: ${context.parsed.x}`,
                     },
                 },
+            },
+            onHover: (event, elements) => {
+                event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
+            onClick: (event, elements, chart) => {
+                const index = elements[0]?.index;
+                const url = index === undefined ? null : chart.data.datasets[0]?.urls?.[index];
+
+                if (url) {
+                    window.location.href = url;
+                }
             },
             scales: {
                 x: {

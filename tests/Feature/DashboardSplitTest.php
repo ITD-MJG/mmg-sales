@@ -8,7 +8,6 @@ use App\Filament\Pages\SalesDashboard;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
-use App\Filament\Widgets\OpportunityStatusChart;
 use App\Filament\Widgets\RecentActivitiesWidget;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\RevenueByTerritoryChart;
@@ -62,7 +61,6 @@ function widgetSets(): array
                 RevenueByTerritoryChart::class,
                 TopSellingProductsChart::class,
                 TopVisitedCustomersChart::class,
-                OpportunityStatusChart::class,
             ],
         ],
     ];

@@ -3,7 +3,6 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\MonthlyOrderChart;
-use App\Filament\Widgets\OpportunityStatusChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\RevenueByTerritoryChart;
 use App\Filament\Widgets\TopSellingProductsChart;
@@ -41,7 +40,6 @@ class AnalyticsDashboard extends BaseDashboard
             RevenueByTerritoryChart::class,
             TopSellingProductsChart::class,
             TopVisitedCustomersChart::class,
-            OpportunityStatusChart::class,
         ];
     }
 }

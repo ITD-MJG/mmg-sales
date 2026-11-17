@@ -146,6 +146,14 @@ it('keeps the values numeric and one per band', function () {
     }
 });
 
+it('links every band to the lead list filtered by that status', function () {
+    $data = leadStatusData(salesStaff());
+
+    expect($data['urls'])->toHaveCount(10)
+        ->and($data['urls'][0])->toContain('filters')
+        ->and($data['urls'][0])->toContain('status');
+});
+
 it('gives every band its own colour so each status paints and the legend fills', function () {
     // One colour per band, in band order: a repeated colour would paint two
     // statuses alike and collapse their legend entries.

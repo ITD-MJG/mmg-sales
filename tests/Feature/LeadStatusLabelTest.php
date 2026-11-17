@@ -50,9 +50,26 @@ it('renders every declared status label in the table badge', function () {
         expect($html)->toContain($label);
     }
 
-    // Snake_case values must never reach the rendered badge text.
-    expect($html)->not->toContain('closed_won')
-        ->and($html)->not->toContain('prospect');
+    // Snake_case values may appear as filter option values, but never as the
+    // rendered badge text.
+    expect($html)->not->toContain('>closed_won<')
+        ->and($html)->not->toContain('>prospect<');
+});
+
+it('exposes a status filter on the lead list', function () {
+    Livewire::test(ListLeads::class)
+        ->assertSuccessful()
+        ->assertTableFilterExists('status');
+});
+
+it('applies the status filter from a funnel link', function () {
+    $new = Lead::factory()->create(['status' => 'new', 'created_by' => $this->user->id]);
+    $won = Lead::factory()->create(['status' => 'closed_won', 'created_by' => $this->user->id]);
+
+    Livewire::withQueryParams(['filters' => ['status' => ['value' => 'new']]])
+        ->test(ListLeads::class)
+        ->assertCanSeeTableRecords([$new])
+        ->assertCanNotSeeTableRecords([$won]);
 });
 
 it('renders the status badge on the lead infolist with the declared label', function () {

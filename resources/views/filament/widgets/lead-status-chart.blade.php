@@ -7,7 +7,7 @@
 <x-filament-widgets::widget class="fi-wi-chart">
     <x-filament::section>
         <x-slot name="heading">
-            Lead Status
+            Sales Funnel
         </x-slot>
 
         <div

@@ -2,8 +2,10 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Principals\PrincipalResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 
 class RevenueByPrincipalChart extends ChartWidget
@@ -41,19 +43,27 @@ class RevenueByPrincipalChart extends ChartWidget
         // users; global viewers still see them through visibleUserIds().
         self::applyVisibilityScope($baseQuery, 'orders.sales_id');
 
-        $data = (clone $baseQuery)
+        $rows = (clone $baseQuery)
             ->where('orders.order_date', '>=', now()->subMonths(11)->startOfMonth())
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->join('principals', 'order_items.principal_id', '=', 'principals.id')
-            ->selectRaw('principals.name as principal_name, SUM(order_items.subtotal) as total')
-            ->groupBy('principals.name')
+            ->selectRaw('principals.id as principal_id, principals.name as principal_name, SUM(order_items.subtotal) as total')
+            ->groupBy('principals.id', 'principals.name')
             ->orderByDesc('total')
             ->limit(8)
-            ->pluck('total', 'principal_name')
-            ->toArray();
+            ->get();
 
-        $labels = array_keys($data);
-        $values = array_map(fn ($v) => round((float) $v, 2), array_values($data));
+        $grandTotal = (float) $rows->sum('total');
+
+        $labels = $rows->map(function ($row) use ($grandTotal): string {
+            $share = $grandTotal > 0 ? ((float) $row->total / $grandTotal) * 100 : 0;
+
+            return $row->principal_name.' ('.number_format($share, 1).'%)';
+        })->all();
+
+        $values = $rows->map(fn ($row): float => round((float) $row->total, 2))->all();
+
+        $urls = $rows->map(fn ($row): string => PrincipalResource::getUrl('view', ['record' => $row->principal_id]))->all();
 
         $colors = [
             'rgb(59, 130, 246)',   // blue
@@ -73,6 +83,7 @@ class RevenueByPrincipalChart extends ChartWidget
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'borderWidth' => 0,
+                    'urls' => $urls,
                 ],
             ],
             'labels' => $labels,
@@ -89,18 +100,30 @@ class RevenueByPrincipalChart extends ChartWidget
         return 'doughnut';
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): array|RawJs
     {
-        return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
-            'cutout' => '55%',
-            'plugins' => [
-                'legend' => [
-                    'display' => true,
-                    'position' => 'right',
-                ],
-            ],
-        ];
+        return RawJs::make(<<<'JS'
+            {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                    },
+                },
+                onHover: (event, elements) => {
+                    event.native.target.style.cursor = elements.length ? 'pointer' : 'default'
+                },
+                onClick: (event, elements, chart) => {
+                    const index = elements[0]?.index
+                    const url = index === undefined
+                        ? null
+                        : chart.data.datasets[0]?.urls?.[index]
+                    if (url) window.location.href = url
+                },
+            }
+            JS);
     }
 }
