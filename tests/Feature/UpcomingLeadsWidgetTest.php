@@ -23,17 +23,17 @@ beforeEach(function () {
 it('displays leads nearing completion sorted by date', function () {
     $p1 = Lead::factory()->create([
         'title' => 'Lead 1',
-        'estimated_completion_date' => now()->addDays(5),
+        'expected_closing_date' => now()->addDays(5),
     ]);
 
     $p2 = Lead::factory()->create([
         'title' => 'Lead 2',
-        'estimated_completion_date' => now()->addDays(2),
+        'expected_closing_date' => now()->addDays(2),
     ]);
 
     $p3 = Lead::factory()->create([
         'title' => 'Lead 3',
-        'estimated_completion_date' => now()->subDays(1), // Should be excluded by >= now()
+        'expected_closing_date' => now()->subDays(1), // Should be excluded by >= now()
     ]);
 
     livewire(UpcomingLeadsWidget::class)
@@ -44,7 +44,7 @@ it('displays leads nearing completion sorted by date', function () {
 
 it('can navigate to view lead page from record url', function () {
     $lead = Lead::factory()->create([
-        'estimated_completion_date' => now()->addDays(1),
+        'expected_closing_date' => now()->addDays(1),
     ]);
 
     livewire(UpcomingLeadsWidget::class)

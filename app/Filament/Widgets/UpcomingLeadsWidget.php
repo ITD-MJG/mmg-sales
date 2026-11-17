@@ -23,9 +23,9 @@ class UpcomingLeadsWidget extends BaseWidget
         return $table
             ->query(
                 Lead::query()
-                    ->whereNotNull('estimated_completion_date')
-                    ->where('estimated_completion_date', '>=', now()->startOfDay())
-                    ->orderBy('estimated_completion_date', 'asc')
+                    ->whereNotNull('expected_closing_date')
+                    ->where('expected_closing_date', '>=', now()->startOfDay())
+                    ->orderBy('expected_closing_date', 'asc')
                     ->limit(5)
             )
             ->columns([
@@ -38,7 +38,7 @@ class UpcomingLeadsWidget extends BaseWidget
                 Tables\Columns\TextColumn::make('estimated_revenue')
                     ->label('Expected Revenue')
                     ->money('IDR'),
-                Tables\Columns\TextColumn::make('estimated_completion_date')
+                Tables\Columns\TextColumn::make('expected_closing_date')
                     ->label('Est. Finish')
                     ->date('d M Y')
                     ->formatStateUsing(fn ($state) => $state ? strtoupper(Carbon::parse($state)->translatedFormat('d M Y')) : '-')
