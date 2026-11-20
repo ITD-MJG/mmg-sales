@@ -37,10 +37,10 @@ class SalesDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            SalesTargetWidget::class,
             LeadStatusChart::class,
             EstimateRevenue::class,
             UpcomingLeadsWidget::class,
-            SalesTargetWidget::class,
             SalesRepLeaderboardWidget::class,
             RecentActivitiesWidget::class,
             TopSalesRepresentativeVisitsWidget::class,

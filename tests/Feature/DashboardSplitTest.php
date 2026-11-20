@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Pages\AnalyticsDashboard;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\SalesDashboard;
+use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
@@ -36,6 +37,7 @@ function widgetSets(): array
         'homepage' => [
             'page' => Dashboard::class,
             'widgets' => [
+                DashboardShortcutsWidget::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
                 MonthlyOrderChart::class,
@@ -44,10 +46,10 @@ function widgetSets(): array
         'sales' => [
             'page' => SalesDashboard::class,
             'widgets' => [
+                SalesTargetWidget::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
                 UpcomingLeadsWidget::class,
-                SalesTargetWidget::class,
                 SalesRepLeaderboardWidget::class,
                 RecentActivitiesWidget::class,
                 TopSalesRepresentativeVisitsWidget::class,
@@ -102,4 +104,27 @@ it('shows the Analytics dashboard to users with view_sales_reports', function ()
     expect(AnalyticsDashboard::canAccess())->toBeTrue();
 
     $this->get(AnalyticsDashboard::getUrl())->assertSuccessful();
+});
+
+it('renders dashboard shortcut links to Sales and Analytics for a user with both', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $this->get(Dashboard::getUrl())
+        ->assertSuccessful()
+        ->assertSee(SalesDashboard::getUrl(), escape: false)
+        ->assertSee(AnalyticsDashboard::getUrl(), escape: false);
+});
+
+it('omits the Analytics shortcut for a user without view_sales_reports', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    expect(DashboardShortcutsWidget::canView())->toBeTrue();
+
+    $this->get(Dashboard::getUrl())
+        ->assertSuccessful()
+        ->assertSee(SalesDashboard::getUrl(), escape: false)
+        ->assertDontSee(AnalyticsDashboard::getUrl(), escape: false);
 });

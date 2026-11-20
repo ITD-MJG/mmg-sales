@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
@@ -23,6 +24,7 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            DashboardShortcutsWidget::class,
             LeadStatusChart::class,
             EstimateRevenue::class,
             MonthlyOrderChart::class,
