@@ -31,14 +31,40 @@ class TargetAchievementService
         $startYear = (int) $filters->startDate->year;
         $endYear = (int) $filters->endDate->year;
 
+        // A target row is per rep per month, so the selected range is a range of
+        // months, not years. Matching on `year` alone would return every month of
+        // an overlapping year: a Jul-Sep filter would report the full year's total.
         $targets = Target::query()
             ->where('user_id', $userId)
             ->whereBetween('year', [$startYear, $endYear])
+            ->where(function ($query) use ($filters, $startYear, $endYear): void {
+                if ($startYear === $endYear) {
+                    $query->where('year', $startYear)
+                        ->whereBetween('month', [$filters->startDate->month, $filters->endDate->month]);
+
+                    return;
+                }
+
+                $query
+                    ->where(function ($q) use ($filters, $startYear): void {
+                        $q->where('year', $startYear)
+                            ->where('month', '>=', $filters->startDate->month);
+                    })
+                    ->orWhere(function ($q) use ($filters, $endYear): void {
+                        $q->where('year', $endYear)
+                            ->where('month', '<=', $filters->endDate->month);
+                    })
+                    ->orWhere(function ($q) use ($startYear, $endYear): void {
+                        $q->where('year', '>', $startYear)
+                            ->where('year', '<', $endYear);
+                    });
+            })
             ->get();
 
+        // Both figures measure the selected period: the target rows are already
+        // limited to its months, so they are the same sum by construction.
         $annualTarget = (float) $targets->sum('monthly_target');
         $monthlyTarget = (float) $targets->sum('monthly_target');
-
         $orderRevenue = (float) Order::query()
             ->where('created_by', $userId)
             ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
