@@ -32,8 +32,9 @@ it('drops the milestone tables', function () {
 });
 
 it('moves orders and activities onto opportunity_id', function () {
+    // `orders.lead_id` was removed by this migration and later reintroduced as an
+    // origin pointer (2026_11_20_000001), so only the opportunity column is asserted here.
     expect(Schema::hasColumn('orders', 'opportunity_id'))->toBeTrue()
-        ->and(Schema::hasColumn('orders', 'lead_id'))->toBeFalse()
         ->and(Schema::hasColumn('activities', 'opportunity_id'))->toBeTrue();
 });
 

@@ -267,6 +267,15 @@ class Lead extends Model
         return $this->hasOne(Activity::class, 'lead_id')->latestOfMany('performed_at');
     }
 
+    /**
+     * The opportunity this lead was converted into, if the opportunity pipeline
+     * is in use. Null while the lead is still raw intake.
+     */
+    public function opportunity(): HasOne
+    {
+        return $this->hasOne(Opportunity::class, 'converted_from_lead_id');
+    }
+
     public function activityComments(): HasManyThrough
     {
         return $this->hasManyThrough(ActivityComment::class, Activity::class, 'lead_id');

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
+use InvalidArgumentException;
 
 #[ObservedBy(OrderObserver::class)]
 class Order extends Model
@@ -24,6 +25,7 @@ class Order extends Model
         'bulan',
         'sales_id',
         'end_customer_id',
+        'lead_id',
         'principal_id',
         'reg_inst',
         'sales_type_id',
@@ -63,6 +65,14 @@ class Order extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        static::saving(function (Order $order) {
+            if (filled($order->lead_id) && filled($order->opportunity_id)) {
+                throw new InvalidArgumentException(
+                    'Order cannot belong to both a lead and an opportunity.'
+                );
+            }
+        });
 
         static::creating(function ($model) {
             // ponytail: derive tahun/bulan from order_date, hidden TextInput defaults unreliable via Livewire
@@ -107,6 +117,15 @@ class Order extends Model
     public function opportunity(): BelongsTo
     {
         return $this->belongsTo(Opportunity::class, 'opportunity_id');
+    }
+
+    /**
+     * The intake lead this order originated from. Never cleared when the lead is
+     * converted — the resulting opportunity is reachable via `lead->opportunity`.
+     */
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(Lead::class, 'lead_id');
     }
 
     public function creator(): BelongsTo
