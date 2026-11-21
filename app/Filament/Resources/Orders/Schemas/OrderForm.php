@@ -14,6 +14,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -57,6 +58,7 @@ class OrderForm
                                                 // prefill, manual included: otherwise the
                                                 // lead's customer, notes and items bleed
                                                 // into a manually entered order.
+                                                $set('lead_id', null);
                                                 $set('source_record_id', null);
                                                 $set('end_customer_id', null);
                                                 $set('notes', null);
@@ -89,6 +91,10 @@ class OrderForm
                                             ->required(false)
                                             ->columnSpan(1)
                                             ->afterStateUpdated(function ($set, $get, ?string $state): void {
+                                                // The lead selector is a convenience for prefilling;
+                                                // the durable link is orders.lead_id, kept exclusive
+                                                // with opportunity_id by the model.
+                                                $set('lead_id', $get('order_source') === 'leads' ? $state : null);
                                                 $sourceType = $get('order_source');
                                                 $source = match ($sourceType) {
                                                     'leads' => $state ? Lead::query()
@@ -143,6 +149,9 @@ class OrderForm
 
                                                 $set('orderItems', $items);
                                             }),
+                                        // Persisted origin pointer, filled from the lead
+                                        // selector above; never re-pointed on conversion.
+                                        Hidden::make('lead_id'),
                                         DatePicker::make('order_date')
                                             ->label('Order Date')
                                             ->default(now())
