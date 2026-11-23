@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\Leads\Schemas;
 
 use App\Models\Lead;
+use App\Models\LeadProduct;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -21,6 +23,18 @@ use Illuminate\Validation\Rule;
 
 class LeadForm
 {
+    /**
+     * Masked values arrive grouped with "." and stored decimals with a ".xx"
+     * fraction, so the rule only has to reject anything that is not a number.
+     */
+    private const MONEY_PATTERN = '/^\d+([.,]\d+)*$/';
+
+    /**
+     * Set while Expected Revenue is written programmatically, so the field's
+     * own update hook does not mistake it for a manual override.
+     */
+    private static bool $syncingEstimatedRevenue = false;
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -152,13 +166,14 @@ class LeadForm
                                             ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
                                         TextInput::make('unit_price')
                                             ->label('Unit Price')
-                                            ->numeric()
                                             ->prefix('IDR')
                                             ->mask(RawJs::make('$money($input, ",", ".", 0)'))
-                                            ->stripCharacters('.')
+                                            ->rule('regex:'.self::MONEY_PATTERN)
+                                            ->validationMessages(['regex' => 'Enter a number, e.g. 1.500.000.'])
                                             ->live(debounce: 500)
                                             ->required()
-                                            ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) $state))
+                                            ->formatStateUsing(fn ($state) => $state === null || $state === '' ? null : self::parseMoney($state))
+                                            ->dehydrateStateUsing(fn ($state) => self::parseMoney($state))
                                             ->afterStateUpdated(fn (Get $get, $set) => self::updateLineTotal($get, $set)),
                                         TextInput::make('line_total')
                                             ->label('Line Total')
@@ -183,12 +198,41 @@ class LeadForm
                                     ->readOnly()
                                     ->dehydrated(false)
                                     ->columnSpanFull(),
+                                Hidden::make('estimated_revenue_is_manual')
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function (Set $set, ?Lead $record): void {
+                                        if (! $record) {
+                                            $set('estimated_revenue_is_manual', false);
+
+                                            return;
+                                        }
+
+                                        $productsTotal = (float) $record->leadProductItems->sum(
+                                            fn (LeadProduct $item): float => (float) $item->quantity * (float) $item->unit_price
+                                        );
+
+                                        $set(
+                                            'estimated_revenue_is_manual',
+                                            round((float) $record->estimated_revenue, 2) !== round($productsTotal, 2),
+                                        );
+                                    }),
                                 TextInput::make('estimated_revenue')
                                     ->label('Expected Revenue')
-                                    ->numeric()
                                     ->prefix('IDR')
                                     ->mask(RawJs::make('$money($input, ",", ".", 0)'))
-                                    ->stripCharacters('.')
+                                    ->rule('regex:'.self::MONEY_PATTERN)
+                                    ->validationMessages(['regex' => 'Enter a number, e.g. 1.500.000.'])
+                                    ->formatStateUsing(fn ($state) => $state === null || $state === '' ? null : self::parseMoney($state))
+                                    ->dehydrateStateUsing(fn ($state) => self::parseMoney($state))
+                                    ->helperText('Follows Unit Price x Qty of the Products list until you type your own figure.')
+                                    ->live(debounce: 500)
+                                    ->afterStateUpdated(function (Set $set): void {
+                                        if (self::$syncingEstimatedRevenue) {
+                                            return;
+                                        }
+
+                                        $set('estimated_revenue_is_manual', true);
+                                    })
                                     ->columnSpan(1)
                                     ->required(),
                                 DatePicker::make('expected_closing_date')
@@ -256,7 +300,7 @@ class LeadForm
     private static function calculateLineTotal(Get $get): float
     {
         $quantity = (float) ($get('quantity') ?? 0);
-        $unitPrice = (float) str_replace('.', '', (string) ($get('unit_price') ?? 0));
+        $unitPrice = self::parseMoney($get('unit_price'));
 
         return $quantity * $unitPrice;
     }
@@ -264,9 +308,34 @@ class LeadForm
     private static function calculateItemTotal(array $item): float
     {
         $quantity = (float) ($item['quantity'] ?? 0);
-        $unitPrice = (float) str_replace('.', '', (string) ($item['unit_price'] ?? 0));
+        $unitPrice = self::parseMoney($item['unit_price'] ?? 0);
 
         return $quantity * $unitPrice;
+    }
+
+    /**
+     * Turn either a masked display value ("1.500.000") or a stored decimal
+     * ("15000.00") into a float. A stored decimal always carries a one or two
+     * digit fraction, which the mask never produces, so the two are
+     * unambiguous.
+     */
+    private static function parseMoney(mixed $value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return 0.0;
+        }
+
+        if (preg_match('/^\d+\.\d{1,2}$/', $value) === 1) {
+            return (float) $value;
+        }
+
+        return (float) str_replace('.', '', $value);
     }
 
     private static function updateLineTotal(Get $get, $set): void
@@ -283,5 +352,25 @@ class LeadForm
         $total = collect($items)->sum(fn (array $item): float => self::calculateItemTotal($item));
 
         $set('../../total_value', $total);
+        self::syncEstimatedRevenue($get, $set, $total);
+    }
+
+    /**
+     * Mirrors the products total into Expected Revenue until the user types
+     * their own figure, which is then left alone.
+     */
+    private static function syncEstimatedRevenue(Get $get, $set, float $total): void
+    {
+        if ($get('../../estimated_revenue_is_manual')) {
+            return;
+        }
+
+        self::$syncingEstimatedRevenue = true;
+
+        try {
+            $set('../../estimated_revenue', $total);
+        } finally {
+            self::$syncingEstimatedRevenue = false;
+        }
     }
 }
