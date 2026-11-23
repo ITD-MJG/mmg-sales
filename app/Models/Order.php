@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use InvalidArgumentException;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
-use InvalidArgumentException;
 
 #[ObservedBy(OrderObserver::class)]
 class Order extends Model
@@ -149,6 +149,30 @@ class Order extends Model
     }
 
     /**
+     * Everything received against this order.
+     *
+     * Each `payment_statuses` row is one payment, so the order's standing is
+     * their sum, not the newest row's amount.
+     */
+    public function paidAmount(): float
+    {
+        $payments = $this->relationLoaded('paymentStatuses')
+            ? $this->paymentStatuses
+            : $this->paymentStatuses()->get();
+
+        return (float) $payments->whereIn('status', ['partial', 'full'])->sum('amount');
+    }
+
+    /**
+     * What is still owed. Clamped at zero because an overpayment is rejected
+     * upstream; a negative here could only ever mean corrupt data.
+     */
+    public function remainingBalance(): float
+    {
+        return max(0, (float) $this->total_amount - $this->paidAmount());
+    }
+
+    /**
      * Orders that contain at least one line item of the given principal.
      *
      * Imported orders have no line items, so the header principal is matched too.
@@ -181,7 +205,10 @@ class Order extends Model
 
     public function getLatestPaymentStatusAttribute(): ?PaymentStatus
     {
-        return $this->paymentStatuses()->latest()->first();
+        // Ordered by id rather than created_at: the timestamp has second
+        // precision, so two payments recorded in the same second would
+        // otherwise surface in whichever order the engine felt like.
+        return $this->paymentStatuses()->latest('id')->first();
     }
 
     public function getRouteKeyName(): string
