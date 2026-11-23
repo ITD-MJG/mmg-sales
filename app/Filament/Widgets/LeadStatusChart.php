@@ -66,7 +66,9 @@ class LeadStatusChart extends Widget
 
     protected string $view = 'filament.widgets.lead-status-chart';
 
-    protected int|string|array $columnSpan = 2;
+    // One column, so the funnel shares the row with Expected Revenue by Closing
+    // Month and Monthly Order Value on the three-column dashboard grid.
+    protected int|string|array $columnSpan = 1;
 
     public static function canView(): bool
     {
