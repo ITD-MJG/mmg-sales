@@ -224,7 +224,7 @@ class LeadForm
                                     ->validationMessages(['regex' => 'Enter a number, e.g. 1.500.000.'])
                                     ->formatStateUsing(fn ($state) => $state === null || $state === '' ? null : self::parseMoney($state))
                                     ->dehydrateStateUsing(fn ($state) => self::parseMoney($state))
-                                    ->helperText('Follows Unit Price x Qty of the Products list until you type your own figure.')
+                                    ->helperText('Automatically taken from the Line Total sum of the Products list above. Change it if you want a different number.')
                                     ->live(debounce: 500)
                                     ->afterStateUpdated(function (Set $set): void {
                                         if (self::$syncingEstimatedRevenue) {
