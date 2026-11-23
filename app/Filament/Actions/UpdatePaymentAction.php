@@ -96,11 +96,12 @@ class UpdatePaymentAction extends Action
                     'notes' => $data['notes'] ?? null,
                 ]);
             })
-            // Mounted by name from the per-row Edit buttons in the history
-            // table. registerModalActions() keeps it out of the footer, where a
+            // Mounted by name from the per-row buttons in the history table.
+            // registerModalActions() keeps them out of the footer, where a
             // button with no payment to point at would be meaningless.
             ->registerModalActions([
                 EditPaymentAction::make(),
+                DeletePaymentAction::make(),
             ])
             // A fully paid order still opens, to read its history, but offers no
             // submit: the amount field is disabled and there is nothing to add.

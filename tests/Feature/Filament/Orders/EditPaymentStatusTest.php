@@ -53,7 +53,7 @@ function orderWithTwoPayments(): array
     return [$order, $first, $second];
 }
 
-it('renders an edit button for every payment in the update payment modal', function (): void {
+it('renders an edit and a delete button for every payment in the update payment modal', function (): void {
     [$order, $first, $second] = orderWithTwoPayments();
 
     $component = livewire(ListOrders::class)
@@ -65,7 +65,9 @@ it('renders an edit button for every payment in the update payment modal', funct
 
     expect($history)
         ->toContain("mountAction('editPayment', { payment: {$first->getKey()} })")
-        ->toContain("mountAction('editPayment', { payment: {$second->getKey()} })");
+        ->toContain("mountAction('editPayment', { payment: {$second->getKey()} })")
+        ->toContain("mountAction('deletePayment', { payment: {$first->getKey()} })")
+        ->toContain("mountAction('deletePayment', { payment: {$second->getKey()} })");
 });
 
 it('edits an existing payment and re-derives the status chain', function (): void {
@@ -136,7 +138,36 @@ it('caps the amount at what the order can still take', function (): void {
     expect((float) $first->fresh()->amount)->toBe(250000.0);
 });
 
-it('hides the edit screen from users without update_payment_order', function (): void {
+it('deletes an existing payment and re-derives the status chain', function (): void {
+    [$order, $first] = orderWithTwoPayments();
+
+    livewire(ListOrders::class)
+        ->mountAction(TestAction::make('updatePayment')->table($order))
+        ->mountAction('deletePayment', ['payment' => $first->getKey()])
+        ->callMountedAction();
+
+    expect($order->paymentStatuses()->whereKey($first->getKey())->exists())->toBeFalse()
+        ->and((float) $order->fresh()->paidAmount())->toBe(250000.0);
+
+    $remaining = $order->paymentStatuses()->sole();
+
+    expect($remaining->status)->toBe('partial')
+        ->and($order->fresh()->latestPaymentStatus?->status)->toBe('partial');
+});
+
+it('refuses to delete a payment id that belongs to another order', function (): void {
+    [$order] = orderWithTwoPayments();
+    [$otherOrder, $foreignPayment] = orderWithTwoPayments();
+
+    livewire(ListOrders::class)
+        ->mountAction(TestAction::make('updatePayment')->table($order))
+        ->mountAction('deletePayment', ['payment' => $foreignPayment->getKey()])
+        ->callMountedAction();
+
+    expect($otherOrder->paymentStatuses()->whereKey($foreignPayment->getKey())->exists())->toBeTrue();
+});
+
+it('closes the edit and delete screens to users without update_payment_order', function (): void {
     [$order, $first] = orderWithTwoPayments();
 
     // Can list orders, but not record payments.
@@ -150,5 +181,11 @@ it('hides the edit screen from users without update_payment_order', function ():
         ->fillForm(['amount' => 900000])
         ->callMountedAction();
 
-    expect((float) $first->fresh()->amount)->toBe(250000.0);
+    livewire(ListOrders::class)
+        ->mountAction(TestAction::make('updatePayment')->table($order))
+        ->mountAction('deletePayment', ['payment' => $first->getKey()])
+        ->callMountedAction();
+
+    expect((float) $first->fresh()->amount)->toBe(250000.0)
+        ->and($order->paymentStatuses()->whereKey($first->getKey())->exists())->toBeTrue();
 });

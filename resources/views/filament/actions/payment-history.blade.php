@@ -65,14 +65,26 @@
                                 {{ $payment->created_at?->format('d M Y H:i') }}
                             </td>
                             <td class="whitespace-nowrap px-3 py-2 text-end">
-                                <x-filament::button
-                                    color="gray"
-                                    size="xs"
-                                    icon="heroicon-m-pencil-square"
-                                    wire:click="mountAction('editPayment', { payment: {{ $payment->getKey() }} })"
-                                >
-                                    Edit
-                                </x-filament::button>
+                                <div class="flex items-center justify-end gap-2">
+                                    <x-filament::button
+                                        color="gray"
+                                        size="xs"
+                                        icon="heroicon-m-pencil-square"
+                                        wire:click="mountAction('editPayment', { payment: {{ $payment->getKey() }} })"
+                                    >
+                                        Edit
+                                    </x-filament::button>
+
+                                    <x-filament::button
+                                        color="danger"
+                                        size="xs"
+                                        icon="heroicon-m-trash"
+                                        outlined
+                                        wire:click="mountAction('deletePayment', { payment: {{ $payment->getKey() }} })"
+                                    >
+                                        Delete
+                                    </x-filament::button>
+                                </div>
                             </td>
                         </tr>
                     @endforeach
