@@ -65,6 +65,10 @@ class ResetPermissions extends Command
             $count++;
         }
 
+        // The /sales dashboard gate, which sits outside the report bundle.
+        Permission::findOrCreate('view_sales_dashboard');
+        $count++;
+
         $this->info("  Created/verified {$count} permissions.");
     }
 
@@ -129,6 +133,7 @@ class ResetPermissions extends Command
             'view_any_activity', 'view_activity', 'create_activity', 'update_activity', 'delete_activity',
             'view_any_order', 'view_order', 'create_order', 'update_order', 'delete_order',
             'view_any_target', 'view_target', 'create_target', 'update_target', 'delete_target',
+            'view_sales_dashboard',
         ], $viewReference);
 
         $smRoles = [
@@ -147,7 +152,7 @@ class ResetPermissions extends Command
         $this->info('  S&M dept roles ('.count($smRoles).' roles): '.count($smPerms).' permissions each');
 
         // 5. Management Director: reports + view reference
-        $directorPerms = array_merge($reportPermissions, $viewReference);
+        $directorPerms = array_merge($reportPermissions, $viewReference, ['view_sales_dashboard']);
 
         Role::findOrCreate('Management Director')->syncPermissions($directorPerms);
         $this->info('  Management Director: '.count($directorPerms).' permissions');

@@ -26,7 +26,7 @@ class SalesDashboard extends BaseDashboard
 
     public static function canAccess(): bool
     {
-        return auth()->check();
+        return auth()->user()?->can('view_sales_dashboard') ?? false;
     }
 
     public function getColumns(): int|array

@@ -24,7 +24,7 @@ class AnalyticsDashboard extends BaseDashboard
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_sales_reports');
+        return auth()->user()?->can('view_sales_reports') ?? false;
     }
 
     public function getColumns(): int|array

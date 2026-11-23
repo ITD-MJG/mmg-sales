@@ -80,9 +80,21 @@ it('renders each dashboard with its widget set', function (string $page, array $
     expect((new $page)->getWidgets())->toBe($widgets);
 })->with(fn () => collect(widgetSets())->map(fn (array $set) => [$set['page'], $set['widgets']])->all());
 
-it('allows any authenticated user to reach the Sales dashboard', function () {
+it('hides the Sales dashboard from users without view_sales_dashboard', function () {
     $user = User::factory()->create();
     actingAs($user);
+
+    expect(SalesDashboard::canAccess())->toBeFalse();
+
+    $this->get(SalesDashboard::getUrl())->assertForbidden();
+});
+
+it('shows the Sales dashboard to users with view_sales_dashboard', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo('view_sales_dashboard');
+    actingAs($user);
+
+    expect(SalesDashboard::canAccess())->toBeTrue();
 
     $this->get(SalesDashboard::getUrl())->assertSuccessful();
 });
@@ -119,6 +131,7 @@ it('renders dashboard shortcut links to Sales and Analytics for a user with both
 
 it('omits the Analytics shortcut for a user without view_sales_reports', function () {
     $user = User::factory()->create();
+    $user->givePermissionTo('view_sales_dashboard');
     actingAs($user);
 
     expect(DashboardShortcutsWidget::canView())->toBeTrue();
@@ -126,5 +139,17 @@ it('omits the Analytics shortcut for a user without view_sales_reports', functio
     $this->get(Dashboard::getUrl())
         ->assertSuccessful()
         ->assertSee(SalesDashboard::getUrl(), escape: false)
+        ->assertDontSee(AnalyticsDashboard::getUrl(), escape: false);
+});
+
+it('omits the shortcuts widget for a user with neither dashboard permission', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    expect(DashboardShortcutsWidget::canView())->toBeFalse();
+
+    $this->get(Dashboard::getUrl())
+        ->assertSuccessful()
+        ->assertDontSee(SalesDashboard::getUrl(), escape: false)
         ->assertDontSee(AnalyticsDashboard::getUrl(), escape: false);
 });

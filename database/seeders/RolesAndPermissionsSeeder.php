@@ -59,6 +59,12 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::findOrCreate($permission);
         }
 
+        // ── Dashboard permissions ────────────────────────────────────────
+        // Gates /sales. Analytics is gated by view_sales_reports instead: it
+        // is a reporting screen, while the sales dashboard is the working view
+        // of the whole sales and marketing ladder.
+        Permission::findOrCreate('view_sales_dashboard');
+
         // ── Reference data view permissions (shared by many roles) ───────
         $viewReference = [
             'view_any_customer', 'view_customer',
@@ -117,6 +123,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_order', 'view_order', 'create_order', 'update_order', 'delete_order',
             // Target
             'view_any_target', 'view_target', 'create_target', 'update_target', 'delete_target',
+            // Dashboard
+            'view_sales_dashboard',
         ], $viewReference);
 
         $smRoles = [
@@ -146,6 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_activity_comment', 'view_activity_comment',
             'view_any_lead', 'view_lead', 'create_lead', 'update_lead',
             'view_any_activity', 'view_activity', 'create_activity', 'update_activity',
+            'view_sales_dashboard',
         ]);
 
         Role::findOrCreate('Management Director')->syncPermissions($directorPermissions);

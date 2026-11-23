@@ -33,6 +33,9 @@
                                 {{ $heading }}
                             </th>
                         @endforeach
+                        <th class="px-3 py-2 text-end text-xs font-medium text-gray-500 dark:text-gray-400">
+                            <span class="sr-only">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-950/5 dark:divide-white/10">
@@ -60,6 +63,16 @@
                             </td>
                             <td class="whitespace-nowrap px-3 py-2 text-gray-500 dark:text-gray-400">
                                 {{ $payment->created_at?->format('d M Y H:i') }}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-2 text-end">
+                                <x-filament::button
+                                    color="gray"
+                                    size="xs"
+                                    icon="heroicon-m-pencil-square"
+                                    wire:click="mountAction('editPayment', { payment: {{ $payment->getKey() }} })"
+                                >
+                                    Edit
+                                </x-filament::button>
                             </td>
                         </tr>
                     @endforeach
