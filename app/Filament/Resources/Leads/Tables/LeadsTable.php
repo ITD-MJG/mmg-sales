@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Leads\Tables;
 
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Models\LeadProduct;
 use App\Models\User;
 use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -17,6 +19,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 
 class LeadsTable
@@ -81,6 +84,12 @@ class LeadsTable
                 EditAction::make()
                     ->visible(fn (Lead $record) => self::canModifyRecord($record, 'created_by')),
 
+                // Registered as a record action because a column action only
+                // carries a name to mount, and the table resolves that name
+                // against its own actions — an unregistered (or hidden) action
+                // counts as disabled and never opens. The Products column is
+                // the second way in.
+                self::productListAction(),
             ])
             ->columns([
                 TextColumn::make('lead_code')
@@ -125,6 +134,22 @@ class LeadsTable
                     ->label('Exp. Revenue')
                     ->money('IDR')
                     ->sortable()
+                    ->toggleable(),
+
+                TextColumn::make('lead_product_items_count')
+                    ->label('Products')
+                    // Counted per line, not by quantity: a lead with two lines
+                    // of 50 units is two products to the rep reading the row.
+                    ->counts('leadProductItems')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    // Built by the same factory as the row action: the column
+                    // action is what the table caches last for this name, so an
+                    // unconfigured copy here would win and the modal would open
+                    // empty.
+                    ->action(self::productListAction())
+                    ->tooltip('Show the product lines')
                     ->toggleable(),
 
                 TextColumn::make('expected_closing_date')
@@ -281,5 +306,30 @@ class LeadsTable
                         ->visible(fn () => auth()->user()?->hasRole('Super Admin')),
                 ]),
             ]);
+    }
+
+    /**
+     * The modal behind the Products column: every line on the lead, priced, with
+     * the summed value of the list underneath.
+     */
+    private static function productListAction(): Action
+    {
+        return Action::make('products')
+            ->label('Products')
+            ->icon('heroicon-m-squares-2x2')
+            ->modalHeading(fn (Lead $record): string => 'Products on '.$record->lead_code)
+            ->modalContent(function (Lead $record): View {
+                $items = $record->leadProductItems()
+                    ->with(['product.principal', 'principal'])
+                    ->orderBy('id')
+                    ->get();
+
+                return view('filament.leads.product-list', [
+                    'items' => $items,
+                    'total' => $items->sum(fn (LeadProduct $item): float => (int) $item->quantity * (float) $item->unit_price),
+                ]);
+            })
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('Close');
     }
 }
