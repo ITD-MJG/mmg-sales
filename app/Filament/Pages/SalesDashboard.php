@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\RecentActivitiesWidget;
@@ -11,6 +12,7 @@ use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
 use App\Filament\Widgets\UpcomingLeadsWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
+use Filament\Widgets\WidgetConfiguration;
 
 class SalesDashboard extends BaseDashboard
 {
@@ -37,6 +39,7 @@ class SalesDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            new WidgetConfiguration(DashboardShortcutsWidget::class, ['currentDashboard' => static::class]),
             SalesTargetWidget::class,
             LeadStatusChart::class,
             EstimateRevenue::class,

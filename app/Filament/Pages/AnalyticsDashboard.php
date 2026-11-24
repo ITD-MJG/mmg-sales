@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\MonthlyOrderChart;
 use App\Filament\Widgets\RevenueByPrincipalChart;
 use App\Filament\Widgets\RevenueByTerritoryChart;
@@ -9,6 +10,7 @@ use App\Filament\Widgets\TopSellingProductsChart;
 use App\Filament\Widgets\TopVisitedCustomersChart;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
+use Filament\Widgets\WidgetConfiguration;
 
 class AnalyticsDashboard extends BaseDashboard
 {
@@ -35,6 +37,7 @@ class AnalyticsDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            new WidgetConfiguration(DashboardShortcutsWidget::class, ['currentDashboard' => static::class]),
             MonthlyOrderChart::class,
             RevenueByPrincipalChart::class,
             RevenueByTerritoryChart::class,

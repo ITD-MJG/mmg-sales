@@ -6,6 +6,8 @@
                     :href="$destination['url']"
                     :icon="$destination['icon']"
                     :tooltip="$destination['description']"
+                    :color="$destination['active'] ? 'primary' : 'gray'"
+                    :aria-current="$destination['active'] ? 'page' : null"
                     tag="a"
                 >
                     {{ $destination['label'] }}

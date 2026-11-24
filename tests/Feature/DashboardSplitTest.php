@@ -20,7 +20,9 @@ use App\Filament\Widgets\TopVisitedCustomersChart;
 use App\Filament\Widgets\UpcomingLeadsWidget;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Widgets\WidgetConfiguration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\seed;
@@ -30,6 +32,18 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     seed(RolesAndPermissionsSeeder::class);
 });
+
+/**
+ * @param  array<string | WidgetConfiguration>  $widgets
+ * @return array<string>
+ */
+function widgetClasses(array $widgets): array
+{
+    return array_map(
+        fn (string|WidgetConfiguration $widget): string => $widget instanceof WidgetConfiguration ? $widget->widget : $widget,
+        $widgets,
+    );
+}
 
 function widgetSets(): array
 {
@@ -46,6 +60,7 @@ function widgetSets(): array
         'sales' => [
             'page' => SalesDashboard::class,
             'widgets' => [
+                DashboardShortcutsWidget::class,
                 SalesTargetWidget::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
@@ -58,6 +73,7 @@ function widgetSets(): array
         'analytics' => [
             'page' => AnalyticsDashboard::class,
             'widgets' => [
+                DashboardShortcutsWidget::class,
                 MonthlyOrderChart::class,
                 RevenueByPrincipalChart::class,
                 RevenueByTerritoryChart::class,
@@ -77,7 +93,7 @@ it('renders each dashboard with its widget set', function (string $page, array $
         ->assertSuccessful()
         ->assertSee($page::getNavigationLabel());
 
-    expect((new $page)->getWidgets())->toBe($widgets);
+    expect(widgetClasses((new $page)->getWidgets()))->toBe($widgets);
 })->with(fn () => collect(widgetSets())->map(fn (array $set) => [$set['page'], $set['widgets']])->all());
 
 it('hides the Sales dashboard from users without view_sales_dashboard', function () {
@@ -153,3 +169,58 @@ it('omits the shortcuts widget for a user with neither dashboard permission', fu
         ->assertDontSee(SalesDashboard::getUrl(), escape: false)
         ->assertDontSee(AnalyticsDashboard::getUrl(), escape: false);
 });
+
+function shortcutAnchor(string $html, string $url): string
+{
+    preg_match_all('/<a\b[^>]*>/', $html, $matches);
+
+    foreach ($matches[0] as $anchor) {
+        if (str_contains($anchor, 'fi-btn') && str_contains($anchor, 'href="'.$url.'"')) {
+            return $anchor;
+        }
+    }
+
+    return '';
+}
+
+it('marks the dashboard being viewed as active in the shortcuts group', function (string $current, string $other) {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $html = Livewire::test(DashboardShortcutsWidget::class, ['currentDashboard' => $current])->html();
+
+    expect(shortcutAnchor($html, $current::getUrl()))
+        ->toContain('aria-current="page"')
+        ->toContain('fi-color-primary')
+        ->and(shortcutAnchor($html, $other::getUrl()))
+        ->not->toContain('aria-current')
+        ->not->toContain('fi-color-primary');
+})->with([
+    'on sales' => [SalesDashboard::class, AnalyticsDashboard::class],
+    'on analytics' => [AnalyticsDashboard::class, SalesDashboard::class],
+]);
+
+it('leaves every shortcut inactive on the homepage dashboard', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $html = Livewire::test(DashboardShortcutsWidget::class)->html();
+
+    expect($html)->toContain(SalesDashboard::getUrl())
+        ->toContain(AnalyticsDashboard::getUrl())
+        ->not->toContain('aria-current')
+        ->not->toContain('fi-color-primary');
+});
+
+it('tells the shortcuts group which dashboard hosts it', function (string $page) {
+    $configuration = collect((new $page)->getWidgets())
+        ->first(fn (string|WidgetConfiguration $widget): bool => ($widget instanceof WidgetConfiguration ? $widget->widget : $widget) === DashboardShortcutsWidget::class);
+
+    expect($configuration)->toBeInstanceOf(WidgetConfiguration::class)
+        ->and($configuration->getProperties())->toBe(['currentDashboard' => $page]);
+})->with([
+    'sales' => [SalesDashboard::class],
+    'analytics' => [AnalyticsDashboard::class],
+]);
