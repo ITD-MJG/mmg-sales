@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\SalesDashboard;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Models\Lead;
 use App\Models\User;
@@ -28,12 +29,15 @@ it('totals expected revenue across the current and following eleven closing mont
     expect($data['labels'])->toHaveCount(12)
         ->and($data['labels'][0])->toBe('Oct 2026')
         ->and($data['labels'][11])->toBe('Sep 2027')
-        ->and($data['datasets'][0]['data'][0])->toBe(4000.0)
-        ->and($data['datasets'][0]['data'][11])->toBe(500.0)
-        ->and(array_sum($data['datasets'][0]['data']))->toBe(4500.0);
+        // Reported in millions, so the target series stays visible next to a
+        // pipeline month that runs to eleven digits.
+        ->and($data['datasets'][0]['data'][0])->toBe(0.004)
+        ->and($data['datasets'][0]['data'][11])->toBe(0.0005)
+        // Floating-point division, so compare the total with a tolerance.
+        ->and(array_sum($data['datasets'][0]['data']))->toEqualWithDelta(0.0045, 1e-9);
 });
 
-it('declares a bar chart with coloured datasets and registers on the dashboard', function () {
+it('declares a bar chart with coloured datasets, unit axis and registers on the Sales dashboard', function () {
     $data = (function (): array {
         return $this->getData();
     })->call(app(EstimateRevenue::class));
@@ -42,12 +46,19 @@ it('declares a bar chart with coloured datasets and registers on the dashboard',
         return $this->getType();
     })->call(app(EstimateRevenue::class));
 
+    $options = (function (): array {
+        return $this->getOptions();
+    })->call(app(EstimateRevenue::class));
+
     // Revenue and target are drawn as two differently coloured datasets.
     expect($data['datasets'])->toHaveCount(2)
         ->and($data['datasets'][0]['backgroundColor'])->toBe('rgba(37, 99, 235, 0.75)')
         ->and($data['datasets'][1]['backgroundColor'])->toBe('rgba(220, 38, 38, 0.65)')
+        ->and($data['datasets'][0]['label'])->toContain('Rp juta')
         ->and($type)->toBe('bar')
-        ->and((new Dashboard)->getWidgets())->toContain(EstimateRevenue::class);
+        ->and($options['scales']['y']['title']['text'])->toBe('Rp juta')
+        ->and((new SalesDashboard)->getWidgets())->toContain(EstimateRevenue::class)
+        ->and((new Dashboard)->getWidgets())->not->toContain(EstimateRevenue::class);
 });
 
 it('renders with no leads', function () {

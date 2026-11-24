@@ -13,14 +13,13 @@ use App\Models\Lead;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Principal;
-use App\Models\Product;
 use App\Models\Territory;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Spatie\Permission\Models\Role as SpatieRole;
 use ReflectionMethod;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 use function Pest\Laravel\actingAs;
 
@@ -86,6 +85,15 @@ function scopeDatasetSum(array $data, int $dataset = 0): float
     return array_sum($data['datasets'][$dataset]['data']);
 }
 
+/**
+ * `EstimateRevenue` plots in millions, so a rupiah fixture of 100 arrives as
+ * 0.0001. Converted back here to keep the fixtures readable.
+ */
+function scopeEstimateSum(array $data, int $dataset = 0): float
+{
+    return round(array_sum($data['datasets'][$dataset]['data']) * 1_000_000, 6);
+}
+
 /** A lead owned by someone else, with the given user assigned as collaborator. */
 function assignedLead(User $owner, User $assignee, float $revenue = 100.0): Lead
 {
@@ -105,24 +113,24 @@ it('counts expected revenue for a rep the lead is assigned to, not just the crea
     assignedLead($this->outsider, $this->rep);
 
     actingAs($this->rep);
-    expect(scopeDatasetSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(100.0);
+    expect(scopeEstimateSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(100.0);
 });
 
 it('does not count expected revenue for an unrelated rep', function () {
     assignedLead($this->outsider, $this->rep);
 
     actingAs($this->outsider);
-    expect(scopeDatasetSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(100.0);
+    expect(scopeEstimateSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(100.0);
 });
 
 it('gives ASM and RSM the territory leads regardless of creator', function () {
     assignedLead($this->outsider, $this->rep, 40.0);
 
     actingAs($this->asm);
-    expect(scopeDatasetSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(40.0);
+    expect(scopeEstimateSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(40.0);
 
     actingAs($this->rsm);
-    expect(scopeDatasetSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(40.0);
+    expect(scopeEstimateSum(scopeWidgetData(EstimateRevenue::class), 0))->toBe(40.0);
 });
 
 it('hides an unattributed order from every sales role but not from a global viewer', function () {

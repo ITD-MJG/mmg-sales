@@ -6,9 +6,10 @@ use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\RecentActivitiesWidget;
-use App\Filament\Widgets\SalesRepLeaderboardWidget;
-use App\Filament\Widgets\SalesTargetWidget;
-use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
+use App\Filament\Widgets\SalesKpiWidget;
+use App\Filament\Widgets\SalesRepRevenueLeaderboardWidget;
+use App\Filament\Widgets\StaleLeadsWidget;
+use App\Filament\Widgets\TargetVsAchievementChart;
 use App\Filament\Widgets\UpcomingLeadsWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
@@ -42,17 +43,22 @@ class SalesDashboard extends BaseDashboard
         return 3;
     }
 
+    /**
+     * The rep's own numbers, then the pipeline and forecast charts, then the two
+     * lists that say what to do next, then the team ranking.
+     */
     public function getWidgets(): array
     {
         return [
             new WidgetConfiguration(DashboardShortcutsWidget::class, ['currentDashboard' => static::class]),
-            SalesTargetWidget::class,
+            SalesKpiWidget::class,
+            TargetVsAchievementChart::class,
             LeadStatusChart::class,
             EstimateRevenue::class,
             UpcomingLeadsWidget::class,
-            SalesRepLeaderboardWidget::class,
+            StaleLeadsWidget::class,
             RecentActivitiesWidget::class,
-            TopSalesRepresentativeVisitsWidget::class,
+            SalesRepRevenueLeaderboardWidget::class,
         ];
     }
 }

@@ -16,8 +16,8 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Spatie\Permission\Models\Role as SpatieRole;
 use ReflectionMethod;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 use function Pest\Laravel\actingAs;
 
@@ -127,6 +127,16 @@ function datasetSum(array $data, int $dataset = 0): float
     return array_sum($data['datasets'][$dataset]['data']);
 }
 
+/**
+ * `EstimateRevenue` plots in millions so a pipeline month of Rp 141 B cannot
+ * swamp the target series, so a rupiah fixture of 120 arrives as 0.00012.
+ * Converted back here to keep the fixtures readable.
+ */
+function estimateSum(array $data, int $dataset = 0): float
+{
+    return round(array_sum($data['datasets'][$dataset]['data']) * 1_000_000, 6);
+}
+
 it('scopes monthly order value to the manager plus subordinates', function () {
     actingAs($this->manager);
     expect(datasetSum(widgetData(MonthlyOrderChart::class)))->toBe(1.2);
@@ -165,27 +175,27 @@ it('scopes top selling products to the manager plus subordinates', function () {
 
 it('scopes expected revenue leads to the manager plus subordinates', function () {
     actingAs($this->manager);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 0))->toBe(120.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 0))->toBe(120.0);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 0))->toBe(20.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 0))->toBe(20.0);
 
     actingAs($this->outsider);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 0))->toBe(400.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 0))->toBe(400.0);
 
     actingAs($this->superAdmin);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 0))->toBe(520.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 0))->toBe(520.0);
 });
 
 it('scopes expected revenue targets to the manager plus subordinates', function () {
     actingAs($this->manager);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 1))->toBe(1440.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 1))->toBe(1440.0);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 1))->toBe(240.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 1))->toBe(240.0);
 
     actingAs($this->superAdmin);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 1))->toBe(6240.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 1))->toBe(6240.0);
 });
 
 it('gives an own-records-only role its own records and no subordinates', function () {
@@ -201,7 +211,7 @@ it('gives an own-records-only role its own records and no subordinates', functio
     ]);
 
     actingAs($this->subordinate);
-    expect(datasetSum(widgetData(EstimateRevenue::class), 0))->toBe(20.0);
+    expect(estimateSum(widgetData(EstimateRevenue::class), 0))->toBe(20.0);
 });
 
 it('counts only the viewer scope in the lead status funnel', function () {

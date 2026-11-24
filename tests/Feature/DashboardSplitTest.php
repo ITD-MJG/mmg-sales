@@ -7,16 +7,23 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\SalesDashboard;
 use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
+use App\Filament\Widgets\LeadsAtRiskWidget;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
+use App\Filament\Widgets\OrganizationKpiWidget;
 use App\Filament\Widgets\RecentActivitiesWidget;
-use App\Filament\Widgets\RevenueByPrincipalChart;
-use App\Filament\Widgets\RevenueByTerritoryChart;
-use App\Filament\Widgets\SalesRepLeaderboardWidget;
-use App\Filament\Widgets\SalesTargetWidget;
-use App\Filament\Widgets\TopSalesRepresentativeVisitsWidget;
-use App\Filament\Widgets\TopSellingProductsChart;
-use App\Filament\Widgets\TopVisitedCustomersChart;
+use App\Filament\Widgets\Reports\RevenueByCustomerGroupWidget;
+use App\Filament\Widgets\Reports\RevenueByPrincipalWidget;
+use App\Filament\Widgets\Reports\RevenueTrendWidget;
+use App\Filament\Widgets\Reports\SalesReportStatsWidget;
+use App\Filament\Widgets\Reports\TopCustomersWidget;
+use App\Filament\Widgets\Reports\TopSalesRepresentativesWidget;
+use App\Filament\Widgets\Reports\TopSellingProductsWidget;
+use App\Filament\Widgets\Reports\TopTerritoriesWidget;
+use App\Filament\Widgets\SalesKpiWidget;
+use App\Filament\Widgets\SalesRepRevenueLeaderboardWidget;
+use App\Filament\Widgets\StaleLeadsWidget;
+use App\Filament\Widgets\TargetVsAchievementChart;
 use App\Filament\Widgets\UpcomingLeadsWidget;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -52,33 +59,38 @@ function widgetSets(): array
             'page' => Dashboard::class,
             'widgets' => [
                 DashboardShortcutsWidget::class,
+                OrganizationKpiWidget::class,
                 LeadStatusChart::class,
-                EstimateRevenue::class,
                 MonthlyOrderChart::class,
+                LeadsAtRiskWidget::class,
             ],
         ],
         'sales' => [
             'page' => SalesDashboard::class,
             'widgets' => [
                 DashboardShortcutsWidget::class,
-                SalesTargetWidget::class,
+                SalesKpiWidget::class,
+                TargetVsAchievementChart::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
                 UpcomingLeadsWidget::class,
-                SalesRepLeaderboardWidget::class,
+                StaleLeadsWidget::class,
                 RecentActivitiesWidget::class,
-                TopSalesRepresentativeVisitsWidget::class,
+                SalesRepRevenueLeaderboardWidget::class,
             ],
         ],
         'analytics' => [
             'page' => AnalyticsDashboard::class,
             'widgets' => [
                 DashboardShortcutsWidget::class,
-                MonthlyOrderChart::class,
-                RevenueByPrincipalChart::class,
-                RevenueByTerritoryChart::class,
-                TopSellingProductsChart::class,
-                TopVisitedCustomersChart::class,
+                SalesReportStatsWidget::class,
+                RevenueTrendWidget::class,
+                TopSalesRepresentativesWidget::class,
+                TopTerritoriesWidget::class,
+                RevenueByCustomerGroupWidget::class,
+                RevenueByPrincipalWidget::class,
+                TopSellingProductsWidget::class,
+                TopCustomersWidget::class,
             ],
         ],
     ];

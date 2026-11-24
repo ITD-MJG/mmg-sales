@@ -35,11 +35,13 @@ class RevenueByTerritoryChart extends ChartWidget
 
         $baseQuery = Order::query();
 
-        self::applyVisibilityScope($baseQuery, 'created_by');
+        // Sales reps own revenue through `sales_id`; `created_by` holds the
+        // administrator who imported the order.
+        self::applyVisibilityScope($baseQuery, 'sales_id');
 
         $data = (clone $baseQuery)
             ->where('order_date', '>=', now()->subMonths(11)->startOfMonth())
-            ->join('users', 'orders.created_by', '=', 'users.id')
+            ->join('users', 'orders.sales_id', '=', 'users.id')
             ->join('territories', 'users.territory_id', '=', 'territories.id')
             ->selectRaw('territories.name as territory_name, SUM(orders.total_amount) as total')
             ->groupBy('territories.name')

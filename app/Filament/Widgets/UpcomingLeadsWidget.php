@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\Leads\LeadResource;
+use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use Carbon\Carbon;
 use Filament\Actions\ViewAction;
@@ -12,6 +13,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class UpcomingLeadsWidget extends BaseWidget
 {
+    use HasVisibilityScope;
+
     protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = 'full';
@@ -21,13 +24,21 @@ class UpcomingLeadsWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(
-                Lead::query()
+            ->query(function () {
+                $query = Lead::query()
+                    // Open leads only: a won or lost deal cannot be "nearing
+                    // completion", and closed rows crowded the five slots.
+                    ->whereNotIn('status', ['closed_won', 'closed_lost'])
                     ->whereNotNull('expected_closing_date')
                     ->where('expected_closing_date', '>=', now()->startOfDay())
+                    ->where('expected_closing_date', '<=', now()->addDays(30)->toDateString())
                     ->orderBy('expected_closing_date', 'asc')
-                    ->limit(5)
-            )
+                    ->limit(5);
+
+                self::applyLeadVisibilityScope($query);
+
+                return $query;
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Lead Title')

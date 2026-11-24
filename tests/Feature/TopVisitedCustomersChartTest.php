@@ -63,8 +63,11 @@ it('does not register the revenue by territory chart on the dashboard', function
         ->not->toContain(RevenueByTerritoryChart::class);
 });
 
-it('registers the top visited leads chart on the dashboard', function () {
-    expect((new Dashboard)->getWidgets())->toContain(TopVisitedCustomersChart::class);
+it('no longer registers the activity-based top visited leads chart on the homepage', function () {
+    // The homepage now answers "what is slipping"; activity rankings moved to
+    // the Sales dashboard, which owns the visit side of the book.
+    expect((new Dashboard)->getWidgets())
+        ->not->toContain(TopVisitedCustomersChart::class);
 });
 
 it('does not register the superseded top visited customers table widget', function () {

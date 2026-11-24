@@ -31,21 +31,21 @@ class SalesTargetWidget extends BaseWidget
             ->where('year', now()->year)
             ->sum('monthly_target');
 
-        $annualShippedAmount = Order::query()
-            ->where('created_by', $user->id)
-            ->whereHas('deliveryStatuses', fn ($q) => $q->whereNotNull('shipped_date'))
+        // Attributed through `sales_id`: orders arrive from an import run by an
+        // administrator, so `created_by` credits the importer, not the rep.
+        $annualRevenue = Order::query()
+            ->where('sales_id', $user->id)
             ->whereYear('order_date', now()->year)
             ->sum('total_amount');
 
-        $monthlyShippedAmount = Order::query()
-            ->where('created_by', $user->id)
-            ->whereHas('deliveryStatuses', fn ($q) => $q->whereNotNull('shipped_date'))
+        $monthlyRevenue = Order::query()
+            ->where('sales_id', $user->id)
             ->whereYear('order_date', now()->year)
             ->whereMonth('order_date', now()->month)
             ->sum('total_amount');
 
-        $annualAchievement = $annualTarget > 0 ? ($annualShippedAmount / $annualTarget) * 100 : 0;
-        $monthlyAchievement = $monthlyTarget > 0 ? ($monthlyShippedAmount / $monthlyTarget) * 100 : 0;
+        $annualAchievement = $annualTarget > 0 ? ($annualRevenue / $annualTarget) * 100 : 0;
+        $monthlyAchievement = $monthlyTarget > 0 ? ($monthlyRevenue / $monthlyTarget) * 100 : 0;
 
         $lowerAchievement = min($annualAchievement, $monthlyAchievement);
         $color = 'danger';

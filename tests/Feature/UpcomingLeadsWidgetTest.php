@@ -50,3 +50,33 @@ it('can navigate to view lead page from record url', function () {
     livewire(UpcomingLeadsWidget::class)
         ->assertTableActionHasUrl('view', LeadResource::getUrl('view', ['record' => $lead]), $lead);
 });
+
+it('keeps closed leads out of the leads nearing completion', function () {
+    // A won deal is already complete, so it must not hold one of the five slots.
+    $won = Lead::factory()->create([
+        'title' => 'Won Lead',
+        'status' => 'closed_won',
+        'expected_closing_date' => now()->addDays(3),
+    ]);
+
+    $open = Lead::factory()->create([
+        'title' => 'Open Lead',
+        'status' => 'negotiate',
+        'expected_closing_date' => now()->addDays(3),
+    ]);
+
+    livewire(UpcomingLeadsWidget::class)
+        ->assertCanSeeTableRecords([$open])
+        ->assertCanNotSeeTableRecords([$won]);
+});
+
+it('keeps a lead closing beyond the next month out of the widget', function () {
+    $farOff = Lead::factory()->create([
+        'title' => 'Far Off Lead',
+        'status' => 'negotiate',
+        'expected_closing_date' => now()->addDays(90),
+    ]);
+
+    livewire(UpcomingLeadsWidget::class)
+        ->assertCanNotSeeTableRecords([$farOff]);
+});

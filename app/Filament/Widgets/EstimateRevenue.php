@@ -45,27 +45,30 @@ class EstimateRevenue extends ChartWidget
             ->get(['year', 'month', 'monthly_target'])
             ->groupBy('year');
 
+        // Reported in millions: a month of pipeline runs to eleven digits and
+        // overflows the three-column dashboard axis, which then hides the target
+        // series entirely. The unit is named on the axis instead.
         $targetValues = $months->map(function ($month) use ($targets): float {
             $monthly = $targets->get($month->year, collect())
                 ->where('month', $month->month)
                 ->sum('monthly_target');
 
-            return (float) $monthly;
+            return (float) $monthly / 1_000_000;
         });
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Expected Revenue (IDR)',
+                    'label' => 'Expected Revenue (Rp juta)',
                     'data' => $months
-                        ->map(fn ($month) => (float) ($revenueByMonth[$month->format('Y-m')] ?? 0))
+                        ->map(fn ($month) => (float) ($revenueByMonth[$month->format('Y-m')] ?? 0) / 1_000_000)
                         ->all(),
                     'backgroundColor' => 'rgba(37, 99, 235, 0.75)',
                     'borderColor' => '#2563eb',
                     'borderWidth' => 1,
                 ],
                 [
-                    'label' => 'Target (IDR)',
+                    'label' => 'Target (Rp juta)',
                     'data' => $targetValues->all(),
                     'backgroundColor' => 'rgba(220, 38, 38, 0.65)',
                     'borderColor' => '#dc2626',
@@ -90,7 +93,10 @@ class EstimateRevenue extends ChartWidget
                 'legend' => ['display' => true, 'position' => 'top'],
             ],
             'scales' => [
-                'y' => ['beginAtZero' => true],
+                'y' => [
+                    'beginAtZero' => true,
+                    'title' => ['display' => true, 'text' => 'Rp juta'],
+                ],
             ],
         ];
     }
