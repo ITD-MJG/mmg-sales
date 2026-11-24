@@ -8,6 +8,7 @@
                     :tooltip="$destination['description']"
                     :color="$destination['active'] ? 'primary' : 'gray'"
                     :aria-current="$destination['active'] ? 'page' : null"
+                    wire:navigate.hover
                     tag="a"
                 >
                     {{ $destination['label'] }}

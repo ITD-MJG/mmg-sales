@@ -16,6 +16,14 @@ class DashboardShortcutsWidget extends Widget
     protected static ?int $sort = 0;
 
     /**
+     * Filament renders widgets lazily by default, which would fetch this group
+     * in a second request and show a loading placeholder on every dashboard
+     * change. It is the only way to reach the dashboards now, so render it
+     * inline instead.
+     */
+    protected static bool $isLazy = false;
+
+    /**
      * Set by the dashboard hosting the widget, so the group can mark the page
      * being viewed. It is a property rather than a URL comparison because
      * Livewire re-renders the widget on its own endpoint, where the request

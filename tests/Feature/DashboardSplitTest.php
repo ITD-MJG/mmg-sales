@@ -170,6 +170,23 @@ it('omits the shortcuts widget for a user with neither dashboard permission', fu
         ->assertDontSee(AnalyticsDashboard::getUrl(), escape: false);
 });
 
+it('keeps the Sales and Analytics dashboards out of the sidebar', function () {
+    expect(Dashboard::shouldRegisterNavigation())->toBeTrue()
+        ->and(SalesDashboard::shouldRegisterNavigation())->toBeFalse()
+        ->and(AnalyticsDashboard::shouldRegisterNavigation())->toBeFalse();
+});
+
+it('still serves both dashboards at their own URL without a nav item', function (string $page) {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $this->get($page::getUrl())->assertSuccessful();
+})->with([
+    'sales' => [SalesDashboard::class],
+    'analytics' => [AnalyticsDashboard::class],
+]);
+
 function shortcutAnchor(string $html, string $url): string
 {
     preg_match_all('/<a\b[^>]*>/', $html, $matches);
@@ -226,6 +243,33 @@ it('leaves every shortcut inactive when no dashboard claims the group', function
         ->toContain(AnalyticsDashboard::getUrl())
         ->not->toContain('aria-current')
         ->not->toContain('fi-color-primary');
+});
+
+it('renders the shortcut group inline instead of as a lazy placeholder', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    expect(DashboardShortcutsWidget::isLazy())->toBeFalse();
+
+    $html = $this->get(Dashboard::getUrl())->assertSuccessful()->getContent();
+
+    expect($html)->toContain('Homepage')
+        ->and(shortcutAnchor($html, Dashboard::getUrl()))->not->toBeEmpty()
+        ->and(shortcutAnchor($html, SalesDashboard::getUrl()))->not->toBeEmpty()
+        ->and(shortcutAnchor($html, AnalyticsDashboard::getUrl()))->not->toBeEmpty();
+});
+
+it('navigates the shortcut group without a full page load', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $html = Livewire::test(DashboardShortcutsWidget::class)->html();
+
+    foreach ([Dashboard::getUrl(), SalesDashboard::getUrl(), AnalyticsDashboard::getUrl()] as $url) {
+        expect(shortcutAnchor($html, $url))->toContain('wire:navigate');
+    }
 });
 
 it('tells the shortcuts group which dashboard hosts it', function (string $page) {

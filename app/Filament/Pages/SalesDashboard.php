@@ -24,6 +24,12 @@ class SalesDashboard extends BaseDashboard
 
     protected static ?int $navigationSort = -1;
 
+    /**
+     * Reached through the dashboard shortcuts widget instead of the sidebar,
+     * so the sidebar keeps one dashboard entry rather than three.
+     */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
 
     public static function canAccess(): bool
