@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Pages\AnalyticsDashboard;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\SalesDashboard;
 use Filament\Widgets\Widget;
 
@@ -38,6 +39,8 @@ class DashboardShortcutsWidget extends Widget
     }
 
     /**
+     * Homepage comes first so the group reads home -> sales -> analytics.
+     *
      * Only offer pages the user is allowed to open. AnalyticsDashboard is gated
      * on the view_sales_reports permission, so listing it unconditionally would
      * hand most users a forbidden link.
@@ -47,6 +50,16 @@ class DashboardShortcutsWidget extends Widget
     protected function getDestinations(): array
     {
         $destinations = [];
+
+        if (Dashboard::canAccess()) {
+            $destinations[] = [
+                'label' => 'Homepage',
+                'description' => 'Lead status, expected revenue and monthly orders',
+                'url' => Dashboard::getUrl(),
+                'icon' => 'heroicon-m-home',
+                'active' => $this->currentDashboard === Dashboard::class,
+            ];
+        }
 
         if (SalesDashboard::canAccess()) {
             $destinations[] = [

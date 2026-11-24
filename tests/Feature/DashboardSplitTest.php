@@ -197,18 +197,32 @@ it('marks the dashboard being viewed as active in the shortcuts group', function
         ->not->toContain('aria-current')
         ->not->toContain('fi-color-primary');
 })->with([
+    'on homepage' => [Dashboard::class, SalesDashboard::class],
     'on sales' => [SalesDashboard::class, AnalyticsDashboard::class],
     'on analytics' => [AnalyticsDashboard::class, SalesDashboard::class],
 ]);
 
-it('leaves every shortcut inactive on the homepage dashboard', function () {
+it('lists the homepage ahead of the permission-gated dashboards', function () {
     $user = User::factory()->create();
     $user->assignRole('Super Admin');
     actingAs($user);
 
     $html = Livewire::test(DashboardShortcutsWidget::class)->html();
 
-    expect($html)->toContain(SalesDashboard::getUrl())
+    expect($html)->toContain('Homepage')
+        ->and(strpos($html, Dashboard::getUrl()))->toBeLessThan(strpos($html, SalesDashboard::getUrl()))
+        ->and(strpos($html, SalesDashboard::getUrl()))->toBeLessThan(strpos($html, AnalyticsDashboard::getUrl()));
+});
+
+it('leaves every shortcut inactive when no dashboard claims the group', function () {
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    actingAs($user);
+
+    $html = Livewire::test(DashboardShortcutsWidget::class)->html();
+
+    expect($html)->toContain(Dashboard::getUrl())
+        ->toContain(SalesDashboard::getUrl())
         ->toContain(AnalyticsDashboard::getUrl())
         ->not->toContain('aria-current')
         ->not->toContain('fi-color-primary');
@@ -221,6 +235,7 @@ it('tells the shortcuts group which dashboard hosts it', function (string $page)
     expect($configuration)->toBeInstanceOf(WidgetConfiguration::class)
         ->and($configuration->getProperties())->toBe(['currentDashboard' => $page]);
 })->with([
+    'homepage' => [Dashboard::class],
     'sales' => [SalesDashboard::class],
     'analytics' => [AnalyticsDashboard::class],
 ]);

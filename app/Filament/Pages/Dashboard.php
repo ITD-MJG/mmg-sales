@@ -7,6 +7,7 @@ use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\MonthlyOrderChart;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Widgets\WidgetConfiguration;
 
 class Dashboard extends BaseDashboard
 {
@@ -24,7 +25,7 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            DashboardShortcutsWidget::class,
+            new WidgetConfiguration(DashboardShortcutsWidget::class, ['currentDashboard' => static::class]),
             LeadStatusChart::class,
             EstimateRevenue::class,
             MonthlyOrderChart::class,
