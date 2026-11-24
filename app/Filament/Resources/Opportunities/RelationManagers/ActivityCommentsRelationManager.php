@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\Opportunities\RelationManagers;
 
 use App\Models\Activity;
+use App\Models\ActivityComment;
 use App\Models\Opportunity;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
@@ -52,6 +54,13 @@ class ActivityCommentsRelationManager extends RelationManager
                     ->relationship('activity', 'subject', fn ($query) => $query->accessibleBy(auth()->user()))
                     ->searchable()
                     ->required()
+                    // The activity is chosen once, when the comment is created,
+                    // and authorised against the create rules at that moment.
+                    // Editing a comment rewrites its text: the stored activity
+                    // is neither re-checked nor swappable, so a comment stays
+                    // editable by its author even after they lose their link to
+                    // the activity.
+                    ->visible(fn (string $operation): bool => $operation === 'create')
                     ->rule(fn () => function (string $attribute, $value, \Closure $fail): void {
                         $activity = Activity::find($value);
 
@@ -59,6 +68,12 @@ class ActivityCommentsRelationManager extends RelationManager
                             $fail('You can only comment on activities you belong to.');
                         }
                     }),
+                Placeholder::make('activity_summary')
+                    ->label('Activity')
+                    ->content(fn (?ActivityComment $record): string => $record?->activity
+                        ? $record->activity->activity_code.' - '.$record->activity->subject
+                        : '-')
+                    ->visible(fn (string $operation): bool => $operation === 'edit'),
                 Textarea::make('comment')
                     ->required()
                     ->rows(3)
