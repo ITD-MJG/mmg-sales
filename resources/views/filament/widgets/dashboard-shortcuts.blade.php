@@ -1,10 +1,6 @@
 <x-filament-widgets::widget>
-    <x-filament::section
-        heading="Jump to a dashboard"
-        description="Sales covers targets, leaderboard and rep performance. Analytics covers revenue, principal and territory breakdowns."
-        :compact="true"
-    >
-        <div class="flex flex-wrap items-center gap-3">
+    <x-filament::section :compact="true" :contained="false">
+        <div class="flex flex-wrap items-center justify-end gap-3">
             @foreach ($destinations as $destination)
                 <x-filament::button
                     :href="$destination['url']"
