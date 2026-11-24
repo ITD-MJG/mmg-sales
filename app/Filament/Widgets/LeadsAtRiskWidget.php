@@ -22,7 +22,7 @@ class LeadsAtRiskWidget extends TableWidget
 {
     use HasVisibilityScope;
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?int $sort = 3;
 

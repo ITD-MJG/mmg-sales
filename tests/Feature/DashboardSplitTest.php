@@ -9,7 +9,6 @@ use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
 use App\Filament\Widgets\LeadsAtRiskWidget;
 use App\Filament\Widgets\LeadStatusChart;
-use App\Filament\Widgets\MonthlyOrderChart;
 use App\Filament\Widgets\OrganizationKpiWidget;
 use App\Filament\Widgets\RecentActivitiesWidget;
 use App\Filament\Widgets\Reports\RevenueByCustomerGroupWidget;
@@ -60,8 +59,6 @@ function widgetSets(): array
             'widgets' => [
                 DashboardShortcutsWidget::class,
                 OrganizationKpiWidget::class,
-                LeadStatusChart::class,
-                MonthlyOrderChart::class,
                 LeadsAtRiskWidget::class,
             ],
         ],

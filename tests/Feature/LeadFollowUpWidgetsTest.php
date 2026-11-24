@@ -132,3 +132,7 @@ it('keeps closed leads out of the quiet list', function () {
         ->assertOk()
         ->assertDontSee('Closed And Quiet Deal');
 });
+
+it('spans the whole dashboard row, since it is the only list on the homepage', function () {
+    expect(app(LeadsAtRiskWidget::class)->getColumnSpan())->toBe('full');
+});
