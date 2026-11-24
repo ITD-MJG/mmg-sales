@@ -68,23 +68,23 @@ it('keeps closed leads out of the risk list', function () {
         ->assertDontSee('Already Won Deal');
 });
 
-it('orders the risk list by closing date so the most overdue deal comes first', function () {
+it('orders the risk list with the latest closing date first', function () {
     Lead::factory()->create([
         'created_by' => $this->user->id,
-        'title' => 'Second Most Urgent',
+        'title' => 'Closes Later',
         'status' => 'quotation',
         'expected_closing_date' => '2026-06-05',
     ]);
     Lead::factory()->create([
         'created_by' => $this->user->id,
-        'title' => 'Most Urgent Deal',
+        'title' => 'Closes Earlier',
         'status' => 'quotation',
         'expected_closing_date' => '2026-05-01',
     ]);
 
     Livewire::test(LeadsAtRiskWidget::class)
         ->assertOk()
-        ->assertSeeInOrder(['Most Urgent Deal', 'Second Most Urgent']);
+        ->assertSeeInOrder(['Closes Later', 'Closes Earlier']);
 });
 
 it('lists a lead that was never contacted before one that simply went quiet', function () {

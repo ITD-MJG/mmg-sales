@@ -13,7 +13,7 @@ use Filament\Widgets\TableWidget;
 
 /**
  * The open leads whose closing date has already passed or falls inside the next
- * month, most overdue first.
+ * month, latest closing date first.
  *
  * Closed leads are excluded: the widget answers "what is slipping", and a deal
  * that is already won cannot slip.
@@ -36,7 +36,7 @@ class LeadsAtRiskWidget extends TableWidget
                     ->whereNotIn('status', ['closed_won', 'closed_lost'])
                     ->whereNotNull('expected_closing_date')
                     ->where('expected_closing_date', '<=', now()->addDays(30)->toDateString())
-                    ->orderBy('expected_closing_date');
+                    ->orderByDesc('expected_closing_date');
 
                 self::applyLeadVisibilityScope($query);
 
