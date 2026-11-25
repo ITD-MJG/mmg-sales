@@ -53,3 +53,14 @@ it('saves principal assignments from the user form', function () {
 
     expect($principal->marketingUsers()->count())->toBe(1);
 });
+
+it('offers principal responsibility to a super admin editing any user', function () {
+    seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('Super Admin');
+    $this->actingAs($admin);
+
+    livewire(EditUser::class, ['record' => User::factory()->create(['department_id' => null])->getRouteKey()])
+        ->assertFormFieldIsVisible('principals');
+});

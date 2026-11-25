@@ -84,10 +84,11 @@ class UserForm
                             ->preload()
                             ->searchable()
                             ->columnSpanFull()
-                            ->visible(fn (Get $get): bool => Department::query()
-                                ->whereKey($get('department_id'))
-                                ->where('name', Department::MARKETING)
-                                ->exists())
+                            ->visible(fn (Get $get): bool => auth()->user()?->isSuperAdmin()
+                                || Department::query()
+                                    ->whereKey($get('department_id'))
+                                    ->where('name', Department::MARKETING)
+                                    ->exists())
                             ->helperText('Marketing users see only the leads, orders and products of these principals.'),
                     ]),
             ]);
