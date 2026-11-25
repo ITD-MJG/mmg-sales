@@ -1,9 +1,11 @@
 <?php
 
 use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Resources\Orders\Pages\CreateOrder;
 use App\Models\Department;
 use App\Models\Order;
 use App\Models\Principal;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\User;
 use App\Policies\OrderPolicy;
@@ -78,4 +80,18 @@ it('resolves the order resource query through the marketing scope', function () 
     $ids = OrderResource::getEloquentQuery()->pluck('id')->all();
 
     expect($ids)->toContain($assignedOrder->id)->not->toContain($foreign->id);
+});
+
+it('offers only products of assigned principals on the order form to a marketing user', function () {
+    $assigned = Principal::factory()->create();
+    $other = Principal::factory()->create();
+    $assignedProduct = Product::factory()->create(['principal_id' => $assigned->id, 'is_active' => true]);
+    $otherProduct = Product::factory()->create(['principal_id' => $other->id, 'is_active' => true]);
+
+    $user = marketingOrderUser([$assigned->id]);
+    $this->actingAs($user);
+
+    \Pest\Livewire\livewire(CreateOrder::class)
+        ->assertSee($assignedProduct->name)
+        ->assertDontSee($otherProduct->name);
 });

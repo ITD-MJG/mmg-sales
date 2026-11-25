@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament\Leads;
 
 use App\Filament\Resources\Leads\Pages\CreateLead;
+use App\Models\Department;
 use App\Models\Lead;
 use App\Models\Principal;
 use App\Models\Product;
@@ -102,4 +103,22 @@ it('persists principal_id on the lead product pivot', function () {
     ]);
 
     expect($lead->leadProductItems()->first()->principal_id)->toBe($principal->id);
+});
+
+it('offers only assigned principals and their products to a marketing user', function () {
+    $assigned = Principal::factory()->create(['is_active' => true]);
+    $other = Principal::factory()->create(['is_active' => true]);
+    $assignedProduct = Product::factory()->create(['principal_id' => $assigned->id, 'is_active' => true]);
+    $otherProduct = Product::factory()->create(['principal_id' => $other->id, 'is_active' => true]);
+
+    $marketing = Department::factory()->create(['name' => Department::MARKETING]);
+    $user = User::factory()->create(['department_id' => $marketing->id]);
+    $user->principals()->attach($assigned->id);
+    $this->actingAs($user);
+
+    livewire(CreateLead::class)
+        ->assertSee($assigned->name)
+        ->assertDontSee($other->name)
+        ->assertSee($assignedProduct->name)
+        ->assertDontSee($otherProduct->name);
 });

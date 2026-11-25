@@ -10,6 +10,7 @@ use App\Models\Lead;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
@@ -364,7 +365,7 @@ class OrderForm
                                             }),
                                         Select::make('item_id')
                                             ->label('Product')
-                                            ->options(fn () => Product::query()
+                                            ->options(fn () => PrincipalScopeService::products(Product::query(), auth()->user())
                                                 ->orderBy('name')
                                                 ->pluck('name', 'id'))
                                             ->searchable()

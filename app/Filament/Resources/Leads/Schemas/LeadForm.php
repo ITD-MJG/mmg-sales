@@ -7,6 +7,7 @@ use App\Models\LeadProduct;
 use App\Models\Principal;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -103,7 +104,7 @@ class LeadForm
                                     ->schema([
                                         Select::make('principal_id')
                                             ->label('Principal')
-                                            ->options(fn () => Principal::query()
+                                            ->options(fn () => PrincipalScopeService::principals(Principal::query(), auth()->user())
                                                 ->where('is_active', true)
                                                 ->orderBy('name')
                                                 ->pluck('name', 'id'))
@@ -129,7 +130,7 @@ class LeadForm
                                             ->preload(),
                                         Select::make('product_id')
                                             ->label('Product')
-                                            ->options(fn (Get $get) => Product::query()
+                                            ->options(fn (Get $get) => PrincipalScopeService::products(Product::query(), auth()->user())
                                                 ->where('is_active', true)
                                                 ->when($get('principal_id'), fn ($query, $principalId) => $query->where('principal_id', $principalId))
                                                 ->orderBy('name')
