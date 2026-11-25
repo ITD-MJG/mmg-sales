@@ -5,12 +5,12 @@ namespace App\Services\Reports;
 use App\DTOs\ReportFilterData;
 use App\DTOs\SalesReportData;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class SalesReportService
 {
@@ -58,6 +58,8 @@ class SalesReportService
     {
         $query = Order::query()
             ->whereBetween('order_date', [$filters->startDate, $filters->endDate]);
+
+        $query = PrincipalScopeService::applyToOrders($query, $filters->principalIds);
 
         if ($filters->userId) {
             $query->where('created_by', $filters->userId);

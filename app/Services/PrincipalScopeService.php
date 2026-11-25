@@ -128,4 +128,21 @@ class PrincipalScopeService
             ? $query->whereRaw('1 = 0')
             : $query->forPrincipals($principalIds);
     }
+
+    /**
+     * Opportunities carry no principal of their own; narrow them through the
+     * products they cover.
+     *
+     * @param  array<int, int>|null  $principalIds
+     */
+    public static function applyToOpportunities(Builder $query, ?array $principalIds): Builder
+    {
+        if ($principalIds === null) {
+            return $query;
+        }
+
+        return $principalIds === []
+            ? $query->whereRaw('1 = 0')
+            : $query->whereHas('products', fn (Builder $products) => $products->whereIn('principal_id', $principalIds));
+    }
 }

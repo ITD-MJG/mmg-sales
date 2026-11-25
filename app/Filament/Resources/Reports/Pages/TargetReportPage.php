@@ -11,6 +11,7 @@ use App\Models\Distributor;
 use App\Models\Principal;
 use App\Models\Territory;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -89,7 +90,7 @@ class TargetReportPage extends Page
                                     ->preload(),
                                 Select::make('principal_id')
                                     ->label('Principal')
-                                    ->options(Principal::pluck('name', 'id'))
+                                    ->options(fn () => PrincipalScopeService::principals(Principal::query(), auth()->user())->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('distributor_id')

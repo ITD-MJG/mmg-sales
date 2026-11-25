@@ -7,6 +7,7 @@ use App\DTOs\TargetReportData;
 use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\Target;
+use App\Services\PrincipalScopeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -118,12 +119,14 @@ class TargetReportService
      */
     private function leadValueByMonth(ReportFilterData $filters): array
     {
+        $query = Opportunity::query()
+            ->whereBetween('created_at', [$filters->startDate, $filters->endDate])
+            ->when($filters->userId, fn (Builder $q) => $q->where('created_by', $filters->userId))
+            ->when(! empty($filters->userIds), fn (Builder $q) => $q->whereIn('created_by', $filters->userIds))
+            ->when($filters->customerId, fn (Builder $q) => $q->where('customer_id', $filters->customerId));
+
         return $this->monthlyTotals(
-            Opportunity::query()
-                ->whereBetween('created_at', [$filters->startDate, $filters->endDate])
-                ->when($filters->userId, fn (Builder $q) => $q->where('created_by', $filters->userId))
-                ->when(! empty($filters->userIds), fn (Builder $q) => $q->whereIn('created_by', $filters->userIds))
-                ->when($filters->customerId, fn (Builder $q) => $q->where('customer_id', $filters->customerId)),
+            PrincipalScopeService::applyToOpportunities($query, $filters->principalIds),
             'created_at',
             'estimated_revenue',
         );
@@ -134,17 +137,19 @@ class TargetReportService
      */
     private function orderValueByMonth(ReportFilterData $filters): array
     {
+        $query = Order::query()
+            ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
+            ->when($filters->userId, fn (Builder $q) => $q->where('created_by', $filters->userId))
+            ->when(! empty($filters->userIds), fn (Builder $q) => $q->whereIn('created_by', $filters->userIds))
+            ->when($filters->principalId, fn (Builder $q) => $q->where('principal_id', $filters->principalId))
+            ->when($filters->distributorId, fn (Builder $q) => $q->where('distributor_id', $filters->distributorId))
+            ->when($filters->customerId, fn (Builder $q) => $q->where('end_customer_id', $filters->customerId))
+            ->when($filters->territoryId, fn (Builder $q) => $q
+                ->leftJoin('users', 'orders.created_by', '=', 'users.id')
+                ->where('users.territory_id', $filters->territoryId));
+
         return $this->monthlyTotals(
-            Order::query()
-                ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
-                ->when($filters->userId, fn (Builder $q) => $q->where('created_by', $filters->userId))
-                ->when(! empty($filters->userIds), fn (Builder $q) => $q->whereIn('created_by', $filters->userIds))
-                ->when($filters->principalId, fn (Builder $q) => $q->where('principal_id', $filters->principalId))
-                ->when($filters->distributorId, fn (Builder $q) => $q->where('distributor_id', $filters->distributorId))
-                ->when($filters->customerId, fn (Builder $q) => $q->where('end_customer_id', $filters->customerId))
-                ->when($filters->territoryId, fn (Builder $q) => $q
-                    ->leftJoin('users', 'orders.created_by', '=', 'users.id')
-                    ->where('users.territory_id', $filters->territoryId)),
+            PrincipalScopeService::applyToOrders($query, $filters->principalIds),
             'order_date',
             'total_amount',
         );

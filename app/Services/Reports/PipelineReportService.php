@@ -5,6 +5,7 @@ namespace App\Services\Reports;
 use App\DTOs\PipelineReportData;
 use App\DTOs\ReportFilterData;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -77,8 +78,12 @@ class PipelineReportService
 
     private function buildBaseQuery(ReportFilterData $filters): Builder
     {
-        return Lead::query()
-            ->whereBetween('leads.created_at', [$filters->startDate, $filters->endDate])
+        $query = PrincipalScopeService::applyToLeads(
+            Lead::query()->whereBetween('leads.created_at', [$filters->startDate, $filters->endDate]),
+            $filters->principalIds,
+        );
+
+        return $query
             ->when($filters->userId, fn (Builder $query, int $userId): Builder => $query->whereHas(
                 'collaborators',
                 fn (Builder $collaborators): Builder => $collaborators->where('users.id', $userId),

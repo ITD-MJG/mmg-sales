@@ -5,6 +5,7 @@ namespace App\Services\Reports;
 use App\DTOs\ProductReportData;
 use App\DTOs\ReportFilterData;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -52,6 +53,8 @@ class ProductReportService
     {
         $query = Order::query()
             ->whereBetween('order_date', [$filters->startDate, $filters->endDate]);
+
+        $query = PrincipalScopeService::applyToOrders($query, $filters->principalIds);
 
         $this->applyFilters($query, $filters);
 

@@ -187,10 +187,10 @@ class Order extends Model
         }
 
         return $query->where(function (Builder $order) use ($principalIds): void {
-            $order->whereIn('principal_id', $principalIds)
+            $order->whereIn('orders.principal_id', $principalIds)
                 ->orWhereHas('orderItems', function (Builder $item) use ($principalIds): void {
-                    $item->whereIn('principal_id', $principalIds)
-                        ->orWhereHas('product', fn (Builder $product): Builder => $product->whereIn('principal_id', $principalIds));
+                    $item->whereIn('order_items.principal_id', $principalIds)
+                        ->orWhereHas('product', fn (Builder $product): Builder => $product->whereIn('products.principal_id', $principalIds));
                 });
         });
     }

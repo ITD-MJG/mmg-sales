@@ -8,6 +8,7 @@ use App\Models\Activity;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -95,9 +96,12 @@ class SalesStatisticsService
     private function orderAggregates(ReportFilterData $filters, array $userIds): Collection
     {
         return $this->byMonth(
-            Order::query()
-                ->whereIn('sales_id', $userIds)
-                ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+            PrincipalScopeService::applyToOrders(
+                Order::query()
+                    ->whereIn('sales_id', $userIds)
+                    ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+                $filters->principalIds,
+            ),
             'order_date',
             'SUM(total_amount) as revenue, COUNT(*) as orders',
         );
@@ -109,9 +113,12 @@ class SalesStatisticsService
     private function leadAggregates(ReportFilterData $filters, array $userIds): Collection
     {
         return $this->byMonth(
-            Lead::query()
-                ->whereIn('created_by', $userIds)
-                ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+            PrincipalScopeService::applyToLeads(
+                Lead::query()
+                    ->whereIn('created_by', $userIds)
+                    ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+                $filters->principalIds,
+            ),
             'created_at',
             'SUM(estimated_revenue) as value, COUNT(*) as leads',
         );
@@ -197,15 +204,21 @@ class SalesStatisticsService
         }
 
         $orders = $this->perUser(
-            Order::query()
-                ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+            PrincipalScopeService::applyToOrders(
+                Order::query()
+                    ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+                $filters->principalIds,
+            ),
             'sales_id',
             'SUM(total_amount) as revenue, COUNT(*) as total',
         );
 
         $leads = $this->perUser(
-            Lead::query()
-                ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+            PrincipalScopeService::applyToLeads(
+                Lead::query()
+                    ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+                $filters->principalIds,
+            ),
             'created_by',
             'SUM(estimated_revenue) as revenue, COUNT(*) as total',
         );

@@ -15,6 +15,7 @@ use App\Models\Principal;
 use App\Models\Segment;
 use App\Models\Territory;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -90,7 +91,7 @@ class ProductReportPage extends Page
                             ->schema([
                                 Select::make('principal_id')
                                     ->label('Principal')
-                                    ->options(Principal::pluck('name', 'id'))
+                                    ->options(fn () => PrincipalScopeService::principals(Principal::query(), auth()->user())->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->preload(),
                                 Select::make('segment_id')

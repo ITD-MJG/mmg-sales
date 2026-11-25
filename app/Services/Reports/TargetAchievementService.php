@@ -7,6 +7,9 @@ use App\DTOs\TargetAchievementData;
 use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\Target;
+use App\Services\PrincipalScopeService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class TargetAchievementService
@@ -65,19 +68,22 @@ class TargetAchievementService
         // limited to its months, so they are the same sum by construction.
         $annualTarget = (float) $targets->sum('monthly_target');
         $monthlyTarget = (float) $targets->sum('monthly_target');
-        $orderRevenue = (float) Order::query()
-            ->where('created_by', $userId)
-            ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
-            ->sum('total_amount');
+        $orderQuery = fn (): Builder => PrincipalScopeService::applyToOrders(
+            Order::query()
+                ->where('created_by', $userId)
+                ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+            $filters->principalIds,
+        );
 
-        $totalOrders = Order::query()
-            ->where('created_by', $userId)
-            ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
-            ->count();
+        $orderRevenue = (float) $orderQuery()->sum('total_amount');
+        $totalOrders = $orderQuery()->count();
 
-        $leadQuery = Opportunity::query()
-            ->where('created_by', $userId)
-            ->whereBetween('created_at', [$filters->startDate, $filters->endDate]);
+        $leadQuery = PrincipalScopeService::applyToOpportunities(
+            Opportunity::query()
+                ->where('created_by', $userId)
+                ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+            $filters->principalIds,
+        );
 
         $leadValue = (float) (clone $leadQuery)->sum('estimated_revenue');
         $totalLeads = (clone $leadQuery)->count();
@@ -95,7 +101,7 @@ class TargetAchievementService
         );
     }
 
-    private function getMonthlyBreakdown(ReportFilterData $filters, int $userId): \Illuminate\Support\Collection
+    private function getMonthlyBreakdown(ReportFilterData $filters, int $userId): Collection
     {
         $targets = Target::query()
             ->where('user_id', $userId)
@@ -103,17 +109,23 @@ class TargetAchievementService
             ->get()
             ->keyBy(fn (Target $target) => "{$target->year}-{$target->month}");
 
-        $orderTotals = Order::query()
-            ->where('created_by', $userId)
-            ->whereBetween('order_date', [$filters->startDate, $filters->endDate])
+        $orderTotals = PrincipalScopeService::applyToOrders(
+            Order::query()
+                ->where('created_by', $userId)
+                ->whereBetween('order_date', [$filters->startDate, $filters->endDate]),
+            $filters->principalIds,
+        )
             ->selectRaw('YEAR(order_date) as year, MONTH(order_date) as month, SUM(total_amount) as total, COUNT(*) as count')
             ->groupBy('year', 'month')
             ->get()
             ->keyBy(fn ($row) => "{$row->year}-{$row->month}");
 
-        $leadTotals = Opportunity::query()
-            ->where('created_by', $userId)
-            ->whereBetween('created_at', [$filters->startDate, $filters->endDate])
+        $leadTotals = PrincipalScopeService::applyToOpportunities(
+            Opportunity::query()
+                ->where('created_by', $userId)
+                ->whereBetween('created_at', [$filters->startDate, $filters->endDate]),
+            $filters->principalIds,
+        )
             ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(estimated_revenue) as total, COUNT(*) as count')
             ->groupBy('year', 'month')
             ->get()

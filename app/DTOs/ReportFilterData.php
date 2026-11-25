@@ -2,6 +2,7 @@
 
 namespace App\DTOs;
 
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 
 readonly class ReportFilterData
@@ -25,6 +26,7 @@ readonly class ReportFilterData
         public ?string $leadConfidence = null,
         public ?string $cdNcdType = null,
         public array $userIds = [],
+        public ?array $principalIds = null,
     ) {}
 
     public function getPrimaryDateRangeLabel(): string
@@ -37,8 +39,17 @@ readonly class ReportFilterData
         return md5(serialize($this));
     }
 
-    public static function fromArray(array $data): self
+    /**
+     * `$principalIds` defaults to the signed-in Marketing user's assigned
+     * principals, so every report and widget inherits the ceiling without
+     * each call site resolving it.
+     */
+    public static function fromArray(array $data, ?array $principalIds = null): self
     {
+        if ($principalIds === null && PrincipalScopeService::appliesTo(auth()->user())) {
+            $principalIds = PrincipalScopeService::principalIds(auth()->user());
+        }
+
         $startDate = Carbon::parse($data['start_date'] ?? now()->startOfYear());
         $endDate = Carbon::parse($data['end_date'] ?? now()->endOfYear());
 
@@ -61,6 +72,7 @@ readonly class ReportFilterData
             leadConfidence: $data['lead_confidence'] ?? null,
             cdNcdType: $data['cd_ncd_type'] ?? null,
             userIds: $data['user_ids'] ?? [],
+            principalIds: $principalIds,
         );
     }
 }

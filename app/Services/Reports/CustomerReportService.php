@@ -5,6 +5,7 @@ namespace App\Services\Reports;
 use App\DTOs\CustomerReportData;
 use App\DTOs\ReportFilterData;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -53,6 +54,8 @@ class CustomerReportService
     {
         $query = Order::query()
             ->whereBetween('order_date', [$filters->startDate, $filters->endDate]);
+
+        $query = PrincipalScopeService::applyToOrders($query, $filters->principalIds);
 
         if ($filters->userId) {
             $query->where('created_by', $filters->userId);
