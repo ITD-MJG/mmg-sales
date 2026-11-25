@@ -34,6 +34,13 @@ class SalesOrdersWidget extends BaseWidget
 
         $shippedCount = $shippedOrders->count();
 
+        $paidOrders = Order::query()
+            ->where('created_by', $user->id)
+            ->whereHas('paymentStatuses', fn ($q) => $q->where('status', 'full'))
+            ->whereYear('order_date', now()->year);
+
+        $paidCount = $paidOrders->count();
+
         $totalOrders = Order::query()->count();
 
         return [
@@ -45,6 +52,10 @@ class SalesOrdersWidget extends BaseWidget
                 ->description('YTD')
                 ->descriptionIcon('heroicon-m-truck')
                 ->color('primary'),
+            Stat::make('Paid Orders', $paidCount.' orders')
+                ->description('YTD')
+                ->descriptionIcon('heroicon-m-banknotes')
+                ->color('success'),
             Stat::make('Total Orders', $totalOrders.' orders')
                 ->description('All-time')
                 ->descriptionIcon('heroicon-m-shopping-bag')

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
+use App\Filament\Widgets\InvoiceVsTargetChart;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\RecentActivitiesWidget;
 use App\Filament\Widgets\SalesKpiWidget;
@@ -53,6 +54,7 @@ class SalesDashboard extends BaseDashboard
             new WidgetConfiguration(DashboardShortcutsWidget::class, ['currentDashboard' => static::class]),
             SalesKpiWidget::class,
             TargetVsAchievementChart::class,
+            InvoiceVsTargetChart::class,
             LeadStatusChart::class,
             EstimateRevenue::class,
             UpcomingLeadsWidget::class,

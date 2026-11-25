@@ -7,6 +7,7 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\SalesDashboard;
 use App\Filament\Widgets\DashboardShortcutsWidget;
 use App\Filament\Widgets\EstimateRevenue;
+use App\Filament\Widgets\InvoiceVsTargetChart;
 use App\Filament\Widgets\LeadsAtRiskWidget;
 use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\OrganizationKpiWidget;
@@ -68,6 +69,7 @@ function widgetSets(): array
                 DashboardShortcutsWidget::class,
                 SalesKpiWidget::class,
                 TargetVsAchievementChart::class,
+                InvoiceVsTargetChart::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
                 UpcomingLeadsWidget::class,

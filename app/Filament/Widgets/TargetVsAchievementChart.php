@@ -7,16 +7,16 @@ use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Twelve months of the rep's own revenue against the target rows held for the
- * same months, so the gap between sold and promised is a trend rather than a
- * single percentage.
+ * Twelve months of the rep's own order net sales against the target rows held
+ * for the same months, so the gap between sold and promised is a trend rather
+ * than a single percentage.
  *
  * Both series are reported in millions: monthly targets reach billions of
  * rupiah and raw values overflow the three-column dashboard axis.
  */
 class TargetVsAchievementChart extends ChartWidget
 {
-    protected ?string $heading = 'My Revenue vs Target';
+    protected ?string $heading = 'Order vs Target';
 
     protected int|string|array $columnSpan = 1;
 
@@ -53,7 +53,7 @@ class TargetVsAchievementChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenue (Rp juta)',
+                    'label' => 'Order (Rp juta)',
                     'data' => $revenue,
                     'backgroundColor' => 'rgba(37, 99, 235, 0.75)',
                     'borderColor' => '#2563eb',

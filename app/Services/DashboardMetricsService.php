@@ -29,6 +29,20 @@ class DashboardMetricsService
     }
 
     /**
+     * Net sales of orders that have at least one real payment recorded, whether
+     * partial or full: an order that is being paid off is still invoiced, so
+     * waiting for `full` would hide most of the month's billing.
+     *
+     * @param  list<int>|null  $userIds
+     */
+    public function invoicedRevenue(CarbonInterface $from, CarbonInterface $to, ?array $userIds): float
+    {
+        return (float) $this->orders($from, $to, $userIds)
+            ->whereHas('paymentStatuses', fn (Builder $query) => $query->whereIn('status', ['partial', 'full']))
+            ->sum('total_amount');
+    }
+
+    /**
      * @param  list<int>|null  $userIds
      */
     public function orderCount(CarbonInterface $from, CarbonInterface $to, ?array $userIds): int

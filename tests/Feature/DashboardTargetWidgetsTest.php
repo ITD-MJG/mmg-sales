@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Widgets\InvoiceVsTargetChart;
 use App\Filament\Widgets\SalesKpiWidget;
 use App\Filament\Widgets\SalesTargetWidget;
 use App\Filament\Widgets\TargetVsAchievementChart;
 use App\Models\Order;
+use App\Models\PaymentStatus;
 use App\Models\Target;
 use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -125,6 +127,48 @@ it('leaves another rep orders out of the target chart', function () {
     $data = (function (): array {
         return $this->getData();
     })->call(app(TargetVsAchievementChart::class));
+
+    expect(array_sum($data['datasets'][0]['data']))->toBe(0.0);
+});
+
+it('counts a partially paid order as invoiced', function () {
+    $order = Order::factory()->create([
+        'sales_id' => $this->rep->id,
+        'order_date' => '2026-06-10',
+        'total_amount' => 1_500_000,
+    ]);
+
+    PaymentStatus::create([
+        'order_id' => $order->id,
+        'status' => 'partial',
+        'amount' => 500_000,
+        'effective_date' => '2026-06-12',
+    ]);
+
+    actingAs($this->rep);
+
+    $data = (function (): array {
+        return $this->getData();
+    })->call(app(InvoiceVsTargetChart::class));
+
+    expect($data['labels'])->toHaveCount(12)
+        ->and($data['datasets'][0]['label'])->toBe('Invoice (Rp juta)')
+        // The order's net sales count in full once any payment lands.
+        ->and($data['datasets'][0]['data'][11])->toBe(1.5);
+});
+
+it('leaves unpaid orders out of the invoice chart', function () {
+    Order::factory()->create([
+        'sales_id' => $this->rep->id,
+        'order_date' => '2026-06-10',
+        'total_amount' => 9_000_000,
+    ]);
+
+    actingAs($this->rep);
+
+    $data = (function (): array {
+        return $this->getData();
+    })->call(app(InvoiceVsTargetChart::class));
 
     expect(array_sum($data['datasets'][0]['data']))->toBe(0.0);
 });
