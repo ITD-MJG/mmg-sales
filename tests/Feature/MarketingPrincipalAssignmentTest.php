@@ -1,9 +1,15 @@
 <?php
 
+use App\Filament\Resources\Users\Pages\EditUser;
+use App\Models\Department;
 use App\Models\Principal;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use function Pest\Laravel\seed;
+use function Pest\Livewire\livewire;
 
 uses(RefreshDatabase::class);
 
@@ -28,4 +34,22 @@ it('rejects a duplicate assignment', function () {
 
     expect(fn () => $user->principals()->attach($principal->id))
         ->toThrow(QueryException::class);
+});
+
+it('saves principal assignments from the user form', function () {
+    seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('Super Admin');
+    $this->actingAs($admin);
+
+    $marketing = Department::factory()->create(['name' => Department::MARKETING]);
+    $principal = Principal::factory()->create();
+
+    livewire(EditUser::class, ['record' => User::factory()->create(['department_id' => $marketing->id])->getRouteKey()])
+        ->fillForm(['principals' => [$principal->id]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($principal->marketingUsers()->count())->toBe(1);
 });

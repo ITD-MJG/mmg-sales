@@ -28,6 +28,10 @@ class UserInfolist
                             ->label('Primary Territory'),
                         TextEntry::make('manager.name')
                             ->label('Reports To'),
+                        TextEntry::make('principals.name')
+                            ->label('Principal Responsibility')
+                            ->placeholder('None')
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Latest Interactions')

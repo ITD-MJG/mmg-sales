@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\Department;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -72,6 +74,21 @@ class UserForm
                             ->preload()
                             ->columnSpanFull()
                             ->helperText('Only global roles and roles matching the user\'s department are shown.'),
+
+                        // Marketing users are restricted to the principals
+                        // assigned here. Empty means no principals at all.
+                        Select::make('principals')
+                            ->label('Principal Responsibility')
+                            ->relationship('principals', 'name')
+                            ->multiple()
+                            ->preload()
+                            ->searchable()
+                            ->columnSpanFull()
+                            ->visible(fn (Get $get): bool => Department::query()
+                                ->whereKey($get('department_id'))
+                                ->where('name', Department::MARKETING)
+                                ->exists())
+                            ->helperText('Marketing users see only the leads, orders and products of these principals.'),
                     ]),
             ]);
     }
