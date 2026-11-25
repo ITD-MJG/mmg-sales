@@ -9,10 +9,12 @@ use App\Filament\Resources\Principals\Pages\ViewPrincipal;
 use App\Filament\Resources\Principals\Schemas\PrincipalForm;
 use App\Filament\Resources\Principals\Tables\PrincipalsTable;
 use App\Models\Principal;
+use App\Services\PrincipalScopeService;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PrincipalResource extends Resource
 {
@@ -25,6 +27,14 @@ class PrincipalResource extends Resource
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    /**
+     * Marketing users only see the principals assigned to them.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return PrincipalScopeService::principals(parent::getEloquentQuery(), auth()->user());
+    }
 
     public static function form(Schema $schema): Schema
     {

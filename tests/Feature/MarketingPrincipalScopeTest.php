@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\Principals\PrincipalResource;
 use App\Models\Department;
 use App\Models\Lead;
 use App\Models\Order;
@@ -8,8 +9,12 @@ use App\Models\Principal;
 use App\Models\Product;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\PrincipalPolicy;
 use App\Services\PrincipalScopeService;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use function Pest\Laravel\seed;
 
 uses(RefreshDatabase::class);
 
@@ -153,4 +158,31 @@ it('applies a raw principal list to reports without widening', function () {
     expect(PrincipalScopeService::applyToOrders(Order::query(), null)->count())->toBe(2)
         ->and(PrincipalScopeService::applyToOrders(Order::query(), [])->count())->toBe(0)
         ->and(PrincipalScopeService::applyToOrders(Order::query(), [$assigned->id])->pluck('id')->all())->toEqual([$headerOrder->id]);
+});
+
+it('shows only assigned principals to a marketing user', function () {
+    seed(RolesAndPermissionsSeeder::class);
+
+    $marketing = Department::factory()->create(['name' => Department::MARKETING]);
+    $user = User::factory()->create(['department_id' => $marketing->id]);
+    $user->assignRole('Marketing Staff');
+
+    $assigned = Principal::factory()->create();
+    $other = Principal::factory()->create();
+    $user->principals()->attach($assigned->id);
+
+    $this->actingAs($user);
+
+    expect(PrincipalScopeService::principals(Principal::query(), $user)->pluck('id')->all())->toEqual([$assigned->id])
+        ->and(PrincipalResource::getEloquentQuery()->pluck('id')->all())->toEqual([$assigned->id])
+        ->and(app(PrincipalPolicy::class)->view($user, $assigned))->toBeTrue()
+        ->and(app(PrincipalPolicy::class)->view($user, $other))->toBeFalse();
+});
+
+it('shows every principal to a super admin', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findOrCreate('Super Admin'));
+    $principal = Principal::factory()->create();
+
+    expect(app(PrincipalPolicy::class)->view($admin, $principal))->toBeTrue();
 });
