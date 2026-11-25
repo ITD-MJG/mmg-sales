@@ -59,6 +59,24 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::findOrCreate($permission);
         }
 
+        // ── Report page permissions (Reports nav group) ──────────────────
+        // One permission per page in the Reports navigation group. The
+        // dashboard-facing permissions above still gate Analytics and the
+        // dashboards; these gate the pages themselves, which only Super Admin
+        // and the Management department may open.
+        $reportPagePermissions = [
+            'view_report_sales',
+            'view_report_products',
+            'view_report_customers',
+            'view_report_leads',
+            'view_report_targets',
+            'view_report_target_achievement',
+        ];
+
+        foreach ($reportPagePermissions as $permission) {
+            Permission::findOrCreate($permission);
+        }
+
         // ── Dashboard permissions ────────────────────────────────────────
         // Gates /sales. Analytics is gated by view_sales_reports instead: it
         // is a reporting screen, while the sales dashboard is the working view
@@ -149,7 +167,7 @@ class RolesAndPermissionsSeeder extends Seeder
         //
         // Leads and Activities are the one place a global viewer writes: they
         // may create and edit both, but never delete (BasePolicy::before()).
-        $directorPermissions = array_merge($reportPermissions, $viewReference, [
+        $directorPermissions = array_merge($reportPermissions, $reportPagePermissions, $viewReference, [
             'view_any_distributor', 'view_distributor',
             'view_any_activity_comment', 'view_activity_comment',
             'view_any_lead', 'view_lead', 'create_lead', 'update_lead',

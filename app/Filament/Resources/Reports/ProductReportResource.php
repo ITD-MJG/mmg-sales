@@ -30,6 +30,6 @@ class ProductReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_product_reports');
+        return auth()->user()?->can('view_report_products') ?? false;
     }
 }

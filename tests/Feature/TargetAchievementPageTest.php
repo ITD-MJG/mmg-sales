@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Resources\Reports\Pages\TargetAchievementPage;
+use App\Models\Department;
 use App\Models\Target;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -13,8 +14,9 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
-    $this->user = User::factory()->create();
-    $this->user->assignRole('Sales Manager');
+    $management = Department::factory()->create(['name' => Department::MANAGEMENT]);
+    $this->user = User::factory()->create(['department_id' => $management->id]);
+    $this->user->assignRole('Management Director');
 });
 
 it('renders the target achievement page', function (): void {
@@ -33,6 +35,6 @@ it('renders the target achievement page', function (): void {
         ->assertSee('Target vs Leads');
 });
 
-it('grants target report access to roles that can view sales reports', function (): void {
-    expect($this->user->can('view_target_reports'))->toBeTrue();
+it('grants the target achievement page permission to a Management director', function (): void {
+    expect($this->user->can('view_report_target_achievement'))->toBeTrue();
 });

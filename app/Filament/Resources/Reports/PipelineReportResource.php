@@ -30,6 +30,6 @@ class PipelineReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_lead_reports');
+        return auth()->user()?->can('view_report_leads') ?? false;
     }
 }

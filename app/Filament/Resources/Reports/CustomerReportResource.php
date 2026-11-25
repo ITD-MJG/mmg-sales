@@ -30,6 +30,6 @@ class CustomerReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_customer_reports');
+        return auth()->user()?->can('view_report_customers') ?? false;
     }
 }

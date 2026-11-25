@@ -30,6 +30,6 @@ class SalesReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_sales_reports');
+        return auth()->user()?->can('view_report_sales') ?? false;
     }
 }

@@ -30,6 +30,6 @@ class TargetAchievementResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_target_reports');
+        return auth()->user()?->can('view_report_target_achievement') ?? false;
     }
 }

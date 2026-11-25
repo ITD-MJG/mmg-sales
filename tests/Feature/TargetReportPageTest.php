@@ -4,6 +4,7 @@ use App\Filament\Resources\Reports\Pages\TargetReportPage;
 use App\Filament\Widgets\Reports\TargetReportStatsWidget;
 use App\Filament\Widgets\Reports\TargetVsLeadWidget;
 use App\Filament\Widgets\Reports\TargetVsOrderWidget;
+use App\Models\Department;
 use App\Models\Target;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -20,14 +21,15 @@ beforeEach(function () {
 
 function targetReportViewer(): User
 {
-    $user = User::factory()->create();
-    $user->assignRole('Sales Manager');
+    $management = Department::factory()->create(['name' => Department::MANAGEMENT]);
+    $user = User::factory()->create(['department_id' => $management->id]);
+    $user->assignRole('Management Director');
     actingAs($user);
 
     return $user;
 }
 
-it('renders the target report page for a user with sales report access', function () {
+it('renders the target report page for a Management user', function () {
     targetReportViewer();
 
     Livewire::test(TargetReportPage::class)->assertSuccessful();
