@@ -23,20 +23,22 @@ beforeEach(function (): void {
     Role::findOrCreate('Marketing Manager');
 });
 
-test('users without subordinates only receive the My Activities tab', function (): void {
+test('users always receive both My and My Team tabs', function (): void {
     $salesDepartment = Department::factory()->create(['name' => 'Sales']);
     $user = User::factory()->create();
     $user->assignRole('Sales Representative');
     $user->department_id = $salesDepartment->id;
     $user->save();
 
+    $this->actingAs($user);
+
     $component = new ListActivities;
     $component->mount();
 
-    expect(array_keys($component->getTabs()))->toBe(['my']);
+    expect(array_keys($component->getTabs()))->toBe(['my', 'team']);
 });
 
-test('My Team Activities includes direct and indirect reports and the territory while My Activities stays own-only', function (): void {
+test('My Activities shows only activities the user created while My Team Activities shows others who assigned the user', function (): void {
     $territory = Territory::factory()->create();
     $manager = User::factory()->create(['territory_id' => $territory->id]);
     $manager->assignRole('Area Sales Manager');
@@ -47,28 +49,28 @@ test('My Team Activities includes direct and indirect reports and the territory 
         'manager_id' => $manager->id,
         'territory_id' => $territory->id,
     ]);
-    $indirectReport = User::factory()->create([
-        'manager_id' => $directReport->id,
-        'territory_id' => $territory->id,
-    ]);
-    $territoryPeer = User::factory()->create(['territory_id' => $territory->id]);
+    $peer = User::factory()->create(['territory_id' => $territory->id]);
     $outsider = User::factory()->create();
 
     $ownActivity = Activity::factory()->create([
         'user_id' => $manager->id,
         'subject' => 'Manager activity',
     ]);
-    $directActivity = Activity::factory()->create([
+    $assignedActivity = Activity::factory()->create([
         'user_id' => $directReport->id,
-        'subject' => 'Direct report activity',
+        'subject' => 'Direct report assigned me',
     ]);
-    $indirectActivity = Activity::factory()->create([
-        'user_id' => $indirectReport->id,
-        'subject' => 'Indirect report activity',
+    $assignedActivity->attendees()->attach($manager);
+
+    $peerAssignedActivity = Activity::factory()->create([
+        'user_id' => $peer->id,
+        'subject' => 'Peer assigned me',
     ]);
-    $territoryActivity = Activity::factory()->create([
-        'user_id' => $territoryPeer->id,
-        'subject' => 'Territory activity',
+    $peerAssignedActivity->attendees()->attach($manager);
+
+    $unassignedReportActivity = Activity::factory()->create([
+        'user_id' => $directReport->id,
+        'subject' => 'Report activity without me',
     ]);
     $outsideActivity = Activity::factory()->create([
         'user_id' => $outsider->id,
@@ -79,10 +81,10 @@ test('My Team Activities includes direct and indirect reports and the territory 
 
     $component->assertSet('activeTab', 'my')
         ->assertCanSeeTableRecords([$ownActivity])
-        ->assertCanNotSeeTableRecords([$directActivity, $indirectActivity, $territoryActivity, $outsideActivity])
+        ->assertCanNotSeeTableRecords([$assignedActivity, $peerAssignedActivity, $unassignedReportActivity, $outsideActivity])
         ->set('activeTab', 'team')
-        ->assertCanSeeTableRecords([$directActivity, $indirectActivity, $territoryActivity])
-        ->assertCanNotSeeTableRecords([$ownActivity, $outsideActivity]);
+        ->assertCanSeeTableRecords([$assignedActivity, $peerAssignedActivity])
+        ->assertCanNotSeeTableRecords([$ownActivity, $unassignedReportActivity, $outsideActivity]);
 });
 
 test('outcome remains a filter that can be combined with ownership tabs', function (): void {
@@ -102,6 +104,7 @@ test('outcome remains a filter that can be combined with ownership tabs', functi
         'user_id' => $report->id,
         'outcome' => 'Interested',
     ]);
+    $teamInterested->attendees()->attach($manager);
 
     Livewire::actingAs($manager)
         ->test(ListActivities::class)
@@ -132,9 +135,9 @@ test('a global viewer lands on an unfiltered All Activities tab', function (): v
 
     $component = Livewire::actingAs($superAdmin)->test(ListActivities::class);
 
-    // Without an All tab a Super Admin has no subordinates, so only an empty
-    // "My Activities" tab renders and the list looks broken.
-    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my']);
+    // A Super Admin has no subordinates, but the ownership tabs still render:
+    // "My" is their own log and "My Team" is anything assigned to them.
+    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my', 'team']);
 
     $component->assertSet('activeTab', 'all')
         ->assertCanSeeTableRecords([$repActivity, $ownActivity])
