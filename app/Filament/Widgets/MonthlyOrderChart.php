@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\ChartWidget;
 
 class MonthlyOrderChart extends ChartWidget
@@ -34,7 +35,7 @@ class MonthlyOrderChart extends ChartWidget
 
     protected function getData(): array
     {
-        $baseQuery = Order::query();
+        $baseQuery = PrincipalScopeService::orders(Order::query(), auth()->user());
 
         // Scoped to the viewer's own and subordinate orders. Unattributed
         // orders (sales_id NULL) belong to nobody and are hidden from sales

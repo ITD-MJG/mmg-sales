@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -24,7 +25,7 @@ class CRMOverview extends BaseWidget
         $totalLeads = Lead::count();
 
         // Open means anything short of a closed stage.
-        $openLeads = Lead::query()->whereNotIn('status', Lead::CLOSED_STATUSES);
+        $openLeads = PrincipalScopeService::leads(Lead::query(), auth()->user())->whereNotIn('status', Lead::CLOSED_STATUSES);
 
         $pipelineValue = (clone $openLeads)->sum('estimated_revenue');
 

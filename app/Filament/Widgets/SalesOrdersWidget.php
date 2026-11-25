@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
@@ -20,28 +21,28 @@ class SalesOrdersWidget extends BaseWidget
 
         $formatter = new NumberFormatter('id_ID', NumberFormatter::CURRENCY);
 
-        $openOrders = Order::query()
+        $openOrders = PrincipalScopeService::orders(Order::query(), $user)
             ->whereDoesntHave('deliveryStatuses')
             ->whereDoesntHave('paymentStatuses')
             ->whereYear('order_date', now()->year);
 
         $openCount = $openOrders->count();
 
-        $shippedOrders = Order::query()
+        $shippedOrders = PrincipalScopeService::orders(Order::query(), $user)
             ->where('created_by', $user->id)
             ->whereHas('deliveryStatuses', fn ($q) => $q->whereNotNull('shipped_date'))
             ->whereYear('order_date', now()->year);
 
         $shippedCount = $shippedOrders->count();
 
-        $paidOrders = Order::query()
+        $paidOrders = PrincipalScopeService::orders(Order::query(), $user)
             ->where('created_by', $user->id)
             ->whereHas('paymentStatuses', fn ($q) => $q->where('status', 'full'))
             ->whereYear('order_date', now()->year);
 
         $paidCount = $paidOrders->count();
 
-        $totalOrders = Order::query()->count();
+        $totalOrders = PrincipalScopeService::orders(Order::query(), $user)->count();
 
         return [
             Stat::make('Open Orders', $openCount.' orders')

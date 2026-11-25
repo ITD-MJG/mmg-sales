@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Filament\Actions\ViewAction;
 use Filament\Tables;
@@ -36,7 +37,7 @@ class StaleLeadsWidget extends TableWidget
 
         return $table
             ->query(function () use ($threshold) {
-                $query = Lead::query()
+                $query = PrincipalScopeService::leads(Lead::query(), auth()->user())
                     ->whereNotIn('status', ['closed_won', 'closed_lost'])
                     ->where(function ($stale) use ($threshold): void {
                         $stale->whereNull('last_contacted_at')

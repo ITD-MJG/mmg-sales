@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Filament\Actions\ViewAction;
 use Filament\Tables;
@@ -32,7 +33,7 @@ class LeadsAtRiskWidget extends TableWidget
     {
         return $table
             ->query(function () {
-                $query = Lead::query()
+                $query = PrincipalScopeService::leads(Lead::query(), auth()->user())
                     ->whereNotIn('status', ['closed_won', 'closed_lost'])
                     ->whereNotNull('expected_closing_date')
                     ->where('expected_closing_date', '<=', now()->addDays(30)->toDateString())

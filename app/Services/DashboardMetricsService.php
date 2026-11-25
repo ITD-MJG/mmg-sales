@@ -217,7 +217,7 @@ class DashboardMetricsService
             $query->whereIn('sales_id', $userIds);
         }
 
-        return $query;
+        return PrincipalScopeService::orders($query, auth()->user());
     }
 
     /**
@@ -230,13 +230,13 @@ class DashboardMetricsService
     {
         $query = Lead::query();
 
-        if ($userIds === null) {
-            return $query;
+        if ($userIds !== null) {
+            $query->where(function (Builder $scoped) use ($userIds): void {
+                $scoped->whereIn('created_by', $userIds)
+                    ->orWhereHas('collaborators', fn (Builder $collaborators): Builder => $collaborators->whereIn('users.id', $userIds));
+            });
         }
 
-        return $query->where(function (Builder $scoped) use ($userIds): void {
-            $scoped->whereIn('created_by', $userIds)
-                ->orWhereHas('collaborators', fn (Builder $collaborators): Builder => $collaborators->whereIn('users.id', $userIds));
-        });
+        return PrincipalScopeService::leads($query, auth()->user());
     }
 }

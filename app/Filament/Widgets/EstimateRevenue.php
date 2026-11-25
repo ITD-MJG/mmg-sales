@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use App\Models\Target;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\ChartWidget;
 
 class EstimateRevenue extends ChartWidget
@@ -28,7 +29,7 @@ class EstimateRevenue extends ChartWidget
 
         $months = collect(range(0, 11))
             ->map(fn (int $offset) => $start->copy()->addMonths($offset));
-        $leadQuery = Lead::query();
+        $leadQuery = PrincipalScopeService::leads(Lead::query(), auth()->user());
         self::applyLeadVisibilityScope($leadQuery);
 
         $revenueByMonth = $leadQuery

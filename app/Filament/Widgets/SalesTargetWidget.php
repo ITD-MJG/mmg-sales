@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Order;
 use App\Models\Target;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
@@ -33,12 +34,12 @@ class SalesTargetWidget extends BaseWidget
 
         // Attributed through `sales_id`: orders arrive from an import run by an
         // administrator, so `created_by` credits the importer, not the rep.
-        $annualRevenue = Order::query()
+        $annualRevenue = PrincipalScopeService::orders(Order::query(), auth()->user())
             ->where('sales_id', $user->id)
             ->whereYear('order_date', now()->year)
             ->sum('total_amount');
 
-        $monthlyRevenue = Order::query()
+        $monthlyRevenue = PrincipalScopeService::orders(Order::query(), auth()->user())
             ->where('sales_id', $user->id)
             ->whereYear('order_date', now()->year)
             ->whereMonth('order_date', now()->month)

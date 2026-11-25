@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\Widget;
 
 /**
@@ -82,7 +83,7 @@ class LeadStatusChart extends Widget
      */
     public function getChartData(): array
     {
-        $query = Lead::query();
+        $query = PrincipalScopeService::leads(Lead::query(), auth()->user());
 
         // Leads are owned by their creator or any collaborator; the bar counts
         // must agree with what the lead list shows.

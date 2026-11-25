@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Filament\Actions\ViewAction;
 use Filament\Tables;
@@ -25,7 +26,7 @@ class UpcomingLeadsWidget extends BaseWidget
     {
         return $table
             ->query(function () {
-                $query = Lead::query()
+                $query = PrincipalScopeService::leads(Lead::query(), auth()->user())
                     // Open leads only: a won or lost deal cannot be "nearing
                     // completion", and closed rows crowded the five slots.
                     ->whereNotIn('status', ['closed_won', 'closed_lost'])

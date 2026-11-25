@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Filament\Widgets\ChartWidget;
 
 class RevenueByTerritoryChart extends ChartWidget
@@ -33,7 +34,7 @@ class RevenueByTerritoryChart extends ChartWidget
     {
         $user = auth()->user();
 
-        $baseQuery = Order::query();
+        $baseQuery = PrincipalScopeService::orders(Order::query(), auth()->user());
 
         // Sales reps own revenue through `sales_id`; `created_by` holds the
         // administrator who imported the order.
