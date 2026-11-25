@@ -282,16 +282,38 @@ class Lead extends Model
     }
 
     /**
-     * Leads that list at least one product supplied by the given principal.
+     * Leads that list at least one product supplied by one of the given principals.
      *
      * The pivot carries a denormalised principal_id for imported rows, so both
-     * it and the product's own principal are checked.
+     * it and the product's own principal are checked. An empty list matches
+     * nothing rather than everything.
+     *
+     * @param  array<int, int>  $principalIds
      */
+    public function scopeForPrincipals(Builder $query, array $principalIds): Builder
+    {
+        if ($principalIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('leadProductItems', function (Builder $item) use ($principalIds): void {
+            $item->whereIn('principal_id', $principalIds)
+                ->orWhereHas('product', fn (Builder $product): Builder => $product->whereIn('principal_id', $principalIds));
+        });
+    }
+
+    /**
+     * Whether this lead lists a product of any of the given principals.
+     *
+     * @param  array<int, int>  $principalIds
+     */
+    public function hasAnyAssignedPrincipal(array $principalIds): bool
+    {
+        return self::query()->whereKey($this->getKey())->forPrincipals($principalIds)->exists();
+    }
+
     public function scopeForPrincipal(Builder $query, int $principalId): Builder
     {
-        return $query->whereHas('leadProductItems', function (Builder $item) use ($principalId): void {
-            $item->where('principal_id', $principalId)
-                ->orWhereHas('product', fn (Builder $product): Builder => $product->where('principal_id', $principalId));
-        });
+        return $query->forPrincipals([$principalId]);
     }
 }

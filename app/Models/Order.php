@@ -173,19 +173,41 @@ class Order extends Model
     }
 
     /**
-     * Orders that contain at least one line item of the given principal.
+     * Orders that contain at least one line item of one of the given principals.
      *
      * Imported orders have no line items, so the header principal is matched too.
+     * An empty list matches nothing rather than everything.
+     *
+     * @param  array<int, int>  $principalIds
      */
-    public function scopeForPrincipal(Builder $query, int $principalId): Builder
+    public function scopeForPrincipals(Builder $query, array $principalIds): Builder
     {
-        return $query->where(function (Builder $order) use ($principalId): void {
-            $order->where('principal_id', $principalId)
-                ->orWhereHas('orderItems', function (Builder $item) use ($principalId): void {
-                    $item->where('principal_id', $principalId)
-                        ->orWhereHas('product', fn (Builder $product): Builder => $product->where('principal_id', $principalId));
+        if ($principalIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $order) use ($principalIds): void {
+            $order->whereIn('principal_id', $principalIds)
+                ->orWhereHas('orderItems', function (Builder $item) use ($principalIds): void {
+                    $item->whereIn('principal_id', $principalIds)
+                        ->orWhereHas('product', fn (Builder $product): Builder => $product->whereIn('principal_id', $principalIds));
                 });
         });
+    }
+
+    /**
+     * Whether this order contains a product of any of the given principals.
+     *
+     * @param  array<int, int>  $principalIds
+     */
+    public function hasAnyAssignedPrincipal(array $principalIds): bool
+    {
+        return self::query()->whereKey($this->getKey())->forPrincipals($principalIds)->exists();
+    }
+
+    public function scopeForPrincipal(Builder $query, int $principalId): Builder
+    {
+        return $query->forPrincipals([$principalId]);
     }
 
     /**

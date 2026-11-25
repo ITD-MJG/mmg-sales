@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\ResourceCodeGenerator;
 use App\Traits\HasCode;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +49,21 @@ class Product extends Model
     public function principal(): BelongsTo
     {
         return $this->belongsTo(Principal::class);
+    }
+
+    /**
+     * Products supplied by one of the given principals. An empty list matches
+     * nothing rather than everything.
+     *
+     * @param  array<int, int>  $principalIds
+     */
+    public function scopeForPrincipals(Builder $query, array $principalIds): Builder
+    {
+        if ($principalIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn('principal_id', $principalIds);
     }
 
     public function generateCode(): string
