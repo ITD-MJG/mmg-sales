@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             DistributorSeeder::class,
             PrincipalSeeder::class,
             ProductSeeder::class,
+            MarketingPrincipalAssignmentSeeder::class,
         ]);
     }
 }
