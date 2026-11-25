@@ -5,6 +5,8 @@ use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Activity;
 use App\Models\Department;
 use App\Models\Lead;
+use App\Models\Principal;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\Territory;
 use App\Models\User;
@@ -110,15 +112,31 @@ it('keeps staff visibility limited to their own leads', function () {
     expect(visibleLeadIds($staff))->toContain($ownLead->id)
         ->and(visibleLeadIds($staff))->not->toContain($peerLead->id);
 });
-it('shows all leads to users in the Marketing department regardless of role', function () {
+it('narrows leads for the Marketing department to own and assigned principals', function () {
     $marketingDepartment = Department::factory()->create(['name' => 'Marketing']);
     $marketingUser = User::factory()->create(['department_id' => $marketingDepartment->id]);
     $marketingUser->assignRole('Marketing Staff');
-    $otherUser = User::factory()->create();
-    $otherLead = Lead::factory()->create(['created_by' => $otherUser->id]);
 
-    expect(visibleLeadIds($marketingUser))->toContain($otherLead->id)
-        ->and(app(LeadPolicy::class)->view($marketingUser, $otherLead))->toBeTrue();
+    $assigned = Principal::factory()->create();
+    $marketingUser->principals()->attach($assigned->id);
+
+    $ownLead = Lead::factory()->create(['created_by' => $marketingUser->id]);
+
+    $assignedLead = Lead::factory()->create(['created_by' => User::factory()->create()->id]);
+    $assignedLead->leadProductItems()->create([
+        'product_id' => Product::factory()->create(['principal_id' => $assigned->id])->id,
+        'principal_id' => $assigned->id,
+        'quantity' => 1,
+        'unit_price' => 1000,
+    ]);
+
+    $foreignLead = Lead::factory()->create(['created_by' => User::factory()->create()->id]);
+
+    expect(visibleLeadIds($marketingUser))->toContain($ownLead->id, $assignedLead->id)
+        ->and(visibleLeadIds($marketingUser))->not->toContain($foreignLead->id)
+        ->and(app(LeadPolicy::class)->view($marketingUser, $ownLead))->toBeTrue()
+        ->and(app(LeadPolicy::class)->view($marketingUser, $assignedLead))->toBeTrue()
+        ->and(app(LeadPolicy::class)->view($marketingUser, $foreignLead))->toBeFalse();
 });
 
 it('keeps leads scoped for users outside the Marketing department', function () {

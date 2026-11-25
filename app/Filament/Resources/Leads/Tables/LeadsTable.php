@@ -6,6 +6,7 @@ use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Lead;
 use App\Models\LeadProduct;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -37,11 +38,11 @@ class LeadsTable
      */
     public static function listVisibilityQuery(Builder $query, ?User $user): Builder
     {
-        if (! $user?->isMarketingDepartment()) {
-            self::applyLeadVisibilityScope($query, 'created_by');
+        if (PrincipalScopeService::appliesTo($user)) {
+            return PrincipalScopeService::leads($query, $user);
         }
 
-        return $query;
+        return self::applyLeadVisibilityScope($query, 'created_by');
     }
 
     public static function configure(Table $table): Table

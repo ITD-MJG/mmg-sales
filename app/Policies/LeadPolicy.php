@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 
 class LeadPolicy extends BasePolicy
 {
@@ -24,8 +25,10 @@ class LeadPolicy extends BasePolicy
             return true;
         }
 
-        if ($user->isMarketingDepartment()) {
-            return true;
+        if (PrincipalScopeService::appliesTo($user)) {
+            return $lead->created_by === $user->id
+                || $lead->collaborators()->whereKey($user->getKey())->exists()
+                || $lead->hasAnyAssignedPrincipal(PrincipalScopeService::principalIds($user));
         }
 
         if (
