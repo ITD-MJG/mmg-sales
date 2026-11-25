@@ -10,6 +10,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -165,6 +166,27 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Target::class);
     }
 
+    /**
+     * Principals this user is assigned to track (Marketing scope).
+     */
+    public function principals(): BelongsToMany
+    {
+        return $this->belongsToMany(Principal::class)->withTimestamps();
+    }
+
+    /** @return list<int> */
+    public function assignedPrincipalIds(): array
+    {
+        return $this->assignedPrincipalIds ??= $this->principals()->pluck('principals.id')->all();
+    }
+
+    public function managesPrincipal(int|Principal $principal): bool
+    {
+        $id = $principal instanceof Principal ? $principal->getKey() : $principal;
+
+        return in_array($id, $this->assignedPrincipalIds(), true);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -177,6 +199,9 @@ class User extends Authenticatable implements FilamentUser
     private ?bool $managementDepartment = null;
 
     private ?bool $managementDirector = null;
+
+    /** @var list<int>|null */
+    private ?array $assignedPrincipalIds = null;
 
     /**
      * Whether the user belongs to the Management department.
