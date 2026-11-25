@@ -3,10 +3,30 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Services\PrincipalScopeService;
 
 class OrderPolicy extends BasePolicy
 {
     protected string $model = 'order';
+
+    /**
+     * A direct URL to an order must respect the same ceiling as the list.
+     * Admins and non-Marketing users keep the permission-only rule.
+     */
+    public function view(User $user, mixed $model): bool
+    {
+        if (! $user->hasPermissionTo("view_{$this->model}")) {
+            return false;
+        }
+
+        if (! PrincipalScopeService::appliesTo($user)) {
+            return true;
+        }
+
+        return $model->created_by === $user->id
+            || $model->sales_id === $user->id
+            || $model->hasAnyAssignedPrincipal(PrincipalScopeService::principalIds($user));
+    }
 
     /**
      * Determine whether the user can update the model.

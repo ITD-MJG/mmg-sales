@@ -10,10 +10,12 @@ use App\Filament\Resources\Orders\Schemas\OrderForm;
 use App\Filament\Resources\Orders\Schemas\OrderInfolist;
 use App\Filament\Resources\Orders\Tables\OrdersTable;
 use App\Models\Order;
+use App\Services\PrincipalScopeService;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderResource extends Resource
 {
@@ -26,6 +28,15 @@ class OrderResource extends Resource
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'order_number';
+
+    /**
+     * Marketing users only see their own, sold and assigned-principal orders.
+     * Every page of the resource inherits this.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return PrincipalScopeService::orders(parent::getEloquentQuery(), auth()->user());
+    }
 
     public static function form(Schema $schema): Schema
     {
