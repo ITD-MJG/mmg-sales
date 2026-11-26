@@ -52,19 +52,14 @@ class OrdersTable
                     ->sortable()
                     ->default('-'),
 
-                TextColumn::make('latestDeliveryStatus.carrier')
+                TextColumn::make('latestDeliveryStatus.status_label')
                     ->label('Delivery Status')
                     ->badge()
-                    ->formatStateUsing(fn ($state, Order $record): string => match (true) {
-                        $record->latestDeliveryStatus?->delivered_date => 'Delivered',
-                        $record->latestDeliveryStatus?->shipped_date => 'Shipped',
-                        $record->latestDeliveryStatus?->carrier => 'In Transit',
-                        default => 'Pending',
-                    })
-                    ->color(fn ($state, Order $record): string => match (true) {
-                        $record->latestDeliveryStatus?->delivered_date => 'success',
-                        $record->latestDeliveryStatus?->shipped_date => 'primary',
-                        $record->latestDeliveryStatus?->carrier => 'info',
+                    ->default('Pending')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'Delivered' => 'success',
+                        'Shipped' => 'primary',
+                        'In Transit' => 'info',
                         default => 'gray',
                     }),
 
