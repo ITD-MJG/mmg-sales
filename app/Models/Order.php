@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use InvalidArgumentException;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -220,12 +221,12 @@ class Order extends Model
         return (float) $this->orderItems()->sum('subtotal');
     }
 
-    public function getLatestDeliveryStatusAttribute(): ?DeliveryStatus
+    public function latestDeliveryStatus(): HasOne
     {
         // Ordered by id rather than created_at: the timestamp has second
         // precision, so two rows recorded in the same second would otherwise
         // surface in whichever order the engine felt like.
-        return $this->deliveryStatuses()->latest('id')->first();
+        return $this->hasOne(DeliveryStatus::class)->latestOfMany('id');
     }
 
     public function getLatestPaymentStatusAttribute(): ?PaymentStatus

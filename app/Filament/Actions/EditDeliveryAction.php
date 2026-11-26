@@ -75,7 +75,8 @@ class EditDeliveryAction extends Action
 
                 TextInput::make('proof_of_delivery')
                     ->label('Proof of Delivery URL')
-                    ->placeholder('https://...'),
+                    ->placeholder('https://...')
+                    ->url(),
 
                 Textarea::make('notes')
                     ->label('Notes')

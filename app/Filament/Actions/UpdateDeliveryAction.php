@@ -48,12 +48,17 @@ class UpdateDeliveryAction extends Action
                     ->afterOrEqual('shipped_date'),
                 TextInput::make('proof_of_delivery')
                     ->label('Proof of Delivery URL')
-                    ->placeholder('https://...'),
+                    ->placeholder('https://...')
+                    ->url(),
                 Textarea::make('notes')
                     ->label('Notes')
                     ->rows(3),
             ])
             ->action(function (array $data, Order $record): void {
+                // visible() only hides the button; a crafted mount still
+                // reaches this closure, so the permission is re-checked here.
+                abort_unless(auth()->user()?->can('update_delivery_order'), 403);
+
                 $record->deliveryStatuses()->create($data);
             })
             // Mounted by name from the per-row buttons in the history table.

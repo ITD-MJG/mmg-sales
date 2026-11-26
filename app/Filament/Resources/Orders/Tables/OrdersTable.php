@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrdersTable
 {
@@ -132,6 +133,9 @@ class OrdersTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            // latestDeliveryStatus is a relation, so it can be eager loaded;
+            // resolving it per row would cost one query per order.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('latestDeliveryStatus'))
             ->defaultSort('order_date', 'desc')
             ->filters([])
             ->recordActions([

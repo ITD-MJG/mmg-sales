@@ -1,13 +1,17 @@
 <?php
 
 use App\Filament\Actions\UpdateDeliveryAction;
+use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Models\Order;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Livewire\livewire;
 
 uses(RefreshDatabase::class);
 
@@ -36,10 +40,12 @@ it('creates delivery status record', function () {
 
     $this->assertDatabaseCount('delivery_statuses', 0);
 
-    $order->deliveryStatuses()->create([
-        'carrier' => 'JNE',
-        'tracking_number' => 'TEST123',
-        'shipped_date' => now()->toDateString(),
+    UpdateDeliveryAction::make()->record($order)->call([
+        'data' => [
+            'carrier' => 'JNE',
+            'tracking_number' => 'TEST123',
+            'shipped_date' => now()->toDateString(),
+        ],
     ]);
 
     $this->assertDatabaseCount('delivery_statuses', 1);
@@ -48,6 +54,36 @@ it('creates delivery status record', function () {
         'carrier' => 'JNE',
         'tracking_number' => 'TEST123',
     ]);
+});
+
+it('refuses to create a delivery without permission', function () {
+    $user = User::factory()->create();
+    Permission::firstOrCreate(['name' => 'update_delivery_order']);
+
+    actingAs($user);
+
+    $order = Order::factory()->create(['created_by' => $user->id]);
+
+    UpdateDeliveryAction::make()->record($order)->call([
+        'data' => ['carrier' => 'JNE'],
+    ]);
+})->throws(HttpException::class);
+
+it('rejects a proof of delivery that is not a URL', function () {
+    $user = User::factory()->create();
+    Permission::firstOrCreate(['name' => 'update_delivery_order']);
+    $user->givePermissionTo(['view_any_order', 'view_order', 'update_delivery_order']);
+    $order = Order::factory()->create(['created_by' => $user->id]);
+
+    actingAs($user);
+
+    livewire(ListOrders::class)
+        ->mountAction(TestAction::make('updateDelivery')->table($order))
+        ->fillForm(['proof_of_delivery' => 'javascript:alert(1)'])
+        ->callMountedAction()
+        ->assertHasFormErrors(['proof_of_delivery']);
+
+    expect($order->deliveryStatuses()->count())->toBe(0);
 });
 
 it('shows recorded deliveries in the history modal', function () {
