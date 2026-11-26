@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Pages;
 
+use App\Filament\Actions\UpdateDeliveryAction;
 use App\Filament\Actions\UpdatePaymentAction;
 use App\Filament\Resources\Orders\OrderResource;
 use Filament\Actions\EditAction;
@@ -15,9 +16,10 @@ class ViewOrder extends ViewRecord
     {
         return [
             EditAction::make(),
-            // Same action as the one on the orders table, so the header offers
-            // the identical payment form and history. On a record page the
-            // action resolves `$record` from the page itself.
+            // Same actions as the ones on the orders table, so the header
+            // offers the identical delivery and payment forms and histories.
+            // On a record page the actions resolve `$record` from the page.
+            UpdateDeliveryAction::make(),
             UpdatePaymentAction::make(),
         ];
     }

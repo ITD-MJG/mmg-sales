@@ -21,7 +21,9 @@ it('can render update delivery action', function () {
     actingAs($user);
 
     $this->get(route('filament.admin.resources.orders.view', $order))
-        ->assertSuccessful();
+        ->assertSuccessful()
+        ->assertSee('Update Delivery')
+        ->assertSee('Update Payment');
 });
 
 it('creates delivery status record', function () {
