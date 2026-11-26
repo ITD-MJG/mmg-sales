@@ -3,14 +3,19 @@
 use App\Filament\Actions\UpdateDeliveryAction;
 use App\Models\Order;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 
 use function Pest\Laravel\actingAs;
 
+uses(RefreshDatabase::class);
+
 it('can render update delivery action', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
     $user = User::factory()->create();
-    Permission::firstOrCreate(['name' => 'update_delivery_order']);
-    $user->givePermissionTo('update_delivery_order');
+    $user->assignRole('Super Admin');
     $order = Order::factory()->create(['created_by' => $user->id]);
 
     actingAs($user);
@@ -41,6 +46,28 @@ it('creates delivery status record', function () {
         'carrier' => 'JNE',
         'tracking_number' => 'TEST123',
     ]);
+});
+
+it('shows recorded deliveries in the history modal', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $user = User::factory()->create();
+    $user->assignRole('Super Admin');
+    $order = Order::factory()->create(['created_by' => $user->id]);
+
+    $order->deliveryStatuses()->create([
+        'carrier' => 'JNE',
+        'tracking_number' => 'TRK-HISTORY',
+        'shipped_date' => now()->toDateString(),
+    ]);
+
+    actingAs($user);
+
+    $html = (string) UpdateDeliveryAction::make()->record($order)->getModalContent();
+
+    expect($html)->toContain('JNE')
+        ->toContain('TRK-HISTORY')
+        ->toContain('Shipped');
 });
 
 it('hides action without permission', function () {
