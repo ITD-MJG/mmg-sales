@@ -213,7 +213,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function isMarketingDepartment(): bool
     {
-        return $this->department?->name === 'Marketing';
+        return $this->department?->name === Department::MARKETING;
+    }
+
+    public function isSalesOrMarketingDepartment(): bool
+    {
+        return in_array($this->department?->name, [Department::SALES, Department::MARKETING], true);
     }
 
     /**

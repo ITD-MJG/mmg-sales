@@ -20,28 +20,31 @@ class SalesTargetWidget extends BaseWidget
             return [];
         }
 
-        $target = Target::where('user_id', $user->id)
-            ->where('year', now()->year)
-            ->where('month', now()->month)
-            ->first();
+        $wholeCompany = ! $user->isSalesOrMarketingDepartment();
 
-        $monthlyTarget = (float) ($target->monthly_target ?? 0);
-        // A year has no annual row any more; its annual target is the sum of
-        // the rep's monthly targets.
-        $annualTarget = (float) Target::where('user_id', $user->id)
-            ->where('year', now()->year)
+        $targets = Target::query()->where('year', now()->year);
+        if (! $wholeCompany) {
+            $targets->where('user_id', $user->id);
+        }
+
+        $monthlyTarget = (float) (clone $targets)
+            ->where('month', now()->month)
             ->sum('monthly_target');
+        // A year has no annual row any more; its annual target is the sum of
+        // the rep's (or, company-wide, everyone's) monthly targets.
+        $annualTarget = (float) $targets->sum('monthly_target');
 
         // Attributed through `sales_id`: orders arrive from an import run by an
         // administrator, so `created_by` credits the importer, not the rep.
-        $annualRevenue = PrincipalScopeService::orders(Order::query(), auth()->user())
-            ->where('sales_id', $user->id)
-            ->whereYear('order_date', now()->year)
-            ->sum('total_amount');
+        $revenue = function () use ($user, $wholeCompany) {
+            $query = PrincipalScopeService::orders(Order::query(), $user)
+                ->whereYear('order_date', now()->year);
 
-        $monthlyRevenue = PrincipalScopeService::orders(Order::query(), auth()->user())
-            ->where('sales_id', $user->id)
-            ->whereYear('order_date', now()->year)
+            return $wholeCompany ? $query : $query->where('sales_id', $user->id);
+        };
+
+        $annualRevenue = (float) $revenue()->sum('total_amount');
+        $monthlyRevenue = (float) $revenue()
             ->whereMonth('order_date', now()->month)
             ->sum('total_amount');
 

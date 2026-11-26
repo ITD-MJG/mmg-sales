@@ -21,28 +21,33 @@ class SalesOrdersWidget extends BaseWidget
 
         $formatter = new NumberFormatter('id_ID', NumberFormatter::CURRENCY);
 
-        $openOrders = PrincipalScopeService::orders(Order::query(), $user)
+        // Staff outside Sales and Marketing are not credited per person, so
+        // the personal filters would hide most of the company's orders.
+        $wholeCompany = ! $user->isSalesOrMarketingDepartment();
+
+        $orders = fn () => PrincipalScopeService::orders(Order::query(), $user);
+        $onlyOwn = fn ($query) => $wholeCompany ? $query : $query->where('created_by', $user->id);
+
+        $openOrders = $orders()
             ->whereDoesntHave('deliveryStatuses')
             ->whereDoesntHave('paymentStatuses')
             ->whereYear('order_date', now()->year);
 
         $openCount = $openOrders->count();
 
-        $shippedOrders = PrincipalScopeService::orders(Order::query(), $user)
-            ->where('created_by', $user->id)
+        $shippedOrders = $onlyOwn($orders())
             ->whereHas('deliveryStatuses', fn ($q) => $q->whereNotNull('shipped_date'))
             ->whereYear('order_date', now()->year);
 
         $shippedCount = $shippedOrders->count();
 
-        $paidOrders = PrincipalScopeService::orders(Order::query(), $user)
-            ->where('created_by', $user->id)
+        $paidOrders = $onlyOwn($orders())
             ->whereHas('paymentStatuses', fn ($q) => $q->where('status', 'full'))
             ->whereYear('order_date', now()->year);
 
         $paidCount = $paidOrders->count();
 
-        $totalOrders = PrincipalScopeService::orders(Order::query(), $user)->count();
+        $totalOrders = $orders()->count();
 
         return [
             Stat::make('Open Orders', $openCount.' orders')

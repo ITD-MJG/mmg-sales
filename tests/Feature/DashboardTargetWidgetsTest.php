@@ -6,6 +6,7 @@ use App\Filament\Widgets\InvoiceVsTargetChart;
 use App\Filament\Widgets\SalesKpiWidget;
 use App\Filament\Widgets\SalesTargetWidget;
 use App\Filament\Widgets\TargetVsAchievementChart;
+use App\Models\Department;
 use App\Models\Order;
 use App\Models\PaymentStatus;
 use App\Models\Target;
@@ -21,8 +22,10 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->travelTo(Carbon::parse('2026-06-15 09:00:00'));
 
-    $this->rep = User::factory()->create(['name' => 'Rep']);
-    $this->importer = User::factory()->create(['name' => 'Importer']);
+    $sales = Department::factory()->create(['name' => Department::SALES]);
+
+    $this->rep = User::factory()->create(['name' => 'Rep', 'department_id' => $sales->id]);
+    $this->importer = User::factory()->create(['name' => 'Importer', 'department_id' => $sales->id]);
 
     Target::create(['user_id' => $this->rep->id, 'year' => 2026, 'month' => 6, 'monthly_target' => 1000]);
 });
@@ -71,6 +74,21 @@ it('does not credit the importer with revenue they only loaded', function () {
 
     expect(targetStats()['Target Achievement']->getValue())
         ->toBe('0.0% monthly / 0.0% annual');
+});
+
+it('shows company-wide target and revenue to staff outside Sales and Marketing', function () {
+    Order::factory()->create([
+        'sales_id' => $this->rep->id,
+        'order_date' => '2026-06-10',
+        'total_amount' => 500,
+    ]);
+
+    $logistics = User::factory()->create(['name' => 'Logistics']);
+
+    actingAs($logistics);
+
+    expect(targetStats()['Target Achievement']->getValue())
+        ->toBe('50.0% monthly / 50.0% annual');
 });
 
 it('counts an order whether or not it has been marked shipped', function () {
