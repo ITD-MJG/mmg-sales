@@ -56,6 +56,13 @@ class UpdateDeliveryAction extends Action
             ->action(function (array $data, Order $record): void {
                 $record->deliveryStatuses()->create($data);
             })
+            // Mounted by name from the per-row buttons in the history table.
+            // registerModalActions() keeps them out of the footer, where a
+            // button with no delivery to point at would be meaningless.
+            ->registerModalActions([
+                EditDeliveryAction::make(),
+                DeleteDeliveryAction::make(),
+            ])
             ->successNotificationTitle('Delivery status updated');
     }
 }
