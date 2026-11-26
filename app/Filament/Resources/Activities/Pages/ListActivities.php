@@ -37,10 +37,11 @@ class ListActivities extends ListRecords
         $tabs['my'] = Tab::make('My Activities')
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('user_id', $user?->id));
 
-        if ($user) {
+        $teamIds = $user?->subordinateUserIds() ?? [];
+
+        if ($teamIds !== []) {
             $tabs['team'] = Tab::make('My Team Activities')
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('user_id', '!=', $user->id)
-                    ->whereHas('attendees', fn (Builder $attendees): Builder => $attendees->whereKey($user->id)));
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereIn('user_id', $teamIds));
         }
 
         return $tabs;

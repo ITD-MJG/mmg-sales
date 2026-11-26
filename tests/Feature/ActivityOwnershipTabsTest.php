@@ -23,12 +23,14 @@ beforeEach(function (): void {
     Role::findOrCreate('Marketing Manager');
 });
 
-test('users always receive both My and My Team tabs', function (): void {
+test('managers with subordinates receive both My and My Team tabs', function (): void {
     $salesDepartment = Department::factory()->create(['name' => 'Sales']);
     $user = User::factory()->create();
     $user->assignRole('Sales Representative');
     $user->department_id = $salesDepartment->id;
     $user->save();
+
+    User::factory()->create(['manager_id' => $user->id]);
 
     $this->actingAs($user);
 
@@ -38,7 +40,19 @@ test('users always receive both My and My Team tabs', function (): void {
     expect(array_keys($component->getTabs()))->toBe(['my', 'team']);
 });
 
-test('My Activities shows only activities the user created while My Team Activities shows others who assigned the user', function (): void {
+test('users without subordinates only receive the My tab', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('Sales Representative');
+
+    $this->actingAs($user);
+
+    $component = new ListActivities;
+    $component->mount();
+
+    expect(array_keys($component->getTabs()))->toBe(['my']);
+});
+
+test('My Activities shows only activities the user created while My Team Activities shows their subordinates', function (): void {
     $territory = Territory::factory()->create();
     $manager = User::factory()->create(['territory_id' => $territory->id]);
     $manager->assignRole('Area Sales Manager');
@@ -83,8 +97,8 @@ test('My Activities shows only activities the user created while My Team Activit
         ->assertCanSeeTableRecords([$ownActivity])
         ->assertCanNotSeeTableRecords([$assignedActivity, $peerAssignedActivity, $unassignedReportActivity, $outsideActivity])
         ->set('activeTab', 'team')
-        ->assertCanSeeTableRecords([$assignedActivity, $peerAssignedActivity])
-        ->assertCanNotSeeTableRecords([$ownActivity, $unassignedReportActivity, $outsideActivity]);
+        ->assertCanSeeTableRecords([$assignedActivity, $unassignedReportActivity])
+        ->assertCanNotSeeTableRecords([$ownActivity, $peerAssignedActivity, $outsideActivity]);
 });
 
 test('outcome remains a filter that can be combined with ownership tabs', function (): void {
@@ -135,9 +149,9 @@ test('a global viewer lands on an unfiltered All Activities tab', function (): v
 
     $component = Livewire::actingAs($superAdmin)->test(ListActivities::class);
 
-    // A Super Admin has no subordinates, but the ownership tabs still render:
-    // "My" is their own log and "My Team" is anything assigned to them.
-    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my', 'team']);
+    // A Super Admin has no subordinates, so no team tab renders: "My" is
+    // their own log and "All" is the unfiltered view.
+    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my']);
 
     $component->assertSet('activeTab', 'all')
         ->assertCanSeeTableRecords([$repActivity, $ownActivity])
