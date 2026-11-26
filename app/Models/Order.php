@@ -222,7 +222,10 @@ class Order extends Model
 
     public function getLatestDeliveryStatusAttribute(): ?DeliveryStatus
     {
-        return $this->deliveryStatuses()->latest()->first();
+        // Ordered by id rather than created_at: the timestamp has second
+        // precision, so two rows recorded in the same second would otherwise
+        // surface in whichever order the engine felt like.
+        return $this->deliveryStatuses()->latest('id')->first();
     }
 
     public function getLatestPaymentStatusAttribute(): ?PaymentStatus
