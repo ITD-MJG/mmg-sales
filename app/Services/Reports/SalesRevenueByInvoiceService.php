@@ -55,6 +55,8 @@ final class SalesRevenueByInvoiceService
      */
     private function weights(Order $order): array
     {
+        $principals = $this->principalWeights($order);
+
         return [
             'territory' => [
                 $this->key($order->sales?->territory_id) => [
@@ -80,9 +82,71 @@ final class SalesRevenueByInvoiceService
                     'weight' => 1.0,
                 ],
             ],
-            'principal' => [],
-            'marketing' => [],
+            'principal' => $principals,
+            'marketing' => $this->marketingWeights($order, $principals),
         ];
+    }
+
+    /**
+     * @return array<string, array{label: string, weight: float}>
+     */
+    private function principalWeights(Order $order): array
+    {
+        $shares = $order->orderItems
+            ->groupBy(fn ($item): string => $this->key($item->principal_id))
+            ->map(fn (Collection $items): float => (float) $items->sum('subtotal'));
+
+        if ($shares->sum() <= 0) {
+            return [
+                $this->key($order->principal_id) => [
+                    'label' => $order->principal?->name ?? 'Unassigned',
+                    'weight' => 1.0,
+                ],
+            ];
+        }
+
+        $total = (float) $shares->sum();
+
+        return $shares
+            ->mapWithKeys(fn (float $subtotal, string $key): array => [
+                $key => [
+                    'label' => $key === 'unassigned'
+                        ? 'Unassigned'
+                        : ($order->orderItems->firstWhere('principal_id', (int) $key)?->principal?->name ?? 'Unassigned'),
+                    'weight' => $subtotal / $total,
+                ],
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, array{label: string, weight: float}>  $principals
+     * @return array<string, array{label: string, weight: float}>
+     */
+    private function marketingWeights(Order $order, array $principals): array
+    {
+        $result = [];
+
+        foreach ($principals as $principalKey => $share) {
+            $principal = $principalKey === 'unassigned'
+                ? null
+                : $order->orderItems->firstWhere('principal_id', (int) $principalKey)?->principal;
+            $users = $principal?->marketingUsers ?? collect();
+
+            if ($users->isEmpty()) {
+                $result['unassigned'] ??= ['label' => 'Unassigned Marketing', 'weight' => 0.0];
+                $result['unassigned']['weight'] += $share['weight'];
+
+                continue;
+            }
+
+            foreach ($users as $user) {
+                $result[(string) $user->id] ??= ['label' => $user->name, 'weight' => 0.0];
+                $result[(string) $user->id]['weight'] += $share['weight'] / $users->count();
+            }
+        }
+
+        return $result;
     }
 
     private function key(int|string|null $value): string
