@@ -190,3 +190,48 @@ test('a principal without marketing users attributes to unassigned marketing', f
 
     expect($rows[0])->toMatchArray(['label' => 'Unassigned Marketing', 'value' => 1000.0]);
 });
+
+test('invoices narrow to the selected group and carry the group share', function () {
+    $rep = User::factory()->create(['name' => 'Rep One']);
+    $customer = Customer::factory()->create(['name' => 'Acme']);
+    $a = Principal::factory()->create(['name' => 'Alpha']);
+    $ann = User::factory()->create(['name' => 'Ann']);
+    $a->marketingUsers()->attach($ann->id);
+
+    $order = paidOrder($rep, 1000, [['status' => 'partial', 'amount' => 400]], ['end_customer_id' => $customer->id]);
+    OrderItem::factory()->create(['order_id' => $order->id, 'principal_id' => $a->id, 'subtotal' => 600]);
+
+    $result = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $rep,
+    ))->invoices('customer', 'total', (string) $customer->id);
+
+    expect($result['count'])->toBe(1)
+        ->and($result['total'])->toEqual(1000.0)
+        ->and($result['rows'][0])->toMatchArray([
+            'order_number' => $order->order_number,
+            'customer' => 'Acme',
+            'rep' => 'Rep One',
+            'total' => 1000.0,
+            'paid' => 400.0,
+            'remaining' => 600.0,
+            'share' => 1000.0,
+        ]);
+});
+
+test('invoice rows stop at 25 but the count reports every match', function () {
+    $rep = User::factory()->create();
+    foreach (range(1, 30) as $i) {
+        paidOrder($rep, 100, [['status' => 'full', 'amount' => 100]]);
+    }
+
+    $result = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $rep,
+    ))->invoices('sales_rep', 'total', (string) $rep->id);
+
+    expect($result['rows'])->toHaveCount(25)
+        ->and($result['count'])->toBe(30);
+});

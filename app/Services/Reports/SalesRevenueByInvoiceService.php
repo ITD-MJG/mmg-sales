@@ -2,6 +2,7 @@
 
 namespace App\Services\Reports;
 
+use App\Filament\Resources\Orders\OrderResource;
 use App\Filament\Traits\HasVisibilityScope;
 use App\Models\Order;
 use App\Models\User;
@@ -48,6 +49,60 @@ final class SalesRevenueByInvoiceService
             fn (array $row): array => [...$row, 'value' => round($row['value'], 2)],
             $totals,
         );
+    }
+
+    /**
+     * @return array{rows: list<array<string, mixed>>, count: int, total: float}
+     */
+    public function invoices(string $dimension, string $metric, ?string $groupKey): array
+    {
+        $rows = [];
+
+        foreach ($this->orders() as $order) {
+            $weightsByDimension = $this->weights($order);
+            $weights = $weightsByDimension[$dimension] ?? [];
+            $weight = $groupKey === null ? 1.0 : ($weights[$groupKey]['weight'] ?? null);
+
+            if ($weight === null) {
+                continue;
+            }
+
+            $total = (float) $order->total_amount;
+            $paid = $order->paidAmount();
+            $amount = $metric === 'paid' ? $paid : $total;
+            $paymentDate = $order->paymentStatuses
+                ->whereIn('status', ['partial', 'full'])
+                ->pluck('effective_date')
+                ->filter()
+                ->sortDesc()
+                ->first();
+
+            $rows[] = [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'url' => OrderResource::getUrl('view', ['record' => $order]),
+                'order_date' => $order->order_date?->format('Y-m-d'),
+                'payment_date' => $paymentDate?->format('Y-m-d'),
+                'customer' => $order->customer?->name ?? 'Unassigned',
+                'rep' => $order->sales?->name ?? 'Unassigned',
+                'supervisor' => $order->sales?->manager?->name ?? 'Unassigned',
+                'territory' => $order->sales?->territory?->name ?? 'Unassigned',
+                'principals' => implode(', ', array_column($weightsByDimension['principal'], 'label')),
+                'marketing' => implode(', ', array_column($weightsByDimension['marketing'], 'label')),
+                'total' => $total,
+                'paid' => $paid,
+                'remaining' => max(0.0, $total - $paid),
+                'share' => round($amount * $weight, 2),
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b): int => $b['share'] <=> $a['share']);
+
+        return [
+            'rows' => array_slice($rows, 0, 25),
+            'count' => count($rows),
+            'total' => round(array_sum(array_column($rows, 'share')), 2),
+        ];
     }
 
     /**
