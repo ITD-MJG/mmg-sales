@@ -43,7 +43,7 @@ test('the widget renders its heading and invoice row', function () {
 test('selecting a group filters the table and clicking again clears it', function () {
     $component = Livewire::test(SalesRevenueByInvoiceWidget::class, [
         'pageFilters' => ['start_date' => '2026-03-01', 'end_date' => '2026-03-31'],
-    ]);
+    ])->set('dimension', 'sales_rep');
 
     $key = (string) $this->admin->id;
 
@@ -63,4 +63,13 @@ test('the widget renders an empty state when the period has no paid invoices', f
     ])
         ->assertSee('No paid invoices in this period.')
         ->assertSee('Showing 0 of 0');
+});
+
+test('selecting a group shows its name in the invoice heading', function () {
+    Livewire::test(SalesRevenueByInvoiceWidget::class, [
+        'pageFilters' => ['start_date' => '2026-03-01', 'end_date' => '2026-03-31'],
+    ])
+        ->set('dimension', 'sales_rep')
+        ->call('selectGroup', (string) $this->admin->id)
+        ->assertSee('Invoices: '.$this->admin->name);
 });

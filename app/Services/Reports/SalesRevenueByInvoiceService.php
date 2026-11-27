@@ -38,7 +38,7 @@ final class SalesRevenueByInvoiceService
             $amount = $metric === 'paid' ? $order->paidAmount() : (float) $order->total_amount;
 
             foreach ($this->weights($order)[$dimension] ?? [] as $key => $group) {
-                $totals[$key] ??= ['key' => $key, 'label' => $group['label'], 'value' => 0.0];
+                $totals[$key] ??= ['key' => (string) $key, 'label' => $group['label'], 'value' => 0.0];
                 $totals[$key]['value'] += $amount * $group['weight'];
             }
         }
@@ -185,7 +185,7 @@ final class SalesRevenueByInvoiceService
         foreach ($principals as $principalKey => $share) {
             $principal = $principalKey === 'unassigned'
                 ? null
-                : $order->orderItems->firstWhere('principal_id', (int) $principalKey)?->principal;
+                : ($order->orderItems->firstWhere('principal_id', (int) $principalKey)?->principal ?? $order->principal);
             $users = $principal?->marketingUsers ?? collect();
 
             if ($users->isEmpty()) {

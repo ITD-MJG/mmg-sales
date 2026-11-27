@@ -249,3 +249,45 @@ test('a zero total order with a full payment still qualifies', function () {
     expect($rows)->toHaveCount(1)
         ->and($rows[0]['value'])->toBe(0.0);
 });
+
+test('a header principal without line items attributes marketing to its users', function () {
+    $rep = User::factory()->create();
+    $principal = Principal::factory()->create(['name' => 'Header']);
+    $marketer = User::factory()->create(['name' => 'Marketer']);
+    $principal->marketingUsers()->attach($marketer->id);
+    paidOrder($rep, 1000, [['status' => 'full', 'amount' => 1000]], ['principal_id' => $principal->id]);
+
+    $rows = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $rep,
+    ))->breakdown('marketing', 'total');
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0])->toMatchArray(['label' => 'Marketer', 'value' => 1000.0]);
+});
+
+test('visibility limits reps to their own invoices and managers to their team', function () {
+    $manager = User::factory()->create(['name' => 'Manager']);
+    $rep = User::factory()->create(['name' => 'Rep', 'manager_id' => $manager->id]);
+    $outsider = User::factory()->create(['name' => 'Outsider']);
+
+    paidOrder($rep, 100, [['status' => 'full', 'amount' => 100]]);
+    paidOrder($manager, 200, [['status' => 'full', 'amount' => 200]]);
+    paidOrder($outsider, 400, [['status' => 'full', 'amount' => 400]]);
+
+    $repRows = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $rep,
+    ))->breakdown('sales_rep', 'total');
+
+    $managerRows = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $manager,
+    ))->breakdown('sales_rep', 'total');
+
+    expect(collect($repRows)->pluck('value', 'label')->all())->toBe(['Rep' => 100.0])
+        ->and(collect($managerRows)->pluck('value', 'label')->all())->toBe(['Manager' => 200.0, 'Rep' => 100.0]);
+});
