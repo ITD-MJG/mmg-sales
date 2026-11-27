@@ -72,9 +72,9 @@ final class SalesRevenueByInvoiceService
             $amount = $metric === 'paid' ? $paid : $total;
             $paymentDate = $order->paymentStatuses
                 ->whereIn('status', ['partial', 'full'])
-                ->pluck('effective_date')
+                ->map(fn ($payment) => $payment->effective_date)
                 ->filter()
-                ->sortDesc()
+                ->sortByDesc(fn ($date) => $date->getTimestamp())
                 ->first();
 
             $rows[] = [

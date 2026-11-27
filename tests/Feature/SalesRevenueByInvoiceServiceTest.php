@@ -235,3 +235,17 @@ test('invoice rows stop at 25 but the count reports every match', function () {
     expect($result['rows'])->toHaveCount(25)
         ->and($result['count'])->toBe(30);
 });
+
+test('a zero total order with a full payment still qualifies', function () {
+    $rep = User::factory()->create();
+    paidOrder($rep, 0, [['status' => 'full', 'amount' => 0]]);
+
+    $rows = (new SalesRevenueByInvoiceService(
+        Carbon::parse('2026-03-01'),
+        Carbon::parse('2026-03-31'),
+        $rep,
+    ))->breakdown('sales_rep', 'total');
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['value'])->toBe(0.0);
+});
