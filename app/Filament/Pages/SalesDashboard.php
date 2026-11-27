@@ -9,15 +9,23 @@ use App\Filament\Widgets\LeadStatusChart;
 use App\Filament\Widgets\RecentActivitiesWidget;
 use App\Filament\Widgets\SalesKpiWidget;
 use App\Filament\Widgets\SalesRepRevenueLeaderboardWidget;
+use App\Filament\Widgets\SalesRevenueByInvoiceWidget;
 use App\Filament\Widgets\StaleLeadsWidget;
 use App\Filament\Widgets\TargetVsAchievementChart;
 use App\Filament\Widgets\UpcomingLeadsWidget;
+use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\WidgetConfiguration;
 
 class SalesDashboard extends BaseDashboard
 {
+    use HasFiltersForm;
+
     protected static string $routePath = '/sales';
 
     protected static ?string $title = 'Sales';
@@ -44,6 +52,14 @@ class SalesDashboard extends BaseDashboard
         return 3;
     }
 
+    public function mount(): void
+    {
+        $this->filters = [
+            'start_date' => now()->startOfYear()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ];
+    }
+
     /**
      * The rep's own numbers, then the pipeline and forecast charts, then the two
      * lists that say what to do next, then the team ranking.
@@ -57,10 +73,33 @@ class SalesDashboard extends BaseDashboard
             InvoiceVsTargetChart::class,
             LeadStatusChart::class,
             EstimateRevenue::class,
+            SalesRevenueByInvoiceWidget::class,
             UpcomingLeadsWidget::class,
             StaleLeadsWidget::class,
             RecentActivitiesWidget::class,
             SalesRepRevenueLeaderboardWidget::class,
         ];
+    }
+
+    public function filtersForm(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Section::make('Period')
+                    ->columnSpan(1)
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                DatePicker::make('start_date')
+                                    ->label('From')
+                                    ->default(now()->startOfYear())
+                                    ->required(),
+                                DatePicker::make('end_date')
+                                    ->label('To')
+                                    ->default(now())
+                                    ->required(),
+                            ]),
+                    ]),
+            ]);
     }
 }

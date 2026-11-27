@@ -22,6 +22,7 @@ use App\Filament\Widgets\Reports\TopSellingProductsWidget;
 use App\Filament\Widgets\Reports\TopTerritoriesWidget;
 use App\Filament\Widgets\SalesKpiWidget;
 use App\Filament\Widgets\SalesRepRevenueLeaderboardWidget;
+use App\Filament\Widgets\SalesRevenueByInvoiceWidget;
 use App\Filament\Widgets\StaleLeadsWidget;
 use App\Filament\Widgets\TargetVsAchievementChart;
 use App\Filament\Widgets\UpcomingLeadsWidget;
@@ -72,6 +73,7 @@ function widgetSets(): array
                 InvoiceVsTargetChart::class,
                 LeadStatusChart::class,
                 EstimateRevenue::class,
+                SalesRevenueByInvoiceWidget::class,
                 UpcomingLeadsWidget::class,
                 StaleLeadsWidget::class,
                 RecentActivitiesWidget::class,
