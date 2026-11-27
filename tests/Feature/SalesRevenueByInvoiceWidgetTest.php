@@ -56,3 +56,11 @@ test('the sales dashboard hosts the widget with a date filter form', function ()
         ->assertSee('Sales Revenue (By Invoice)')
         ->assertSee('Period');
 });
+
+test('the widget renders an empty state when the period has no paid invoices', function () {
+    Livewire::test(SalesRevenueByInvoiceWidget::class, [
+        'pageFilters' => ['start_date' => '2025-01-01', 'end_date' => '2025-01-31'],
+    ])
+        ->assertSee('No paid invoices in this period.')
+        ->assertSee('Showing 0 of 0');
+});

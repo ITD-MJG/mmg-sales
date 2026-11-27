@@ -1,7 +1,7 @@
 @php
     $groups = $this->getBreakdown();
     $invoices = $this->getInvoices();
-    $max = max(array_column($groups, 'value')) ?: 1;
+    $max = $groups === [] ? 1 : max(1, ...array_column($groups, 'value'));
     $format = fn ($value) => 'Rp '.number_format((float) $value, 0, ',', '.');
 @endphp
 
