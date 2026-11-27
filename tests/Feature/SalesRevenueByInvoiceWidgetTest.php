@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Pages\SalesDashboard;
 use App\Filament\Widgets\SalesRevenueByInvoiceWidget;
 use App\Models\Order;
 use App\Models\PaymentStatus;
@@ -48,4 +49,10 @@ test('selecting a group filters the table and clicking again clears it', functio
 
     $component->call('selectGroup', $key)->assertSet('selectedKey', $key);
     $component->call('selectGroup', $key)->assertSet('selectedKey', null);
+});
+
+test('the sales dashboard hosts the widget with a date filter form', function () {
+    Livewire::test(SalesDashboard::class)
+        ->assertSee('Sales Revenue (By Invoice)')
+        ->assertSee('Period');
 });
